@@ -1,0 +1,42 @@
+#Prototipo de gitingore, cualquier cosa agreguen sus cosas:)
+
+
+# Archivos del entorno
+.env
+.env.*
+
+# Node.js
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+venv/
+env/
+
+# Frontend (Vite, React, Vue, etc.)
+.vite/
+*.log
+*.local
+*.DS_Store
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Git
+*.orig
+*.mergebackup
+
+# Producción
+*.bak
+*.tmp
