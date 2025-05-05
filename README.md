@@ -1,5 +1,6 @@
 # ProyectoIDS
 ## Estructura (sugerida) repositorio
+```bash
 ProyectoIDS/
 │
 ├── frontend/ # Aplicación React (Interfaz de usuario)
@@ -8,6 +9,8 @@ ProyectoIDS/
 ├── docs/ # Documentación técnica
 ├── README.md
 └── .gitignore
+
+```
 
 ## 🔁 Flujo de trabajo con Git
 
