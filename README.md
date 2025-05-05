@@ -5,6 +5,14 @@ ProyectoIDS/
 │
 ├── frontend/ # Aplicación React (Interfaz de usuario)
 ├── backend/ # Api y lógica del servidor
+|── backend/          # API y lógica del servidor
+│   ├── index.js
+│   ├── app.js
+│   ├── firebase.js
+│   ├── .env
+|   ├── package-lock-json
+|   └── package.json
+|   
 ├── database/ # Configuración de Firebase
 ├── docs/ # Documentación técnica
 ├── README.md
