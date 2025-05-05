@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tareas Asignadas - Modificar Estado</title>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <h2>Tareas asignadas al usuario</h2>
+  <div id="tasksList">
+    <p>Cargando tareas...</p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDawiw9RbKSqAL03zVVo4LIOi-ggE01f8w",
+      authDomain: "tasky-69b74.firebaseapp.com",
+      projectId: "tasky-69b74",
+      storageBucket: "tasky-69b74.firebasestorage.app",
+      messagingSenderId: "1069303930447",
+      appId: "1:1069303930447:web:c977ee712c5afcf5c9143a",
+      measurementId: "G-0W7B1PMRD2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tasksList = document.getElementById("tasksList");
+    const userId = "mFhUR1LHKvTl3Xmz051MzAdNF2u2";
+
+    async function getTasksByUserId(userId) {
+      const tasksCollection = collection(db, "tasks");
+      const q = query(tasksCollection, where("assignedTo", "==", userId));
+
+      try {
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+          tasksList.innerHTML = "<p>No hay tareas asignadas a este usuario.</p>";
+          return;
+        }
+
+        let htmlContent = "<ul>";
+        querySnapshot.forEach((docSnap) => {
+          const task = docSnap.data();
+          const taskId = docSnap.id;
+
+          htmlContent += `
+            <li>
+              <strong>Title:</strong> ${task.title}<br>
+              <strong>Status:</strong> <span id="status-${taskId}">${task.status}</span><br>
+              <input type="text" id="new-status-${taskId}" placeholder="Nuevo estado">
+              <button onclick="updateStatus('${taskId}')">Actualizar estado</button>
+              <hr>
+            </li>
+          `;
+        });
+        htmlContent += "</ul>";
+        tasksList.innerHTML = htmlContent;
+
+      } catch (error) {
+        console.error("Error al obtener las tareas:", error);
+        tasksList.innerHTML = "<p>Error al obtener las tareas.</p>";
+      }
+    }
+
+    window.updateStatus = async function(taskId) {
+      const newStatusInput = document.getElementById(`new-status-${taskId}`);
+      const newStatus = newStatusInput.value.trim();
+
+      if (newStatus === "") {
+        alert("Por favor ingresa un nuevo estado.");
+        return;
+      }
+
+      try {
+        const taskRef = doc(db, "tasks", taskId);
+        await updateDoc(taskRef, { status: newStatus });
+        document.getElementById(`status-${taskId}`).innerText = newStatus;
+        newStatusInput.value = "";
+        alert("Estado actualizado correctamente.");
+      } catch (error) {
+        console.error("Error actualizando el estado:", error);
+        alert("Ocurrió un error al actualizar.");
+      }
+    }
+
+    // Mostrar tareas
+    getTasksByUserId(userId);
+  </script>
+</body>
+</html>

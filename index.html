@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Prueba de creación de usuario</title>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <h2>Crear Usuario</h2>
+  <form id="form">
+    <input type="text" id="nombre" placeholder="Nombre" required /><br />
+    <input type="text" id="apellido" placeholder="Apellido" required /><br />
+    <input type="email" id="email" placeholder="Correo" required /><br />
+    <input type="password" id="password" placeholder="Contraseña" required /><br />
+    <input type="text" id="rut" placeholder="RUT" required /><br />
+    <input type="text" id="cargo" placeholder="Cargo" required /><br />
+    <label><input type="checkbox" id="admin" /> ¿Administrador?</label><br />
+    <button type="submit">Registrar</button>
+  </form>
+
+  <p id="mensaje"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDawiw9RbKSqAL03zVVo4LIOi-ggE01f8w",
+      authDomain: "tasky-69b74.firebaseapp.com",
+      projectId: "tasky-69b74",
+      storageBucket: "tasky-69b74.firebasestorage.app",
+      messagingSenderId: "1069303930447",
+      appId: "1:1069303930447:web:c977ee712c5afcf5c9143a",
+      measurementId: "G-0W7B1PMRD2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("form");
+    const mensaje = document.getElementById("mensaje");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const nombre = document.getElementById("nombre").value;
+      const apellido = document.getElementById("apellido").value;
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const rut = document.getElementById("rut").value;
+      const cargo = document.getElementById("cargo").value;
+      const administrador = document.getElementById("admin").checked;
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        await setDoc(doc(db, "users", rut), {
+          nombre,
+          apellido,
+          correo: email,
+          rut,
+          cargo,
+          administrador,
+        });
+
+        mensaje.textContent = "✅ Usuario creado correctamente.";
+      } catch (error) {
+        console.error(error);
+        mensaje.textContent = "❌ Error: " + error.message;
+      }
+    });
+  </script>
+</body>
+</html>

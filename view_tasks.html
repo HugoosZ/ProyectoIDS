@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ver Tareas Asignadas</title>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <h2>Tareas asignadas al usuario</h2>
+
+  <div id="tasksList">
+    <p>Cargando tareas...</p>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDawiw9RbKSqAL03zVVo4LIOi-ggE01f8w",
+      authDomain: "tasky-69b74.firebaseapp.com",
+      projectId: "tasky-69b74",
+      storageBucket: "tasky-69b74.firebasestorage.app",
+      messagingSenderId: "1069303930447",
+      appId: "1:1069303930447:web:c977ee712c5afcf5c9143a",
+      measurementId: "G-0W7B1PMRD2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const tasksList = document.getElementById("tasksList");
+
+    // ID del usuario para el que queremos mostrar las tareas asignadas
+    const userId = "mFhUR1LHKvTl3Xmz051MzAdNF2u2";
+
+    async function getTasksByUserId(userId) {
+      const tasksCollection = collection(db, "tasks");
+      const q = query(tasksCollection, where("assignedTo", "==", userId));
+
+      try {
+        const querySnapshot = await getDocs(q);
+        if (querySnapshot.empty) {
+          tasksList.innerHTML = "<p>No hay tareas asignadas a este usuario.</p>";
+          return;
+        }
+
+        // Mostrar tareas
+        let htmlContent = "<ul>";
+        querySnapshot.forEach((doc) => {
+          const task = doc.data();
+          htmlContent += `
+            <li>
+              <strong>Title:</strong> ${task.title}<br>
+              <strong>Description:</strong> ${task.description}<br>
+              <strong>Start Time:</strong> ${new Date(task.startTime).toLocaleString()}<br>
+              <strong>End Time:</strong> ${new Date(task.endTime).toLocaleString()}<br>
+              <strong>Status:</strong> ${task.status}<br>
+              <strong>Priority:</strong> ${task.priority}<br>
+              <hr>
+            </li>
+          `;
+        });
+        htmlContent += "</ul>";
+        tasksList.innerHTML = htmlContent;
+
+      } catch (error) {
+        console.error("Error al obtener las tareas:", error);
+        tasksList.innerHTML = "<p>Error al obtener las tareas.</p>";
+      }
+    }
+
+    // Llamada a la función para obtener las tareas
+    getTasksByUserId(userId);
+  </script>
+</body>
+</html>

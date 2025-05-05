@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear Tarea</title>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js"></script>
+</head>
+<body>
+  <h2>Crear una nueva tarea</h2>
+  <form id="taskForm">
+    <label for="assignedTo">Asignado a (ID de usuario):</label><br>
+    <input type="text" id="assignedTo" required><br><br>
+
+    <label for="createdAt">Fecha de creación (timestamp):</label><br>
+    <input type="datetime-local" id="createdAt" required><br><br>
+
+    <label for="createdBy">Creado por (ID de usuario):</label><br>
+    <input type="text" id="createdBy" value="9dAl4m5vMHNa5xy7TWlG" readonly><br><br> <!-- ID predefinido -->
+
+    <label for="description">Descripción:</label><br>
+    <textarea id="description" required></textarea><br><br>
+
+    <label for="endTime">Fecha de finalización (timestamp):</label><br>
+    <input type="datetime-local" id="endTime" required><br><br>
+
+    <label for="priority">Prioridad:</label><br>
+    <input type="text" id="priority" required><br><br>
+
+    <label for="startTime">Fecha de inicio (timestamp):</label><br>
+    <input type="datetime-local" id="startTime" required><br><br>
+
+    <label for="status">Estado:</label><br>
+    <input type="text" id="status" required><br><br>
+
+    <label for="title">Título de la tarea:</label><br>
+    <input type="text" id="title" required><br><br>
+
+    <button type="submit">Crear tarea</button>
+  </form>
+
+  <p id="mensaje"></p>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDawiw9RbKSqAL03zVVo4LIOi-ggE01f8w",
+      authDomain: "tasky-69b74.firebaseapp.com",
+      projectId: "tasky-69b74",
+      storageBucket: "tasky-69b74.firebasestorage.app",
+      messagingSenderId: "1069303930447",
+      appId: "1:1069303930447:web:c977ee712c5afcf5c9143a",
+      measurementId: "G-0W7B1PMRD2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("taskForm");
+    const mensaje = document.getElementById("mensaje");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const assignedTo = document.getElementById("assignedTo").value;
+      const createdAt = new Date(document.getElementById("createdAt").value).toISOString();
+      const createdBy = document.getElementById("createdBy").value;
+      const description = document.getElementById("description").value;
+      const endTime = new Date(document.getElementById("endTime").value).toISOString();
+      const priority = document.getElementById("priority").value;
+      const startTime = new Date(document.getElementById("startTime").value).toISOString();
+      const status = document.getElementById("status").value;
+      const title = document.getElementById("title").value;
+
+      try {
+        // Agregar la tarea a la colección "tasks"
+        const docRef = await addDoc(collection(db, "tasks"), {
+          assignedTo: assignedTo,
+          createdAt: createdAt,
+          createdBy: createdBy,
+          description: description,
+          endTime: endTime,
+          priority: priority,
+          startTime: startTime,
+          status: status,
+          title: title
+        });
+
+        mensaje.textContent = `Tarea creada con éxito. ID de tarea: ${docRef.id}`;
+      } catch (error) {
+        console.error(error);
+        mensaje.textContent = `Error al crear tarea: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
