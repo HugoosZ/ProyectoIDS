@@ -2,7 +2,7 @@
 
 Para inicializar la conexión con Firebase desde el backend, se debe usar el archivo `.json` proporcionado por Firebase.
 
-Luego, usa el siguiente código (js):
+Luego, usar el siguiente código (js):
 
 ```javascript
 var admin = require("firebase-admin");
