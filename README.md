@@ -32,22 +32,36 @@ Trabajaremos con ramas por equipo:
 
 ### Cómo contribuir
 
+
+
 1. Clona el repositorio:
-   ```bash
+```bash
    git clone https://github.com/HugoosZ/ProyectoIDS.git
    cd ProyectoIDS
-   ```
-2. Crea tu rama 
-```bash
-git checkout -b frontend/login-page
 ```
-3. 
+
+2. Actualizar el codigo:
 ```bash
-git add .
-git commit -m "Agrega página de login"
-git push origin frontend/login-page
+   git pull
+```
+
+3. Crea tu rama 
+```bash
+   git checkout -b frontend/login-page
+```
+4. 
+```bash
+   git add .
+   git commit -m "Agrega página de login"
+   git push origin frontend/login-page
 
 ```
-4. Crea un pull request hacia la rama develop
+5. Crea un pull request hacia la rama develop
+
+6. Una vez revisados y probados los cambios, se integran a main como versión final estable.
+
+
+
+
 
 

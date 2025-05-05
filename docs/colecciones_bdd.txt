@@ -1,0 +1,19 @@
+users:
+	isAdmin (bool)
+	name (string)
+	lastName (string)
+	password (string)
+	mail (string)
+	rut (string) (id)
+	role (string)
+
+tasks:
+	assignedTo (string) (id_usuario)
+	createdAt (timestamp)
+	createdBy (string) (id_admin)
+	description (string)
+	endTime (timestamp)
+	priority (string)
+	startTime (timestamp)
+	status (string)
+	title (string)
