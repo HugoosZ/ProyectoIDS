@@ -35,6 +35,10 @@ Thumbs.db
 
 # Git
 *.orig
+
+#bd
+db.env
+
 *.mergebackup
 
 # Producción
