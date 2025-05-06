@@ -4,7 +4,7 @@
 # Archivos del entorno
 .env
 .env.*
-./config
+/config/
 
 # Node.js
 node_modules/
