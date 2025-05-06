@@ -1,4 +1,4 @@
-//Aquí está la lógica para conectarnos a Firebase
+//Aquí está la lógica para conectarnos a Firebase  
 
 require('dotenv').config();
 //require('dotenv').config({ path: './db.env'});
