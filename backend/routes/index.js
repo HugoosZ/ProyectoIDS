@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
     const querySnapshot = await db.collection('users').get()    //consulta de prueba a db
 
     console.log(querySnapshot.docs[0].data()); //para ver los datos que se recuperan
-    res.send("Prueba de que funciona");
+    res.send("Prueba de que funciona:)");
 })
 
 router.get('/users', async (req, res) => {
@@ -72,4 +72,6 @@ router.get('/structure', async (req, res) => { //Para ver estructura, en este ca
         res.status(500).json({ error: "Error al leer estructura", details: error.message });
     }
 });
+
+
 module.exports = router;

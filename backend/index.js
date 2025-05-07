@@ -1,17 +1,10 @@
-const app= require('./app.js')  //recupera lo que se exporta en app
+const app = require('./app.js');
 
-app.listen(3000)
-console.log('server is running on port 3000') //para mostrar lo que muestra app
-
-
-app.get('/', (req, res) => {
-    res.send('Prueba de que funciona');
-  });
-  
-  // Configuración del puerto para Vercel
+if (require.main === module) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-  }).on('error', (err) => {
-    console.error('Server error:', err);
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
   });
+} else {
+  module.exports = app; // Para Vercel
+}
