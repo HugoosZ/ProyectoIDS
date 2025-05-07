@@ -5,15 +5,17 @@
       "src": "backend/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": [
-          "config/**"
-        ]
+        "includeFiles": ["config/**"]
       }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
+      "dest": "backend/index.js"
+    },
+    {
+      "src": "/",
       "dest": "backend/index.js"
     }
   ]
