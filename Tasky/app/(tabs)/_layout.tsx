@@ -1,8 +1,7 @@
-// Archivo: (tabs)/_layout.tsx
+// Archivo: app/(tabs)/_layout.tsx
 import { createDrawerNavigator } from '@react-navigation/drawer';
 import React from 'react';
 import AdminMain from '../admin/main';
-import ForgotPassword from './forgotPassword';
 
 const Drawer = createDrawerNavigator();
 
@@ -11,7 +10,7 @@ export default function Layout() {
     <Drawer.Navigator
       initialRouteName="AdminMain"
       screenOptions={{
-        headerShown: false, // Puedes ajustar esto según tus necesidades
+        headerShown: false,
       }}
     >
       <Drawer.Screen
@@ -19,13 +18,6 @@ export default function Layout() {
         component={AdminMain}
         options={{
           title: 'Panel Administrativo',
-        }}
-      />
-      <Drawer.Screen
-        name="ForgotPassword"
-        component={ForgotPassword}
-        options={{
-          title: 'Recuperar Contraseña',
         }}
       />
     </Drawer.Navigator>
