@@ -1,6 +1,6 @@
 //archivos donde se deben crear todas las rutas de acceso a la db
 const {Router} = require('express');
-const {db} = require('../firebase'); // para traer el objeto db que se exporta de firebase.js
+const {db, auth} = require('../firebase'); // para traer el objeto db que se exporta de firebase.js
 
 const router = Router();
 
@@ -29,7 +29,6 @@ router.get('/users', async (req, res) => {
 
 
 //ruta login
-
 router.post('/login', async (req, res) => {
     const { rut, idToken } = req.body;
   
@@ -38,7 +37,7 @@ router.post('/login', async (req, res) => {
     }
   
     try {
-      // Buscar el email asociado al RUT
+      // Buscar usuario por rut
       const snapshot = await db.collection('users').where('rut', '==', rut).get();
   
       if (snapshot.empty) {
@@ -48,10 +47,9 @@ router.post('/login', async (req, res) => {
       const userData = snapshot.docs[0].data();
       const email = userData.email;
   
-      // Verificar el token recibido desde frontend
+      // Verificar token
       const decodedToken = await auth.verifyIdToken(idToken);
   
-      // Confirmar que el email del token sea el esperado
       if (decodedToken.email !== email) {
         return res.status(401).json({ error: 'Token inválido para este RUT' });
       }
@@ -63,4 +61,9 @@ router.post('/login', async (req, res) => {
       res.status(500).json({ error: 'Error interno del servidor' });
     }
   });
+
+  //asignar tareas a usuarios
+  //router.post('/asigneTask', (res,req) =>{
+
+  //});
 module.exports = router;
