@@ -19,6 +19,11 @@ app.use(cors({
 // Importa y usa los routers con prefijos claros
 const mainRouter = require('./routes/index');
 const adminRouter = require('./routes/adminRoutes');
+const taskRoutes = require('./routes/tasks');
+const usersRoutes = require('./routes/users');
+
+router.use('/api', taskRoutes);
+router.use('/api', usersRoutes);
 
 app.use('/api', mainRouter);       // Todas las rutas de index.js empezarán con /api
 app.use('/api/', adminRouter); // Rutas admin empezarán con /api/admin
