@@ -10,8 +10,11 @@ app.use(express.json()); // permite entender formularios que recibe por ejemplo 
 app.use(express.urlencoded({extended: false}));
 
 const cors = require('cors');
-app.use(cors());
-
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
 
 // Importa y usa los routers con prefijos claros
 const mainRouter = require('./routes/index');
