@@ -1,17 +1,15 @@
-//Aquí está la lógica para conectarnos a Firebase
-const { getAuth } = require('firebase-admin/auth');
-require('dotenv').config(); //solo para usar los .env
-const{initializeApp, applicationDefault}=require('firebase-admin/app') ;//para inicializar firebase en el proyecto 
-const{getFirestore}=require('firebase-admin/firestore'); //para acceder al servicio firestore (a la bbdd en si)
+// Importar el SDK de Firebase Admin
+import admin from 'firebase-admin';
 
-initializeApp({
-    credential: applicationDefault(), //busca automaticamente las credenciales, para esto deben 
-                                     //dentro del archivo .env dentro de la carpeta backend
-});
+// Inicializar solo si no está inicializado
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(), // o admin.credential.cert() si usas una key JSON
+    databaseURL: "https://<your-project-id>.firebaseio.com"
+  });
+}
 
-const db = getFirestore();  //obtiene la db
-const auth = getAuth();
+const auth = admin.auth();
+const db = admin.firestore();
 
-module.exports = {
-    db, auth    //la exportamos para usarla en app.js
-};
+export { auth, db };
