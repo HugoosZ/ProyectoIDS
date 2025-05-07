@@ -4,10 +4,8 @@ const router = express.Router();
 
 const taskRoutes = require('./tasks');
 const usersRoutes = require('./users');
-const loginRoute = require('./login');
 
-router.use('/tasks', taskRoutes);
-router.use('/login', loginRoute);
-router.use('/users', usersRoutes);
+router.use('/api', taskRoutes);
+router.use('/api', usersRoutes);
 
 module.exports = router;
