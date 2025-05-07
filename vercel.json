@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "backend/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["config/**"]
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -16,7 +13,8 @@
     },
     {
       "src": "/",
-      "dest": "backend/index.js"
+      "dest": "backend/index.js",
+      "methods": ["GET"]
     }
   ]
 }
