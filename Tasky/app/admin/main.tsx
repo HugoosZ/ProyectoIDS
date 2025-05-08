@@ -1,71 +1,146 @@
-import { useState } from 'react';
-import { Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import globalStyles from '../globalStyles'; // Usando los estilos globales
+import { useState, useRef } from 'react';
+import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import {
+  Modal,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  Animated,
+  Dimensions,
+  StyleSheet,
+  SafeAreaView,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import globalStyles from '../globalStyles';
 
 export default function AdminMain() {
+  const router = useRouter();
+  const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
+  const screenWidth = Dimensions.get('window').width;
+  const slideAnim = useRef(new Animated.Value(-screenWidth)).current;
+  const backgroundOpacity = useRef(new Animated.Value(0)).current;
 
-  // Función para mostrar el menú deslizante
-  const toggleMenu = () => {
-    setModalVisible(!modalVisible);
+  const openMenu = () => {
+    setModalVisible(true);
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(backgroundOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  };
+
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: -screenWidth,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(backgroundOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      setModalVisible(false);
+    });
   };
 
   return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      {/* Contenedor general */}
-      <View style={globalStyles.formContainer}>
-        {/* Header con el botón de menú y el texto al lado */}
-        <View style={globalStyles.headerContainer}>
-          {/* Contenedor para el botón */}
-          <View style={globalStyles.menuButtonContainer}>
-            <TouchableOpacity style={globalStyles.menuButton} onPress={toggleMenu}>
-              <Text style={globalStyles.buttonText}>☰</Text> {/* Icono de 3 rayas */}
-            </TouchableOpacity>
-          </View>
-
-          {/* Contenedor para el texto */}
-          <View style={globalStyles.welcomeTextContainer}>
-            <Text style={[globalStyles.welcomeText, { fontSize: 16 }]}>Bienvenido, Administrador</Text> {/* Texto al lado del botón */}
-          </View>
-        </View>
-
-        {/* Opciones del menú */}
-        <Modal
-          transparent={true}
-          visible={modalVisible}
-          animationType="slide"
-          onRequestClose={toggleMenu}
-        >
-          <TouchableWithoutFeedback onPress={toggleMenu}>
-            <View style={globalStyles.modalBackground}>
-              <TouchableWithoutFeedback>
-                <View style={globalStyles.modalContainer}>
-                  {/* Cerrar el menú */}
-                  <TouchableOpacity style={globalStyles.closeButton} onPress={toggleMenu}>
-                    <Text style={globalStyles.closeButtonText}>Cerrar</Text>
-                  </TouchableOpacity>
-
-                  {/* Opciones del menú */}
-                  <View style={globalStyles.menuOptions}>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Crear/Editar Roles de Usuario</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Crear Tarea</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Asignar Tareas a Trabajadores</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Seguimiento de Tareas</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            </View>
-          </TouchableWithoutFeedback>
-        </Modal>
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* TopBar */}
+      <View style={globalStyles.topBar}>
+        <TouchableOpacity onPress={openMenu}>
+          <Ionicons name="menu" size={32} color="#6508c8" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('Notificaciones')}>
+          <Ionicons name="notifications-outline" size={32} color="#6508c8" />
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      {/* Contenido principal*/}
+      <View style={{ flex: 1 }}>
+        <View style={globalStyles.adminContainer}>
+          <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
+          
+        </View>
+      </View>
+
+      {/* BottomBar */}
+      <View style={globalStyles.bottomBar}>
+        <TouchableOpacity onPress={() => console.log('Calendario')}>
+          <Ionicons name="calendar-outline" size={28} color="#6508c8" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('Tarea')}>
+          <Ionicons name="add" size={28} color="#6508c8" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('Inicio')}>
+          <Ionicons name="home-outline" size={28} color="#6508c8" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal de menú lateral */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        animationType="none"
+        onRequestClose={closeMenu}
+      >
+        <TouchableWithoutFeedback onPress={closeMenu}>
+          <Animated.View
+            style={[
+              globalStyles.modalBackground,
+              {
+                backgroundColor: backgroundOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.36)'],
+                }),
+              },
+            ]}
+          >
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  globalStyles.modalContainer,
+                  { transform: [{ translateX: slideAnim }] },
+                ]}
+              >
+                <TouchableOpacity style={globalStyles.closeButton} onPress={closeMenu}>
+                  <Ionicons name="close" size={32} color="#6508c8" />
+                </TouchableOpacity>
+
+                <View style={globalStyles.menuOptions}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/VistaDiaria')}>
+                    <Text style={globalStyles.menuText}>Vista diaria</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/NuevaTarea')}>
+                    <Text style={globalStyles.menuText}>Nueva tarea</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/AddUsers')}>
+                    <Text style={globalStyles.menuText}>Añadir usuarios</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Analisis')}>
+                    <Text style={globalStyles.menuText}>Análisis</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Asistencia')}>
+                    <Text style={globalStyles.menuText}>Asistencia</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </SafeAreaView>
   );
 }
