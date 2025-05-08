@@ -55,4 +55,22 @@ router.put('/reassign-task/:taskId', async (req, res) => {
     }
   });
 
+  // Obtener todas las tareas de un usuario específico
+router.get('/tasks/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const snapshot = await db.collection('tasks').where('assignedTo', '==', userId).get();
+    const tasks = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error('Error al obtener tareas:', error);
+    res.status(500).json({ error: 'Error al obtener tareas' });
+  }
+
+});
+
   module.exports = router;
