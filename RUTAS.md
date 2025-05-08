@@ -1,4 +1,4 @@
-# 📡 Rutas de la API - Proyecto IDS
+#  Rutas de la API - Proyecto IDS
 
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
