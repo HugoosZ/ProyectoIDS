@@ -1,17 +1,12 @@
-//Aquí está la lógica para conectarnos a Firebase
-const { getAuth } = require('firebase-admin/auth');
-require('dotenv').config(); //solo para usar los .env
-const{initializeApp, applicationDefault}=require('firebase-admin/app') ;//para inicializar firebase en el proyecto 
-const{getFirestore}=require('firebase-admin/firestore'); //para acceder al servicio firestore (a la bbdd en si)
+require('dotenv').config();
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const firebaseCredentials = require(process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
-initializeApp({
-    credential: applicationDefault(), //busca automaticamente las credenciales, para esto deben 
-                                     //dentro del archivo .env dentro de la carpeta backend
+const firebaseApp = initializeApp({
+    credential: cert(firebaseCredentials)
 });
 
-const db = getFirestore();  //obtiene la db
-const auth = getAuth();
+const db = getFirestore();
 
-module.exports = {
-    db, auth    //la exportamos para usarla en app.js
-};
+module.exports = { db };
