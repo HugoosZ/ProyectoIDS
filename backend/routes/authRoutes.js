@@ -3,7 +3,7 @@ const router = express.Router();
 const { auth } = require('../firebase'); // Importa auth de Firebase
 
 // Ruta para validar el JWT
-router.get('/validate-token', async (req, res) => {
+router.post('/validate-token', async (req, res) => {
     try {
       console.log("Headers recibidos:", req.headers); // Log para ver headers
   
