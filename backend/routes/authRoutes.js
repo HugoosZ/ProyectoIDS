@@ -5,7 +5,7 @@ const { auth } = require('../firebase'); // Importa auth de Firebase
 // Ruta para validar el JWT
 router.get('/validate-token', async (req, res) => {
     try {
-      console.log("Headers recibidos:", req.headers); // 👈 Log para ver headers
+      console.log("Headers recibidos:", req.headers); // Log para ver headers
   
       const authHeader = req.headers.authorization;
       
@@ -20,11 +20,11 @@ router.get('/validate-token', async (req, res) => {
       }
   
       const token = authHeader.split(' ')[1];
-      console.log("✅ Token recibido:", token); // 👈 Log del token recibido
+      console.log("✅ Token recibido:", token); //  Log del token recibido
   
       // Verifica el token con Firebase
       const decodedToken = await auth.verifyIdToken(token);
-      console.log("🔑 Token decodificado:", decodedToken); // 👈 Datos del usuario
+      console.log("🔑 Token decodificado:", decodedToken); //  Datos del usuario
   
       res.json({ 
         valid: true,
