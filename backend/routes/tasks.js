@@ -1,7 +1,11 @@
 const { Router } = require('express');
 const { db } = require('../firebase');
+const { createTask } = require('../controllers/taskController');
+
 
 const router = Router();
+
+router.post('/tasks', createTask);
 
 
   // Reasignar tarea a usuario usando uid en lugar de rut
