@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management System</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        form {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #taskList {
+            margin-top: 20px;
+        }
+        .task-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+        .task-card h3 {
+            margin-top: 0;
+        }
+        .error {
+            color: red;
+            margin-bottom: 15px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Management System</h1>
+    
+    <form id="taskForm">
+        <div id="messageArea"></div>
+        
+        <div>
+            <label for="description">Task Description:</label>
+            <textarea id="description" rows="4" required></textarea>
+        </div>
+        
+        <div>
+            <label for="estimatedTime">Estimated Completion Time (hours):</label>
+            <input type="number" id="estimatedTime" min="0.1" step="0.1" required>
+        </div>
+        
+        <button type="submit">Create Task</button>
+    </form>
+    
+    <h2>Tasks</h2>
+    <div id="taskList"></div>
+
+    <!-- Link to external JavaScript file -->
+    <script src="../backend/routes/taskApp.js"></script>
+</body>
+</html>
