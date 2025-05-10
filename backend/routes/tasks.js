@@ -5,7 +5,7 @@ const { createTask } = require('../controllers/taskController');
 
 const router = Router();
 
-router.post('/tasks', createTask);
+router.post('/createTask', createTask); // Crear tarea usando el controlador en controllers/taskController.js
 
 
   // Reasignar tarea a usuario usando uid en lugar de rut
