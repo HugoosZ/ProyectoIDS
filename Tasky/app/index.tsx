@@ -7,6 +7,8 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import type { UserCredential } from 'firebase/auth';
+import { fetchUsers } from '../lib/api/users';
+import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
 
 const db = getFirestore();
 
@@ -15,6 +17,7 @@ export default function Index() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar la contraseña
   const router = useRouter();
+  const { setJwt } = useAuth();
 
   const handleLogin = async () => {
     if (!rut || !password) {
@@ -38,13 +41,21 @@ export default function Index() {
         const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const token = await user.getIdToken();
-      
+        
         console.log("TOKEN JWT:", token); // opcional
-      
+        setJwt(token); 
+
+
+        try {
+          const response = await fetchUsers(token); 
+        } catch (error) {
+          console.error(" Error al validar token con backend:", error);
+        }
+
         const rol = userData.isAdmin ? 'admin' : 'trabajador';
         router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
       } catch (error) {
-        Alert.alert('Error', 'Contraseña incorrecta');
+        console.error(error);
       }
   
     } catch (error: any) {
