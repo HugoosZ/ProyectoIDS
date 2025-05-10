@@ -21,12 +21,13 @@ const mainRouter = require('./routes/index');
 const adminRouter = require('./routes/adminRoutes');
 const taskRoutes = require('./routes/tasks');
 const usersRoutes = require('./routes/users');
-const aux = require('./routes/test.js')
+//const aux = require('./routes/test.js')
+const authRoutes = require('./routes/authRoutes');
 
 app.use('/api', taskRoutes);
 app.use('/api', usersRoutes);
-app.use('/api', aux);
-
+//app.use('/api', aux);
+app.use('/api/auth', authRoutes);
 
 
 app.use('/api', mainRouter);       // Todas las rutas de index.js empezarán con /api
