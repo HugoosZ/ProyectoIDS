@@ -2,10 +2,11 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import globalStyles from './globalStyles';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase'; // ajusta si está en otra carpeta
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
 
 const db = getFirestore();
 
@@ -33,17 +34,20 @@ export default function Index() {
       const email = userData.email;
   
       // 2. Autenticar con Firebase Auth usando email y password
-      await signInWithEmailAndPassword(auth, email, password)
-        .then(() => {
-          // 3. Redirigir según tipo de usuario
-          const rol = userData.isAdmin ? 'admin' : 'trabajador';
-          router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
-        })
-        .catch(() => {
-          Alert.alert('Error', 'Contraseña incorrecta');
-        });
+      try {
+        const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        const token = await user.getIdToken();
+      
+        console.log("TOKEN JWT:", token); // opcional
+      
+        const rol = userData.isAdmin ? 'admin' : 'trabajador';
+        router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
+      } catch (error) {
+        Alert.alert('Error', 'Contraseña incorrecta');
+      }
   
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
     }
