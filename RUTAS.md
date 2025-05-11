@@ -102,7 +102,7 @@ Permite a un administrador crear un nuevo usuario en la base de datos.
 **Respuesta**:
 Mensaje de éxito si la creación fue exitosa o error si falló alguna validación o permisos.
 
-
+**Ejemplo de fetch**:
 ```js
 fetch("https://proyecto-ids.vercel.app/api/createUser", {
   method: "POST",
@@ -122,3 +122,57 @@ fetch("https://proyecto-ids.vercel.app/api/createUser", {
 ```
 
 
+## GET /statustasks/:userId
+**Descripción**:
+Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana.
+Tanto el usuario como un administrador pueden consultar esta ruta.
+
+
+**Parámetro en URL**:
+    userId – UID del usuario cuyas tareas se desean consultar.
+
+**Headers requeridos**:
+    Authorization: "Bearer <token>"
+
+### Filtros disponibles (opcionales vía query params)
+
+| Parámetro | Tipo                  | Descripción |
+|-----------|-----------------------|-------------|
+| `status`  | string                | Filtra por estado de la tarea (por ejemplo: `"pendiente"`, `"completada"`). |
+| `priority`| string                | Filtra por prioridad (por ejemplo: `"alta"`, `"media"`, `"baja"`). |
+| `today`   | boolean (como string) | Si es `"true"`, filtra las tareas que tienen `startTime` en el día actual. |
+| `week`    | boolean (como string) | Si es `"true"`, filtra las tareas programadas en la semana actual (lunes a domingo). |
+
+
+> 🔸 **Nota**: Los filtros `today` y `week` son **excluyentes** entre sí. Si ambos están presentes, se evalúan en el orden del backend.
+
+**Respuesta**:
+  Devuelve un objeto con:
+
+  - Información del usuario (id, name, lastName)
+
+  - Conteo de tareas (count)
+
+  - Lista de tareas (tasks), cada una con:
+
+    - id, title, description, status, priority
+
+    - startTime, endTime, createdAt (como fechas JS)
+
+**Ejemplo de fetch**:
+
+```js
+const queryParams = new URLSearchParams({
+  status: "pendiente",
+  priority: "alta",
+  today: "true"
+});
+
+fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.toString()}`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  }
+})
+```
