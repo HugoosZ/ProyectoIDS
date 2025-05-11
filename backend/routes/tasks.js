@@ -145,7 +145,7 @@ router.get('/statustasks/:userId', verifyAndDecodeToken, async (req, res) => {
       };
     });
 
-    // 8. Enviar respuesta
+    
     res.status(200).json({
       user: {
         id: userId,
@@ -159,7 +159,7 @@ router.get('/statustasks/:userId', verifyAndDecodeToken, async (req, res) => {
   } catch (error) {
     console.error('Error al obtener tareas:', error);
     
-    if (error.code === 3) { // Código de error por consulta inválida
+    if (error.code === 3) { 
       return res.status(400).json({ error: 'Parámetros de consulta inválidos' });
     }
     
