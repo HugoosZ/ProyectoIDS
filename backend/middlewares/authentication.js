@@ -15,7 +15,7 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         
         // Paso 3: Añade el UID (RUT) al request
         req.user = {
-            uid: decodedToken.uid //   el RUT que usará isAdmin en authMiddleware.js
+            uid: decodedToken.uid //  
         };
         
         next(); // Pasa al siguiente middleware
