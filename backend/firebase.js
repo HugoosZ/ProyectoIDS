@@ -4,6 +4,8 @@ require('dotenv').config();
 //require('dotenv').config({ path: './db.env'});
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
+
 
 // 1. Parsear y asignar correctamente las credenciales
 const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
@@ -15,5 +17,6 @@ const firebaseApp = initializeApp({
 
 // 3. Obtener Firestore
 const db = getFirestore();
+const auth = getAuth();
 
-module.exports = { db };
+module.exports = { db, auth };
