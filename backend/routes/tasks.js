@@ -1,11 +1,13 @@
 const { Router } = require('express');
 const { db } = require('../firebase');
 const { createTask } = require('../controllers/taskController');
+const { checkAdminPrivileges } = require('../middlewares/authorization');
+const { verifyAndDecodeToken } = require('../middlewares/authentication');
 
 
 const router = Router();
 
-router.post('/createTask', createTask); // Crear tarea usando el controlador en controllers/taskController.js
+router.post('/createTask', verifyAndDecodeToken, checkAdminPrivileges, createTask); // Crear tarea usando el controlador en controllers/taskController.js
 
 
   // Reasignar tarea a usuario usando uid en lugar de rut
