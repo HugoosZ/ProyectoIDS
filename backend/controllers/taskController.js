@@ -50,8 +50,7 @@ exports.createTask = async (req, res) => {
 exports.taskStatus = async (req, res) => {
   try {
     console.log("ola")
-    const { userId } = req.params;
-    const requestingUserId = req.userId; // ID del usuario que hace la petición (del token)
+    const requestingUserId = req.user.uid; // ID del usuario que hace la petición (del token)
 
     // 1. Verificar permisos (solo el propio usuario o admin puede ver sus tareas)
     const userDoc = await db.collection("users").doc(requestingUserId).get();
