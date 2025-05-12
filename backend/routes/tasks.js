@@ -88,7 +88,7 @@ router.get('/statustasks/:userId', verifyAndDecodeToken, async (req, res) => {
     const { userId } = req.params;
     console.log(userId)
     console.log("aa")
-    const requestingUserId = req.userId; // ID del usuario que hace la petición (del token)
+    const requestingUserId = req.user.uid; // ID del usuario que hace la petición (del token)
     console.log(requestingUserId)
 
     // 1. Verificar permisos (solo el propio usuario o admin puede ver sus tareas)
