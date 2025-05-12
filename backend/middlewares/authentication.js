@@ -6,6 +6,8 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         const token = req.headers.authorization?.split(' ')[1]; // de la estructura Bearer <token>, se toma token gracias a [1]
         // Bearer es un esquema de auntentificacion que indica portador de credenciales 
 
+        console.log(token) //Borrar esto !!! Es solo para pruebas
+
         if (!token) {
             return res.status(401).json({ error: 'Token no proporcionado' });
         }
