@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { Picker } from '@react-native-picker/picker'; // asegurate de tenerlo instalado
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,27 +10,36 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import globalStyles from '../globalStyles';
-import { Picker } from '@react-native-picker/picker';
 
 const NuevaTarea = () => {
+  const [trabajadores, setTrabajadores] = useState([]);
+  const [trabajadorSeleccionado, setTrabajadorSeleccionado] = useState("");
+
   const [nombre, setNombre] = useState('');
   const [comentario, setComentario] = useState('');
-  const [trabajador, setTrabajador] = useState('');
   const [desde, setDesde] = useState(new Date());
   const [hasta, setHasta] = useState(new Date());
   const [showDesde, setShowDesde] = useState(false);
   const [showHasta, setShowHasta] = useState(false);
 
   // Lista de trabajadores de ejemplo (deberías obtenerla desde tu backend)
-  const trabajadores = [
-    { id: '1', nombre: 'Carlos' },
-    { id: '2', nombre: 'María' },
-    { id: '3', nombre: 'Juan' },
-  ];
+  useEffect(() => {
+    const obtenerUsuarios = async () => {
+      try {
+        const res = await fetch("https://proyecto-ids.vercel.app/api/users");
+        const data = await res.json();
+        setTrabajadores(data);
+      } catch (err) {
+        console.error("Error al obtener usuarios:", err);
+      }
+    };
 
+    obtenerUsuarios();
+  }, []);
+  
   const guardarTarea = () => {
     // Aquí podrías hacer una petición al backend
-    console.log({ nombre, desde, hasta, trabajador, comentario });
+    console.log({ nombre, desde, hasta, trabajadorSeleccionado, comentario });
   };
 
   return (
@@ -77,19 +87,25 @@ const NuevaTarea = () => {
           />
         )}
 
-        <Text style={globalStyles.subtitle}>Asignar a trabajador</Text>
-        <View style={[globalStyles.input, { padding: 0 }]}>
+        
+                <View>
+          <Text>Asignar a:</Text>
           <Picker
-            selectedValue={trabajador}
-            onValueChange={(itemValue) => setTrabajador(itemValue)}
-            style={{ width: '100%', height: 40 }}
+            selectedValue={trabajadorSeleccionado}
+            onValueChange={(itemValue) => setTrabajadorSeleccionado(itemValue)}
+            style={{ height: 50, width: '100%' }}
           >
             <Picker.Item label="Selecciona un trabajador" value="" />
-            {trabajadores.map((trab) => (
-              <Picker.Item key={trab.id} label={trab.nombre} value={trab.id} />
+            {trabajadores.map((usuario) => (
+              <Picker.Item
+                key={usuario.id}
+                label={`${usuario.name} ${usuario.lastName}`}
+                value={usuario.id}
+              />
             ))}
           </Picker>
         </View>
+
 
         <Text style={globalStyles.subtitle}>Comentarios</Text>
         <TextInput

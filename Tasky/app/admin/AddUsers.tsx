@@ -1,36 +1,53 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
-import { launchImageLibrary } from 'react-native-image-picker';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import globalStyles from '../globalStyles';
 
 const AddUsers = () => {
   const [nombre, setNombre] = useState('');
+  const [apellido, setApellido] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rol, setRol] = useState('');
   const [rut, setRUT] = useState('');
-  const [foto, setFoto] = useState(null);
 
-  const seleccionarImagen = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.5 });
-    if (!result.didCancel && result.assets && result.assets.length > 0) {
-      setFoto(result.assets[0]);
-    }
-  };
-
-  const manejarEnvio = () => {
-    if (!nombre || !rol || !rut) {
+  const manejarEnvio = async () => {
+    if (!nombre || !apellido || !email || !password || !rol || !rut) {
       Alert.alert('Campos requeridos', 'Por favor completa todos los campos.');
       return;
     }
 
-    // Aquí iría la lógica para enviar los datos al backend
-    console.log({ nombre, rol, rut, foto });
+    try {
+      const res = await fetch("https://proyecto-ids.vercel.app/api/createUser", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          rut,
+          name: nombre,
+          lastName: apellido,
+          role: rol
+        })
+      });
 
-    Alert.alert('Éxito', 'Trabajador agregado correctamente.');
-    // Limpiar campos
-    setNombre('');
-    setRol('');
-    setRUT('');
-    setFoto(null);
+      if (res.ok) {
+        Alert.alert('Éxito', 'Trabajador agregado correctamente.');
+        setNombre('');
+        setApellido('');
+        setEmail('');
+        setPassword('');
+        setRol('');
+        setRUT('');
+      } else {
+        const error = await res.text();
+        Alert.alert('Error', `No se pudo crear el usuario: ${error}`);
+      }
+    } catch (err) {
+      console.error("Error al enviar:", err);
+      Alert.alert('Error', 'Ocurrió un error al conectar con el servidor.');
+    }
   };
 
   return (
@@ -41,9 +58,35 @@ const AddUsers = () => {
         <Text style={globalStyles.subtitle}>Nombre</Text>
         <TextInput
           style={globalStyles.input}
-          placeholder="Nombre completo"
+          placeholder="Nombre"
           value={nombre}
           onChangeText={setNombre}
+        />
+
+        <Text style={globalStyles.subtitle}>Apellido</Text>
+        <TextInput
+          style={globalStyles.input}
+          placeholder="Apellido"
+          value={apellido}
+          onChangeText={setApellido}
+        />
+
+        <Text style={globalStyles.subtitle}>Correo electrónico</Text>
+        <TextInput
+          style={globalStyles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+        />
+
+        <Text style={globalStyles.subtitle}>Contraseña</Text>
+        <TextInput
+          style={globalStyles.input}
+          placeholder="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
         />
 
         <Text style={globalStyles.subtitle}>Rol / Cargo</Text>
@@ -61,18 +104,6 @@ const AddUsers = () => {
           value={rut}
           onChangeText={setRUT}
         />
-
-        <Text style={globalStyles.subtitle}>Foto</Text>
-        <TouchableOpacity style={globalStyles.button} onPress={seleccionarImagen}>
-          <Text style={globalStyles.buttonText}>Seleccionar Imagen</Text>
-        </TouchableOpacity>
-
-        {foto && (
-          <Image
-            source={{ uri: foto.uri }}
-            style={{ width: 100, height: 100, borderRadius: 15, marginVertical: 10 }}
-          />
-        )}
 
         <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
           <Text style={globalStyles.buttonText}>Guardar Trabajador</Text>

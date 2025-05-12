@@ -7,10 +7,10 @@ const globalStyles = StyleSheet.create({
     justifyContent: 'flex-start', // Cambiado a flex-start para alinear desde la parte superior
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(234, 234, 234, 1)', // Fondo claro
+    backgroundColor: 'rgb(236, 236, 236)', // Fondo claro
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 30,
   },
@@ -20,8 +20,9 @@ const globalStyles = StyleSheet.create({
     alignSelf: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: ' rgb(109, 82, 160)',
     marginBottom: 10,
   },
   input: {
@@ -144,7 +145,7 @@ const globalStyles = StyleSheet.create({
     color: 'black',
   },
   topBar: {
-    backgroundColor: 'rgba(234, 234, 234, 1)', 
+    backgroundColor: 'rgb(90, 22, 163)', 
     paddingTop: 15, 
     paddingBottom: 15,
     paddingHorizontal: 15,
