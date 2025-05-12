@@ -176,3 +176,20 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
   }
 })
 ```
+
+## `POST /createTask`
+**Descripcion:**
+
+Crea una tarea con el siguiente formato (JSON):
+```
+{
+"assignedTo": "",
+"createdBy": "",
+"description": "",
+"startTime": "",
+"endTime": "",
+"priority": "",
+"status": "",
+"title": ""
+}
+```
