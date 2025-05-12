@@ -84,13 +84,17 @@ router.get('/tasks/:userId', async (req, res) => {
 //router.get('/statustasks/:userId', verifyAndDecodeToken, taskStatus);
 router.get('/statustasks/:userId', verifyAndDecodeToken, async (req, res) => {
   try {
+    console.log("a")
     const { userId } = req.params;
+    console.log(userId)
+    console.log("aa")
     const requestingUserId = req.userId; // ID del usuario que hace la petición (del token)
+    console.log(requestingUserId)
 
     // 1. Verificar permisos (solo el propio usuario o admin puede ver sus tareas)
     const userDoc = await db.collection('users').doc(requestingUserId).get();
     const userData = userDoc.data();
-
+    console.log("aaa")
     if (userId !== requestingUserId && !userData.isAdmin) {
       return res.status(403).json({ error: 'No autorizado para ver estas tareas' });
     }
