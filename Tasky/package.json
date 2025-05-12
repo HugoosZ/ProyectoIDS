@@ -35,7 +35,7 @@
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.7",
     "expo-web-browser": "~14.1.6",
-    "firebase": "^11.6.1",
+    "firebase": "^11.7.1",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-native": "^0.79.2",
@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@types/firebase": "^2.4.32",
     "@types/react": "~19.0.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
