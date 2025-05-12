@@ -20,6 +20,8 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
             uid: decodedToken.uid //  
         };
         
+        console.log(decodedToken) //Borrar esto !!! Es solo para pruebas!!
+
         next(); // Pasa al siguiente middleware
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
