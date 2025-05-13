@@ -8,7 +8,7 @@ const { taskStatus } = require('../controllers/taskController');
 
 const router = Router();
 
-router.post('/createTask', createTask); // Crear tarea usando el controlador en controllers/taskController.js
+router.post('/createTask', verifyAndDecodeToken, checkAdminPrivileges, createTask); // Crear tarea usando el controlador en controllers/taskController.js
 
 
   // Reasignar tarea a usuario usando uid en lugar de rut
