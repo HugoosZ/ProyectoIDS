@@ -6,6 +6,8 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         const token = req.headers.authorization?.split(' ')[1]; // de la estructura Bearer <token>, se toma token gracias a [1]
         // Bearer es un esquema de auntentificacion que indica portador de credenciales 
 
+        console.log(token) //Borrar esto !!! Es solo para pruebas!!
+
         if (!token) {
             return res.status(401).json({ error: 'Token no proporcionado' });
         }
@@ -15,9 +17,11 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         
         // Paso 3: Añade el UID (RUT) al request
         req.user = {
-            uid: decodedToken.uid //   el RUT que usará isAdmin en authMiddleware.js
+            uid: decodedToken.uid //  
         };
         
+        console.log(decodedToken) //Borrar esto !!! Es solo para pruebas!!
+
         next(); // Pasa al siguiente middleware
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
