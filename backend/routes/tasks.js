@@ -62,6 +62,24 @@ router.put('/reassign-task/:taskId', async (req, res) => {
     }
   });
 
+router.get('/pendingTasks', async (req, res) => { // Visualizar tareas pendientes de forma general
+  try {
+    const snapshot = await db.collection('tasks')
+      .where('status', '==', 'pendiente')
+      .get();
+
+    const tasks = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    console.error('Error fetching pending tasks:', error);
+    res.status(500).json({ error: 'Failed to fetch pending tasks' });
+  }
+});
+
   // Obtener todas las tareas de un usuario específico
 router.get('/tasks/:userId', async (req, res) => {
   const { userId } = req.params;
