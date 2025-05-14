@@ -10,16 +10,13 @@ app.use(express.json()); // permite entender formularios que recibe por ejemplo 
 app.use(express.urlencoded({extended: false}));
 
 const cors = require('cors');
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }));
 
-const corsOptions = {
-  origin: '*', // o especifica solo el frontend, por ejemplo: 'http://localhost:8081'
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-app.use(cors(corsOptions));
-
-app.options('*', cors(corsOptions)); // respuesta para preflight
+app.options('*', cors()); // respuesta para preflight
 
 
 // Importa y usa los routers con prefijos claros
