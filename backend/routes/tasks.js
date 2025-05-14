@@ -95,8 +95,44 @@ router.get('/tasks/:userId', async (req, res) => {
     console.error('Error al obtener tareas:', error);
     res.status(500).json({ error: 'Error al obtener tareas' });
   }
-
 });
+
+// Actualizar el estado de una tarea
+router.patch('/tasks/:taskId/status', verifyAndDecodeToken, async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { status } = req.body;
+    const userId = req.user.uid;
+
+    const validStatuses = ['pendiente', 'en progreso', 'completada'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Estado inválido.' });
+    }
+
+    const taskRef = db.collection('tasks').doc(taskId);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+      return res.status(404).json({ error: 'Tarea no encontrada.' });
+    }
+
+    const taskData = taskDoc.data();
+
+    // Ensure the task belongs to the user
+    if (taskData.assignedTo !== userId) {
+      return res.status(403).json({ error: 'No tienes permiso para modificar esta tarea.' });
+    }
+
+    // Update the status
+    await taskRef.update({ status });
+
+    res.json({ message: 'Estado de la tarea actualizado exitosamente.' });
+  } catch (error) {
+    console.error('Error al actualizar el estado de la tarea:', error);
+    res.status(500).json({ error: 'Error al actualizar el estado.' });
+  }
+});
+
 
  // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 //router.get('/statustasks/:userId', verifyAndDecodeToken, taskStatus);
