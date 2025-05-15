@@ -193,3 +193,11 @@ Crea una tarea con el siguiente formato (JSON):
 "title": ""
 }
 ```
+
+## `PATCH /tasks/:taskId/status`
+**Descripcion**
+
+Permite realizar actualización en el estado de una tarea.
+
+Estados permitidos son `pendiente`, `en progreso` y `completada`.
+
