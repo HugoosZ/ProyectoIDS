@@ -62,12 +62,11 @@ router.put('/reassign-task/:taskId', async (req, res) => {
     }
   });
 
-router.get('/pendingTasks', async (req, res) => { // Visualizar tareas pendientes de forma general
+router.get('/pendingTasks/:userId', async (req, res) => { // Visualizar tareas pendientes de forma general
+  const { userId } = req.params;
   try {
     const snapshot = await db.collection('tasks')
-      .where('status', '==', 'pendiente')
-      .get();
-
+      .where('status', '==', 'pendiente' && 'assignedTo', '==', userId).get();
     const tasks = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()

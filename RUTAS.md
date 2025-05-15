@@ -22,7 +22,7 @@ fetch("https://proyecto-ids.vercel.app/api/tasks/gxoyKkAMIPMAeeoUHRZjIQhUkH52")
 
 ```
 
-## PUT /reassign-task/:taskId
+## `PUT /reassign-task/:taskId`
 **Descripción**:
 Reasigna una tarea a otro usuario, validando que quien lo hace sea administrador.
 
@@ -54,7 +54,7 @@ fetch("https://proyecto-ids.vercel.app/api/reassign-task/pBxZsNAPlEakYecJ022U", 
 
 
     
-## GET /checkAdmin
+## `GET /checkAdmin`
 **Descripción**:
 Verifica si el usuario autenticado (según el token JWT enviado) tiene permisos de administrador.
 
@@ -78,7 +78,7 @@ fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
 ```
 
 
-## POST /createUser
+## `POST /createUser`
 **Descripción**:
 Permite a un administrador crear un nuevo usuario en la base de datos.
 
@@ -122,7 +122,7 @@ fetch("https://proyecto-ids.vercel.app/api/createUser", {
 ```
 
 
-## GET /statustasks/:userId
+## `GET /statustasks/:userId`
 **Descripción**:
 Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana.
 Tanto el usuario como un administrador pueden consultar esta ruta.
@@ -178,7 +178,7 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
 ```
 
 ## `POST /createTask`
-**Descripcion:**
+**Descripción:**
 
 Crea una tarea con el siguiente formato (JSON):
 ```
@@ -195,7 +195,7 @@ Crea una tarea con el siguiente formato (JSON):
 ```
 
 ## `PATCH /tasks/:taskId/status`
-**Descripcion**
+**Descripción:**
 
 Permite realizar actualización en el estado de una tarea.
 
