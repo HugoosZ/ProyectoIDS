@@ -1,128 +1,113 @@
-import { Picker } from '@react-native-picker/picker'; // asegurate de tenerlo instalado
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Platform
-} from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { View, Text, Alert, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '../../lib/context/AuthContext';
+import { fetchUsers } from '../../lib/api/users';
 import globalStyles from '../globalStyles';
 
-const NuevaTarea = () => {
-  const [trabajadores, setTrabajadores] = useState([]);
-  const [trabajadorSeleccionado, setTrabajadorSeleccionado] = useState("");
+export default function NuevaTarea() {
+  const { jwt } = useAuth();
+  const router = useRouter();
 
-  const [nombre, setNombre] = useState('');
-  const [comentario, setComentario] = useState('');
-  const [desde, setDesde] = useState(new Date());
-  const [hasta, setHasta] = useState(new Date());
-  const [showDesde, setShowDesde] = useState(false);
-  const [showHasta, setShowHasta] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Lista de trabajadores de ejemplo (deberías obtenerla desde tu backend)
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+  const [priority, setPriority] = useState('');
+  const [status, setStatus] = useState('');
+  const [assignedTo, setAssignedTo] = useState('');
+
   useEffect(() => {
-    const obtenerUsuarios = async () => {
+    const validateUser = async () => {
+      if (!jwt) {
+        Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
+        router.push('/');
+        return;
+      }
+
       try {
-        const res = await fetch("https://proyecto-ids.vercel.app/api/users");
+        const user = await fetchUsers(jwt);
+        setUserData(user);
+
+        const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${jwt}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("No autorizado");
+
         const data = await res.json();
-        setTrabajadores(data);
-      } catch (err) {
-        console.error("Error al obtener usuarios:", err);
+        setIsAdmin(data.isAdmin);
+      } catch (error) {
+        Alert.alert("Error", "No tienes permisos para crear tareas.");
+        router.back();
       }
     };
 
-    obtenerUsuarios();
-  }, []);
-  
-  const guardarTarea = () => {
-    // Aquí podrías hacer una petición al backend
-    console.log({ nombre, desde, hasta, trabajadorSeleccionado, comentario });
+    validateUser();
+  }, [jwt]);
+
+  const handleCreateTask = async () => {
+    if (!isAdmin) {
+      Alert.alert("Error", "No tienes permisos para crear tareas.");
+      return;
+    }
+
+    try {
+      const response = await fetch('https://proyecto-ids.vercel.app/api/createTask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          startTime,
+          endTime,
+          priority,
+          status,
+          assignedTo,
+          createdBy: userData?.uid,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Error al crear la tarea');
+      const data = await response.json();
+
+      Alert.alert("Tarea creada", `ID: ${data.id}`);
+      router.back();
+    } catch (err) {
+      Alert.alert("Error", "No se pudo crear la tarea");
+      console.error(err);
+    }
   };
 
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Nueva Tarea</Text>
+      <Text style={globalStyles.title}>Crear Nueva Tarea</Text>
 
-      <View style={globalStyles.formContainer}>
-        <Text style={globalStyles.subtitle}>Nombre de la tarea</Text>
-        <TextInput
-          style={globalStyles.input}
-          placeholder="Ingresa el nombre"
-          value={nombre}
-          onChangeText={setNombre}
-        />
+      <TextInput placeholder="Título" style={globalStyles.input} value={title} onChangeText={setTitle} />
+      <TextInput placeholder="Descripción" style={globalStyles.input} value={description} onChangeText={setDescription} />
+      <TextInput placeholder="Inicio (ISO)" style={globalStyles.input} value={startTime} onChangeText={setStartTime} />
+      <TextInput placeholder="Fin (ISO)" style={globalStyles.input} value={endTime} onChangeText={setEndTime} />
+      <TextInput placeholder="Prioridad (alta, media, baja)" style={globalStyles.input} value={priority} onChangeText={setPriority} />
+      <TextInput placeholder="Estado (pendiente, completada, etc.)" style={globalStyles.input} value={status} onChangeText={setStatus} />
+      <TextInput placeholder="Rut del trabajador" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
 
-        <Text style={globalStyles.subtitle}>Desde</Text>
-        <TouchableOpacity onPress={() => setShowDesde(true)} style={globalStyles.input}>
-          <Text>{desde.toLocaleString()}</Text>
-        </TouchableOpacity>
-        {showDesde && (
-          <DateTimePicker
-            value={desde}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, date) => {
-              setShowDesde(false);
-              if (date) setDesde(date);
-            }}
-          />
-        )}
+      <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
+        <Text style={globalStyles.buttonText}>Crear Tarea</Text>
+      </TouchableOpacity>
 
-        <Text style={globalStyles.subtitle}>Hasta</Text>
-        <TouchableOpacity onPress={() => setShowHasta(true)} style={globalStyles.input}>
-          <Text>{hasta.toLocaleString()}</Text>
-        </TouchableOpacity>
-        {showHasta && (
-          <DateTimePicker
-            value={hasta}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, date) => {
-              setShowHasta(false);
-              if (date) setHasta(date);
-            }}
-          />
-        )}
-
-        
-                <View>
-          <Text>Asignar a:</Text>
-          <Picker
-            selectedValue={trabajadorSeleccionado}
-            onValueChange={(itemValue) => setTrabajadorSeleccionado(itemValue)}
-            style={{ height: 50, width: '100%' }}
-          >
-            <Picker.Item label="Selecciona un trabajador" value="" />
-            {trabajadores.map((usuario) => (
-              <Picker.Item
-                key={usuario.id}
-                label={`${usuario.name} ${usuario.lastName}`}
-                value={usuario.id}
-              />
-            ))}
-          </Picker>
-        </View>
-
-
-        <Text style={globalStyles.subtitle}>Comentarios</Text>
-        <TextInput
-          style={[globalStyles.input, { height: 80 }]}
-          multiline
-          numberOfLines={4}
-          placeholder="Escribe comentarios..."
-          value={comentario}
-          onChangeText={setComentario}
-        />
-
-        <TouchableOpacity style={globalStyles.button} onPress={guardarTarea}>
-          <Text style={globalStyles.buttonText}>Guardar Tarea</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
+        <Text style={globalStyles.buttonText}>Volver</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
-};
-
-export default NuevaTarea;
+}
+// Está en formato ISO pq no se ve el calendario en formato web 

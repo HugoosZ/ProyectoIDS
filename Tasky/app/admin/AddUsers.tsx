@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import globalStyles from '../globalStyles';
+import { useAuth } from '../../lib/context/AuthContext'; 
 
 const AddUsers = () => {
+  const { jwt } = useAuth(); 
+
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
@@ -16,24 +19,38 @@ const AddUsers = () => {
       return;
     }
 
+    if (!jwt) {
+      Alert.alert('Error de autenticación', 'Token no disponible. Inicia sesión nuevamente.');
+      return;
+    }
+
     try {
       const res = await fetch("https://proyecto-ids.vercel.app/api/createUser", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${jwt}` 
         },
         body: JSON.stringify({
+          rut,
           email,
           password,
-          rut,
           name: nombre,
           lastName: apellido,
-          role: rol
+          role: rol,
+          isAdmin: false 
         })
       });
 
       if (res.ok) {
-        Alert.alert('Éxito', 'Trabajador agregado correctamente.');
+        Alert.alert(
+          'Usuario creado',
+          'El trabajador fue registrado exitosamente.',
+          [
+            { text: 'OK', onPress: () => console.log('Popup cerrado') }
+          ]
+        );
+        
         setNombre('');
         setApellido('');
         setEmail('');
@@ -54,8 +71,6 @@ const AddUsers = () => {
     <ScrollView contentContainerStyle={globalStyles.container}>
       <Text style={globalStyles.title}>Agregar Nuevo Trabajador</Text>
 
-      <View style={globalStyles.formContainer}>
-        <Text style={globalStyles.subtitle}>Nombre</Text>
         <TextInput
           style={globalStyles.input}
           placeholder="Nombre"
@@ -63,7 +78,6 @@ const AddUsers = () => {
           onChangeText={setNombre}
         />
 
-        <Text style={globalStyles.subtitle}>Apellido</Text>
         <TextInput
           style={globalStyles.input}
           placeholder="Apellido"
@@ -71,7 +85,6 @@ const AddUsers = () => {
           onChangeText={setApellido}
         />
 
-        <Text style={globalStyles.subtitle}>Correo electrónico</Text>
         <TextInput
           style={globalStyles.input}
           placeholder="Email"
@@ -80,7 +93,6 @@ const AddUsers = () => {
           keyboardType="email-address"
         />
 
-        <Text style={globalStyles.subtitle}>Contraseña</Text>
         <TextInput
           style={globalStyles.input}
           placeholder="Contraseña"
@@ -89,18 +101,16 @@ const AddUsers = () => {
           secureTextEntry
         />
 
-        <Text style={globalStyles.subtitle}>Rol / Cargo</Text>
         <TextInput
           style={globalStyles.input}
-          placeholder="Ej: Electricista, Supervisor"
+          placeholder="Rol/Cargo"
           value={rol}
           onChangeText={setRol}
         />
 
-        <Text style={globalStyles.subtitle}>RUT</Text>
         <TextInput
           style={globalStyles.input}
-          placeholder="Ej: 12.345.678-9"
+          placeholder="Rut"
           value={rut}
           onChangeText={setRUT}
         />
@@ -108,7 +118,10 @@ const AddUsers = () => {
         <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
           <Text style={globalStyles.buttonText}>Guardar Trabajador</Text>
         </TouchableOpacity>
-      </View>
+
+        <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
+          <Text style={globalStyles.buttonText}>Volver</Text>
+        </TouchableOpacity>
     </ScrollView>
   );
 };
