@@ -15,6 +15,7 @@ router.get('/checkAdmin', verifyAndDecodeToken, checkAdminPrivileges, async (req
 });
 
 router.post('/createUser', verifyAndDecodeToken, checkAdminPrivileges, userController.createUser); 
+router.post('/createUserAUX', userController.createUser); //Ruta sin autenticacion
 
 
 router.get('/', async (req, res) => {
