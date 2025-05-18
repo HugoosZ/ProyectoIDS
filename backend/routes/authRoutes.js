@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { auth } = require('../firebase'); // Importa auth de Firebase
-const { login } = require('../controllers/authController');
+const { login, cambiarPassword } = require('../controllers/authController');
 
 // Ruta para validar el JWT
 router.post('/validate-token', async (req, res) => {
@@ -46,5 +46,8 @@ router.post('/validate-token', async (req, res) => {
 
 // Ruta de login
 router.post('/login', login);
+
+// Ruta para cambiar contraseña
+router.post('/cambiar-password', cambiarPassword);
 
 module.exports = router;
