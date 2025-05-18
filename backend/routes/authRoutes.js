@@ -39,7 +39,7 @@ router.post('/validate-token', async (req, res) => {
       res.status(401).json({ 
         valid: false, 
         error: 'Token inválido',
-        details: error.message // 👈 Mensaje de error detallado
+        details: error.message // Mensaje de error detallado
       });
     }
   });
