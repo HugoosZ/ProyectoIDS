@@ -1,6 +1,18 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from 'react-native';
 import globalStyles from './globalStyles';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../lib/context/AuthContext';
@@ -17,35 +29,22 @@ export default function Index() {
       Alert.alert('Error', 'Debe rellenar los campos');
       return;
     }
-  
+
     try {
       const response = await fetch('https://proyecto-ids.vercel.app/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          rut,
-          password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rut, password }),
       });
 
-      if (!response.ok) {
-        throw new Error('Error en la autenticación');
-      }
+      if (!response.ok) throw new Error('Error en la autenticación');
 
       const data = await response.json();
-      
-      if (!data.token) {
-        throw new Error('No se recibió el token de autenticación');
-      }
 
-      // Guardar el token en el contexto
+      if (!data.token) throw new Error('No se recibió el token de autenticación');
+
       setJwt(data.token);
-
-      // Redirigir según el rol del usuario
       router.push(data.isAdmin ? '/admin/main' : '/trabajador/maint');
-      
     } catch (error) {
       console.error('Error de login:', error);
       Alert.alert('Error', 'Credenciales incorrectas');
@@ -53,74 +52,103 @@ export default function Index() {
   };
 
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>¡Bienvenid@ a Tasky!</Text>
-
-      <Image
-        source={require('../assets/images/logotasky.jpg')}
-        style={styles.image}
-      />
-
-      <View style={globalStyles.formContainer}>
-        <Text style={globalStyles.subtitle}>Ingresa a tu cuenta</Text>
-
-        <TextInput
-          style={globalStyles.input}
-          placeholder="RUT (Ej: 12345678-9)"
-          placeholderTextColor="#999"
-          value={rut}
-          onChangeText={setRut}
-        />
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={globalStyles.input}
-            placeholder="Contraseña"
-            secureTextEntry={!showPassword} // Si showPassword es false, ocultar la contraseña
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
-          />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)} // Cambiar el estado de showPassword
-            style={styles.eyeIcon}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={24}
-              color="#999"
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#e9e9e9' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={{ flex: 1 }}>
+          {/* Logo en esquina superior derecha, más abajo */}
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../assets/images/logotasky.jpg')}
+              style={styles.logo}
+              resizeMode="contain"
             />
-          </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.container}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.titleCentered}>¡Bienvenid@ a Tasky!</Text>
+
+            <View style={globalStyles.formContainer}>
+              <Text style={globalStyles.subtitle}>Ingresa a tu cuenta</Text>
+
+              <TextInput
+                style={globalStyles.input}
+                placeholder="RUT (Ej: 12345678-9)"
+                placeholderTextColor="#999"
+                value={rut}
+                onChangeText={setRut}
+              />
+
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Contraseña"
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor="#999"
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={24}
+                    color="#999"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={globalStyles.button} onPress={handleLogin}>
+                <Text style={globalStyles.buttonText}>Iniciar sesión</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => router.push('./forgotPassword')}>
+                <Text style={globalStyles.registerLink}>¿Olvidaste tu contraseña?</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </View>
-
-        <TouchableOpacity style={globalStyles.button} onPress={handleLogin}>
-          <Text style={globalStyles.buttonText}>Iniciar sesión</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('./forgotPassword')}>
-          <Text style={globalStyles.registerLink}>
-            ¿Olvidaste tu contraseña?
-          </Text>
-        </TouchableOpacity>
-
-      </View>
-    </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  image: {
+  logoContainer: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 40,
-    height: 40,
+    top: 50, // más abajo para no chocar con la batería/notch
+    right: 15,
+    zIndex: 10,
+  },
+  logo: {
+    width: 70,
+    height: 70,
+  },
+  container: {
+    flexGrow: 1,
+    paddingTop: 0,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    backgroundColor: '#e9e9e9',  // color de fondo cambiado aquí
+  },
+  titleCentered: {
+    ...globalStyles.title,
+    textAlign: 'center',
   },
   passwordContainer: {
     position: 'relative',
+    marginBottom: 20,
   },
   eyeIcon: {
     position: 'absolute',
     right: 10,
-    top: 10,
+    top: 15,
   },
 });
