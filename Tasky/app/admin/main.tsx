@@ -19,6 +19,9 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
+import TopBar from '../../components/TopBar';
+import BottomBar from '../../components/BottomBar';
+
 
 export default function AdminMain() {
   const router = useRouter();
@@ -88,10 +91,10 @@ export default function AdminMain() {
   const tareasFiltradas = tareas.filter((tarea) => {
     if (estadoFiltro === 'todas') return true;
     if (estadoFiltro === 'pendientes') {
-      return tarea.status === 'Pendiente' || tarea.status === 'En curso';
+      return tarea.status === 'Pendiente' || tarea.status === 'En curso'||tarea.status ==='pendiente' ;
     }
     if (estadoFiltro === 'finalizadas') {
-      return tarea.status === 'Completada' || tarea.status === 'Finalizado';
+      return tarea.status === 'Completada' || tarea.status === 'Finalizado' ||tarea.status ==='completada' ;
     }
     return true;
   });
@@ -105,17 +108,9 @@ export default function AdminMain() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      {/* TopBar */}
-      <View style={globalStyles.topBar}>
-        <TouchableOpacity onPress={openMenu}>
-          <Ionicons name="menu" size={32} color="#ffff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Notificaciones')}>
-          <Ionicons name="notifications-outline" size={32} color="#ffff" />
-        </TouchableOpacity>
-      </View>
+      
+      <TopBar />
 
-      {/* VistaDiaria insertada aquí */}
       <View style={globalStyles.container}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
@@ -184,71 +179,9 @@ export default function AdminMain() {
         )}
       </View>
 
-      {/* BottomBar */}
-      <View style={globalStyles.bottomBar}>
-        <TouchableOpacity onPress={() => console.log('Calendario')}>
-          <Ionicons name="calendar-outline" size={28} color="#6508c8" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/admin/NuevaTarea')}>
-          <Ionicons name="add" size={28} color="#6508c8" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push('/admin/main')}>
-          <Ionicons name="home-outline" size={28} color="#6508c8" />
-        </TouchableOpacity>
-      </View>
+      <BottomBar />
 
-      {/* Modal de menú lateral */}
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        animationType="none"
-        onRequestClose={closeMenu}
-      >
-        <TouchableWithoutFeedback onPress={closeMenu}>
-          <Animated.View
-            style={[
-              globalStyles.modalBackground,
-              {
-                backgroundColor: backgroundOpacity.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.36)'],
-                }),
-              },
-            ]}
-          >
-            <TouchableWithoutFeedback>
-              <Animated.View
-                style={[
-                  globalStyles.modalContainer,
-                  { transform: [{ translateX: slideAnim }] },
-                ]}
-              >
-                <TouchableOpacity style={globalStyles.closeButton} onPress={closeMenu}>
-                  <Ionicons name="close" size={32} color="#6508c8" />
-                </TouchableOpacity>
 
-                <View style={globalStyles.menuOptions}>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/main')}>
-                    <Text style={globalStyles.menuText}>Vista diaria</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/NuevaTarea')}>
-                    <Text style={globalStyles.menuText}>Nueva tarea</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/AddUsers')}>
-                    <Text style={globalStyles.menuText}>Añadir usuarios</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Analisis')}>
-                    <Text style={globalStyles.menuText}>Análisis</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Asistencia')}>
-                    <Text style={globalStyles.menuText}>Asistencia</Text>
-                  </TouchableOpacity>
-                </View>
-              </Animated.View>
-            </TouchableWithoutFeedback>
-          </Animated.View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </SafeAreaView>
   );
 }
