@@ -74,7 +74,7 @@ export default function Index() {
         // 4. Redirigir según tipo de usuario (basado en los datos de Firestore)
         const rol = userData.isAdmin ? 'admin' : 'trabajador'; // Asegúrate que el campo se llame 'isAdmin'
         console.log(`Rol del usuario: ${rol}. Redirigiendo...`);
-        router.replace(rol === 'admin' ? '/admin/main' : '/trabajador/maint'); // Usar replace para no volver al login con el botón atrás
+        router.replace(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas'); // Usar replace para no volver al login con el botón atrás
       } else {
         // Este caso es improbable si signInWithEmailAndPassword no lanzó error, pero por si acaso.
         Alert.alert('Error de Autenticación', 'No se pudo obtener la información del usuario después del login.');
