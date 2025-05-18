@@ -93,7 +93,7 @@ export default function Index() {
           <Text style={globalStyles.buttonText}>Iniciar sesión</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/forgotPassword')}>
+        <TouchableOpacity onPress={() => router.push('./forgotPassword')}>
           <Text style={globalStyles.registerLink}>
             ¿Olvidaste tu contraseña?
           </Text>
