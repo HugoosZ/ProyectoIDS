@@ -16,8 +16,6 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
 
-app.options('*', cors()); // respuesta para preflight
-
 
 // Importa y usa los routers con prefijos claros
 const mainRouter = require('./routes/index');
