@@ -12,21 +12,15 @@ router.post('/createTask', verifyAndDecodeToken, checkAdminPrivileges, createTas
 
 
   // Reasignar tarea a usuario usando uid en lugar de rut
-router.put('/reassign-task/:taskId', async (req, res) => {
+router.put('/reassign-task/:taskId', checkAdminPrivileges, async (req, res) => {
   const { taskId } = req.params;
-  const { newAssignedToUid, adminUid } = req.body;
+  const { newAssignedToUid } = req.body;
 
-  if (!newAssignedToUid || !adminUid) {
+  if (!newAssignedToUid) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
   try {
-    // Verifica que el admin existe y tiene permisos
-    const adminDoc = await db.collection('users').doc(adminUid).get();
-    if (!adminDoc.exists || !adminDoc.data().isAdmin) {
-      return res.status(403).json({ error: 'Solo administradores pueden reasignar tareas' });
-    }
-
     // Verifica que el nuevo usuario existe
     const userDoc = await db.collection('users').doc(newAssignedToUid).get();
     if (!userDoc.exists) {
