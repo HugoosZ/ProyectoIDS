@@ -3,6 +3,7 @@ const { validarDigitoVerificador } = require('../utils/validadorRUT');
 
 const login = async (req, res) => {
     try {
+        console.log("a");
         const { rut, password } = req.body;
 
         if (!rut || !password) {
@@ -11,7 +12,7 @@ const login = async (req, res) => {
                 message: 'RUT y contraseña son requeridos'
             });
         }
-
+        console.log("b");
         // Validación del RUT usando la función existente
         try {
             if (!validarDigitoVerificador(rut)) {
@@ -26,7 +27,7 @@ const login = async (req, res) => {
                 message: 'Formato de RUT inválido. Debe ser como: 12345678-9'
             });
         }
-
+        console.log("c");
         try {
             // Aquí iría la lógica para autenticar con Firebase usando el RUT
             // Por ahora retornamos una respuesta de éxito simulada
@@ -44,7 +45,7 @@ const login = async (req, res) => {
                 message: 'Credenciales inválidas'
             });
         }
-
+        console.log("d");
     } catch (error) {
         console.error('Error en login:', error);
         res.status(500).json({
@@ -53,6 +54,7 @@ const login = async (req, res) => {
             error: error.message
         });
     }
+    console.log("e");
 };
 
 const cambiarPassword = async (req, res) => {
