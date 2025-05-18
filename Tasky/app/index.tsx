@@ -2,18 +2,15 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import globalStyles from './globalStyles';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../firebase'; // ajusta si está en otra carpeta
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
-
-const db = getFirestore();
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../lib/context/AuthContext';
 
 export default function Index() {
   const [rut, setRut] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar la contraseña
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { setJwt } = useAuth();
 
   const handleLogin = async () => {
     if (!rut || !password) {
@@ -22,30 +19,36 @@ export default function Index() {
     }
   
     try {
-      // 1. Buscar el correo asociado al RUT en Firestore
-      const userDoc = await getDoc(doc(db, 'users', rut));
-      if (!userDoc.exists()) {
-        Alert.alert('Error', 'Usuario no encontrado');
-        return;
+      const response = await fetch('https://proyecto-ids.vercel.app/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rut,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la autenticación');
       }
-  
-      const userData = userDoc.data();
-      const email = userData.email;
-  
-      // 2. Autenticar con Firebase Auth usando email y password
-      await signInWithEmailAndPassword(auth, email, password)
-        .then(() => {
-          // 3. Redirigir según tipo de usuario
-          const rol = userData.isAdmin ? 'admin' : 'trabajador';
-          router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
-        })
-        .catch(() => {
-          Alert.alert('Error', 'Contraseña incorrecta');
-        });
-  
+
+      const data = await response.json();
+      
+      if (!data.token) {
+        throw new Error('No se recibió el token de autenticación');
+      }
+
+      // Guardar el token en el contexto
+      setJwt(data.token);
+
+      // Redirigir según el rol del usuario
+      router.push(data.isAdmin ? '/admin/main' : '/trabajador/maint');
+      
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
+      console.error('Error de login:', error);
+      Alert.alert('Error', 'Credenciales incorrectas');
     }
   };
 
