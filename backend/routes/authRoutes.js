@@ -45,10 +45,7 @@ router.post('/validate-token', async (req, res) => {
   });
 
 // Ruta de login
-router.post('/login', login, async (req, res) => {
-  // Como ya se pasaron las auntenticaciones se puede postear el json
-   console.log("Login exitoso");
-});
+router.post('/login', login);
 
 // Ruta para cambiar contraseña
 router.post('/cambiar-password', cambiarPassword);
