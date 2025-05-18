@@ -44,7 +44,7 @@ export default function Index() {
       if (!data.token) throw new Error('No se recibió el token de autenticación');
 
       setJwt(data.token);
-      router.push(data.isAdmin ? '/admin/main' : '/trabajador/maint');
+      router.push(data.isAdmin ? '/admin/main' : '/trabajador/ver-tareas');
     } catch (error) {
       console.error('Error de login:', error);
       Alert.alert('Error', 'Credenciales incorrectas');
@@ -82,25 +82,25 @@ export default function Index() {
                 placeholderTextColor="#999"
                 value={rut}
                 onChangeText={setRut}
+                autoCapitalize="none"
               />
 
-              <View style={styles.passwordContainer}>
+              <View style={{ ...globalStyles.input, flexDirection: 'row', alignItems: 'center' }}>
                 <TextInput
-                  style={globalStyles.input}
+                  style={{ flex: 1 }}
                   placeholder="Contraseña"
-                  secureTextEntry={!showPassword}
                   placeholderTextColor="#999"
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  autoCapitalize="none"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
-                >
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                   <Ionicons
-                    name={showPassword ? 'eye-off' : 'eye'}
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={24}
-                    color="#999"
+                    color="#666"
+                    style={{ paddingHorizontal: 8 }}
                   />
                 </TouchableOpacity>
               </View>
@@ -136,19 +136,10 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingHorizontal: 20,
     justifyContent: 'center',
-    backgroundColor: '#e9e9e9',  // color de fondo cambiado aquí
+    backgroundColor: '#e9e9e9',
   },
   titleCentered: {
     ...globalStyles.title,
     textAlign: 'center',
-  },
-  passwordContainer: {
-    position: 'relative',
-    marginBottom: 20,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 10,
-    top: 15,
   },
 });
