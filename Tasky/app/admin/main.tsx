@@ -1,71 +1,298 @@
-import { useState } from 'react';
-import { Modal, ScrollView, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
-import globalStyles from '../globalStyles'; // Usando los estilos globales
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import {
+  Modal,
+  Text,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  Animated,
+  Dimensions,
+  StyleSheet,
+  SafeAreaView,
+  FlatList,
+  ScrollView,
+  Switch,
+  Platform,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Picker } from '@react-native-picker/picker';
+import globalStyles from '../globalStyles';
 
 export default function AdminMain() {
+  const router = useRouter();
+  const navigation = useNavigation();
   const [modalVisible, setModalVisible] = useState(false);
+  const screenWidth = Dimensions.get('window').width;
+  const slideAnim = useRef(new Animated.Value(-screenWidth)).current;
+  const backgroundOpacity = useRef(new Animated.Value(0)).current;
 
-  // Función para mostrar el menú deslizante
-  const toggleMenu = () => {
-    setModalVisible(!modalVisible);
+  const [tareas, setTareas] = useState([]);
+  const [estadoFiltro, setEstadoFiltro] = useState('todas');
+  const [verPorUsuarios, setVerPorUsuarios] = useState(false);
+
+  const openMenu = () => {
+    setModalVisible(true);
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(backgroundOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start();
   };
 
-  return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      {/* Contenedor general */}
-      <View style={globalStyles.formContainer}>
-        {/* Header con el botón de menú y el texto al lado */}
-        <View style={globalStyles.headerContainer}>
-          {/* Contenedor para el botón */}
-          <View style={globalStyles.menuButtonContainer}>
-            <TouchableOpacity style={globalStyles.menuButton} onPress={toggleMenu}>
-              <Text style={globalStyles.buttonText}>☰</Text> {/* Icono de 3 rayas */}
-            </TouchableOpacity>
-          </View>
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: -screenWidth,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+      Animated.timing(backgroundOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      setModalVisible(false);
+    });
+  };
 
-          {/* Contenedor para el texto */}
-          <View style={globalStyles.welcomeTextContainer}>
-            <Text style={[globalStyles.welcomeText, { fontSize: 16 }]}>Bienvenido, Administrador</Text> {/* Texto al lado del botón */}
+  useEffect(() => {
+    const fetchTareas = async () => {
+      try {
+        const res = await fetch("https://proyecto-ids.vercel.app/api/tasks");
+        const data = await res.json();
+        setTareas(data);
+      } catch (error) {
+        console.error("Error al obtener tareas:", error);
+      }
+    };
+
+    fetchTareas();
+  }, []);
+
+  const formatearFecha = (timestamp) => {
+    if (!timestamp?._seconds) return 'Fecha inválida';
+    const fecha = new Date(timestamp._seconds * 1000);
+    return fecha.toLocaleString();
+  };
+
+  const tareasFiltradas = tareas.filter((tarea) => {
+    if (estadoFiltro === 'todas') return true;
+    if (estadoFiltro === 'pendientes') {
+      return tarea.status === 'Pendiente' || tarea.status === 'En curso';
+    }
+    if (estadoFiltro === 'finalizadas') {
+      return tarea.status === 'Completada' || tarea.status === 'Finalizado';
+    }
+    return true;
+  });
+
+  const tareasPorUsuario = tareasFiltradas.reduce((acc, tarea) => {
+    const usuario = tarea.assignedTo || 'Sin asignar';
+    if (!acc[usuario]) acc[usuario] = [];
+    acc[usuario].push(tarea);
+    return acc;
+  }, {});
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      {/* TopBar */}
+      <View style={globalStyles.topBar}>
+        <TouchableOpacity onPress={openMenu}>
+          <Ionicons name="menu" size={32} color="#ffff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => console.log('Notificaciones')}>
+          <Ionicons name="notifications-outline" size={32} color="#ffff" />
+        </TouchableOpacity>
+      </View>
+
+      {/* VistaDiaria insertada aquí */}
+      <View style={globalStyles.container}>
+        <View style={styles.header}>
+          <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
+          <View style={styles.switchContainer}>
+            <Switch value={verPorUsuarios} onValueChange={() => setVerPorUsuarios(!verPorUsuarios)} />
           </View>
         </View>
 
-        {/* Opciones del menú */}
-        <Modal
-          transparent={true}
-          visible={modalVisible}
-          animationType="slide"
-          onRequestClose={toggleMenu}
-        >
-          <TouchableWithoutFeedback onPress={toggleMenu}>
-            <View style={globalStyles.modalBackground}>
-              <TouchableWithoutFeedback>
-                <View style={globalStyles.modalContainer}>
-                  {/* Cerrar el menú */}
-                  <TouchableOpacity style={globalStyles.closeButton} onPress={toggleMenu}>
-                    <Text style={globalStyles.closeButtonText}>Cerrar</Text>
-                  </TouchableOpacity>
-
-                  {/* Opciones del menú */}
-                  <View style={globalStyles.menuOptions}>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Crear/Editar Roles de Usuario</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Crear Tarea</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Asignar Tareas a Trabajadores</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={globalStyles.menuOption}>
-                      <Text style={globalStyles.menuText}>Seguimiento de Tareas</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
+        {!verPorUsuarios && (
+          <View style={styles.filtroContainer}>
+            <Text style={globalStyles.subtitle}>Lista de tareas</Text>
+            <Text style={styles.label}>Filtrar por estado:</Text>
+            <View style={styles.pickerWrapper}>
+              <Picker
+                selectedValue={estadoFiltro}
+                onValueChange={(itemValue) => setEstadoFiltro(itemValue)}
+                style={styles.picker}
+                mode="dropdown"
+              >
+                <Picker.Item label="Todas" value="todas" />
+                <Picker.Item label="Pendientes" value="pendientes" />
+                <Picker.Item label="Finalizadas" value="finalizadas" />
+              </Picker>
             </View>
-          </TouchableWithoutFeedback>
-        </Modal>
+          </View>
+        )}
+
+        {tareasFiltradas.length === 0 ? (
+          <Text>No hay tareas para mostrar</Text>
+        ) : verPorUsuarios ? (
+          <ScrollView>
+            <Text style={globalStyles.subtitle}>Lista de usuarios</Text>
+            {Object.keys(tareasPorUsuario).map((usuario) => (
+              
+              <View key={usuario} style={{ marginBottom: 20 }}>
+                
+                <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>{usuario}</Text>
+                {tareasPorUsuario[usuario].map((tarea) => (
+                  
+                  <View key={tarea.id || Math.random().toString()} style={styles.tareaContainer}>
+                    
+                    <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
+                    <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
+                    <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
+                    <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={tareasFiltradas}
+            keyExtractor={(item) => item.id || Math.random().toString()}
+            renderItem={({ item: tarea }) => (
+              
+              <View style={styles.tareaContainer}>
+                <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
+                <Text><Text style={styles.labelBold}>Asignado a:</Text> {tarea.assignedTo}</Text>
+                <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
+                <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
+                <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
+              </View>
+            )}
+          />
+        )}
       </View>
-    </ScrollView>
+
+      {/* BottomBar */}
+      <View style={globalStyles.bottomBar}>
+        <TouchableOpacity onPress={() => console.log('Calendario')}>
+          <Ionicons name="calendar-outline" size={28} color="#6508c8" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/admin/NuevaTarea')}>
+          <Ionicons name="add" size={28} color="#6508c8" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push('/admin/main')}>
+          <Ionicons name="home-outline" size={28} color="#6508c8" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Modal de menú lateral */}
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        animationType="none"
+        onRequestClose={closeMenu}
+      >
+        <TouchableWithoutFeedback onPress={closeMenu}>
+          <Animated.View
+            style={[
+              globalStyles.modalBackground,
+              {
+                backgroundColor: backgroundOpacity.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0.36)'],
+                }),
+              },
+            ]}
+          >
+            <TouchableWithoutFeedback>
+              <Animated.View
+                style={[
+                  globalStyles.modalContainer,
+                  { transform: [{ translateX: slideAnim }] },
+                ]}
+              >
+                <TouchableOpacity style={globalStyles.closeButton} onPress={closeMenu}>
+                  <Ionicons name="close" size={32} color="#6508c8" />
+                </TouchableOpacity>
+
+                <View style={globalStyles.menuOptions}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/main')}>
+                    <Text style={globalStyles.menuText}>Vista diaria</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/NuevaTarea')}>
+                    <Text style={globalStyles.menuText}>Nueva tarea</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/AddUsers')}>
+                    <Text style={globalStyles.menuText}>Añadir usuarios</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Analisis')}>
+                    <Text style={globalStyles.menuText}>Análisis</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Asistencia')}>
+                    <Text style={globalStyles.menuText}>Asistencia</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </TouchableWithoutFeedback>
+          </Animated.View>
+        </TouchableWithoutFeedback>
+      </Modal>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filtroContainer: {
+    marginBottom: 20,
+  },
+  tareaContainer: {
+    backgroundColor: '#f2f2f2',
+    padding: 12,
+    borderRadius: 8,
+    marginVertical: 8,
+  },
+  nombre: {
+    fontSize: 16,
+    color: ' rgb(132, 106, 180)',
+    fontWeight: 'bold',
+  },
+  label: {
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  labelBold: {
+    fontWeight: 'bold',
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  picker: {
+    height: 20,
+    width: '100%',
+  },
+});
