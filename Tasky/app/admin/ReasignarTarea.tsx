@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/context/AuthContext';
 import { fetchUsers } from '../../lib/api/users';
 import globalStyles from '../globalStyles';
-import { Picker } from '@react-native-picker/picker'; // Importa Picker
+import { Picker } from '@react-native-picker/picker'; 
 
 
 export default function ReasignarTarea() {
