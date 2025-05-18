@@ -3,7 +3,7 @@ export async function fetchUsers(jwt: string) {
     throw new Error("No se proporciono token JWT")
   }
   try {
-    const response = await fetch("https://proyecto-ids.vercel.app/api/auth/validate-token", {
+    const response = await fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${jwt}`,

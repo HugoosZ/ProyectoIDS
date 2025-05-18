@@ -2,20 +2,13 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import globalStyles from './globalStyles';
-import { auth } from '../firebase'; // ajusta si está en otra carpeta
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import type { UserCredential } from 'firebase/auth';
-import { fetchUsers } from '../lib/api/users';
-import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
-
-const db = getFirestore();
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../lib/context/AuthContext';
 
 export default function Index() {
   const [rut, setRut] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar la contraseña
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { setJwt } = useAuth();
 
@@ -26,41 +19,36 @@ export default function Index() {
     }
   
     try {
-      // 1. Buscar el correo asociado al RUT en Firestore
-      const userDoc = await getDoc(doc(db, 'users', rut));
-      if (!userDoc.exists()) {
-        Alert.alert('Error', 'Usuario no encontrado');
-        return;
+      const response = await fetch('https://proyecto-ids.vercel.app/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          rut,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error en la autenticación');
       }
-  
-      const userData = userDoc.data();
-      const email = userData.email;
-  
-      // 2. Autenticar con Firebase Auth usando email y password
-      try {
-        const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        const token = await user.getIdToken();
-        
-        console.log("TOKEN JWT:", token); // opcional
-        setJwt(token); 
 
-
-        try {
-          const response = await fetchUsers(token); 
-        } catch (error) {
-          console.error(" Error al validar token con backend:", error);
-        }
-
-        const rol = userData.isAdmin ? 'admin' : 'trabajador';
-        router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
-      } catch (error) {
-        console.error(error);
+      const data = await response.json();
+      
+      if (!data.token) {
+        throw new Error('No se recibió el token de autenticación');
       }
-  
-    } catch (error: any) {
-      console.error(error);
-      Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
+
+      // Guardar el token en el contexto
+      setJwt(data.token);
+
+      // Redirigir según el rol del usuario
+      router.push(data.isAdmin ? '/admin/main' : '/trabajador/maint');
+      
+    } catch (error) {
+      console.error('Error de login:', error);
+      Alert.alert('Error', 'Credenciales incorrectas');
     }
   };
 
