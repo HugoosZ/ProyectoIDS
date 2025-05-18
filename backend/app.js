@@ -12,9 +12,12 @@ app.use(express.urlencoded({extended: false}));
 const cors = require('cors');
 app.use(cors({
     origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
   }));
+
+app.options('*', cors()); // respuesta para preflight
+
 
 // Importa y usa los routers con prefijos claros
 const mainRouter = require('./routes/index');
