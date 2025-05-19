@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button } from 'react-native';
-// Importa AsyncStorage o tu método de almacenamiento preferido
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 
-// Asegúrate de que la ruta a globalStyles sea correcta
-// import globalStyles from '../globalStyles';
-
-// Definición de estilos globales simulada si no se proporciona el archivo
 const globalStyles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom: 100,
     backgroundColor: '#f0f2f5',
   },
   title: {
@@ -32,46 +30,27 @@ const globalStyles = StyleSheet.create({
   },
 });
 
-// Tipo Tarea ajustado a los campos devueltos por /statustasks
-// y los que necesita el componente para mostrar.
 type Tarea = {
-  id: string; // Desde la API
-  nombre: string; // Mapeado desde 'title' de la API
-  descripcion: string; // Desde 'description' de la API
-  estado: string; // Desde 'status' de la API
-  hora: string; // Formateado desde 'startTime' de la API
-  // Campos adicionales de la API que podrías querer usar:
+  id: string;
+  nombre: string;
+  descripcion: string;
+  estado: string;
+  hora: string;
   priority?: string;
-  startTime?: string | Date; // La API devuelve "fechas JS"
+  startTime?: string | Date;
   endTime?: string | Date;
 };
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
-  console.log("Intentando obtener datos de autenticación desde AsyncStorage...");
   try {
-    const userIdKey = 'userId'; 
-    const tokenKey = 'userToken'; 
-
-    const userId = await AsyncStorage.getItem(userIdKey);
-    const token = await AsyncStorage.getItem(tokenKey);
-
-    console.log(`Valor recuperado para ${userIdKey}:`, userId);
-    console.log(`Valor recuperado para ${tokenKey}:`, token);
-
-    if (!userId) {
-      console.warn(`AsyncStorage: No se encontró valor para la clave '${userIdKey}'. Asegúrate de guardarlo después del login.`);
-    }
-    if (!token) {
-      console.warn(`AsyncStorage: No se encontró valor para la clave '${tokenKey}'. Asegúrate de guardarlo después del login.`);
-    }
-
+    const userId = await AsyncStorage.getItem('userId');
+    const token = await AsyncStorage.getItem('userToken');
     return { userId, token };
   } catch (e) {
-    console.error("Error al obtener datos de auth de AsyncStorage:", e);
+    console.error("Error al obtener datos de auth:", e);
     return { userId: null, token: null };
   }
 };
-
 
 export default function VerTareas() {
   const [tareasDelDia, setTareasDelDia] = useState<Tarea[]>([]);
@@ -79,154 +58,172 @@ export default function VerTareas() {
   const [error, setError] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [actualizandoId, setActualizandoId] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    const loadAuthDataAndFetchTasks = async () => {
+    const loadAuthData = async () => {
       const { userId, token } = await getStoredAuthData();
       if (userId && token) {
-        console.log("Datos de autenticación cargados:", { userId, token });
         setAuthUserId(userId);
         setAuthToken(token);
       } else {
-        console.error("Fallo al cargar datos de autenticación. userId o token es null/undefined.");
-        setError("Usuario no autenticado. No se pueden cargar las tareas.");
+        setError("Usuario no autenticado.");
         setLoading(false);
       }
     };
-    loadAuthDataAndFetchTasks();
+    loadAuthData();
   }, []);
 
-
   const fetchTareas = async () => {
-    if (!authUserId || !authToken) {
-      console.warn("fetchTareas llamado sin authUserId o authToken.");
-      setLoading(false);
-      return;
-    }
+    if (!authUserId || !authToken) return;
 
     setLoading(true);
-    setError(null); 
-
-    const queryParams = new URLSearchParams({
-      today: "true"
-    });
-
-    const API_URL = `https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?${queryParams.toString()}`;
-    console.log(`Fetching tareas desde: ${API_URL}`);
-    console.log(`Usando token: Bearer ${authToken ? authToken.substring(0, 15) + "..." : "NULL"}`);
-
+    setError(null);
 
     try {
-      const response = await fetch(API_URL, {
-        method: "GET",
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?today=true`, {
         headers: {
           "Authorization": `Bearer ${authToken}`,
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       });
 
-      if (!response.ok) {
-        let errorDataMessage = "No se pudo obtener más información del error del servidor.";
-        try {
-            const errorData = await response.json(); 
-            console.error("Error response JSON data:", errorData);
-            errorDataMessage = errorData.message || errorData.error || JSON.stringify(errorData);
-        } catch (jsonError) {
-            const errorText = await response.text();
-            console.error("Error response text data:", errorText);
-            errorDataMessage = errorText;
-        }
-        throw new Error(`Error HTTP ${response.status} (${response.statusText}): ${errorDataMessage}`);
-      }
-
       const data = await response.json();
-      console.log('Datos recibidos de /statustasks:', JSON.stringify(data, null, 2));
+      const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
+        id: apiTask.id,
+        nombre: apiTask.title,
+        descripcion: apiTask.description,
+        estado: apiTask.status.toLowerCase(),
+        hora: apiTask.startTime
+          ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+          : 'N/A',
+        priority: apiTask.priority,
+        startTime: apiTask.startTime,
+        endTime: apiTask.endTime,
+      }));
 
-      if (data && Array.isArray(data.tasks)) {
-        const tareasMapeadas: Tarea[] = data.tasks.map((apiTask: any) => ({
-          id: apiTask.id,
-          nombre: apiTask.title,
-          descripcion: apiTask.description,
-          estado: apiTask.status,
-          hora: apiTask.startTime ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : 'N/A',
-          priority: apiTask.priority,
-          startTime: apiTask.startTime,
-          endTime: apiTask.endTime,
-        }));
-        setTareasDelDia(tareasMapeadas);
-      } else {
-        console.warn("La respuesta de la API no tiene el formato esperado (data.tasks no es un array) o no hay tareas:", data);
-        setTareasDelDia([]);
-      }
+      setTareasDelDia(tareas);
     } catch (err: any) {
-      console.error('Error detallado al obtener tareas:', err);
-      setError(err.message || 'Ocurrió un error desconocido al cargar las tareas.');
+      console.error("Error al obtener tareas:", err);
+      setError("Error al cargar las tareas.");
     } finally {
       setLoading(false);
     }
   };
 
-   useEffect(() => {
-    if (authUserId && authToken) {
-      fetchTareas();
-    }
+  useEffect(() => {
+    if (authUserId && authToken) fetchTareas();
   }, [authUserId, authToken]);
 
+  const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
+    if (!authToken) return;
+
+    try {
+      setActualizandoId(tareaId);
+
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
+        method: 'PATCH',
+        headers: {
+          "Authorization": `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nuevoEstado }),
+      });
+
+      const resultado = await response.json();
+      console.log("Respuesta:", resultado);
+
+      if (!response.ok) {
+        throw new Error(resultado.message || 'Error al actualizar tarea.');
+      }
+
+      await fetchTareas();
+    } catch (err: any) {
+      console.error("Error actualizando tarea:", err);
+      Alert.alert("Error", err.message || "No se pudo actualizar la tarea.");
+    } finally {
+      setActualizandoId(null);
+    }
+  };
 
   const mostrarEstado = (estado: string) => {
-    const estadoNormalizado = estado ? estado.toLowerCase() : "";
-    if (estadoNormalizado === 'pendiente') return '🕒 Pendiente';
-    if (estadoNormalizado === 'en curso') return '🔄 En curso';
-    if (estadoNormalizado === 'terminada' || estadoNormalizado === 'completada') return '✅ Terminada';
-    if (estadoNormalizado === 'finalizada') return '✅ Finalizada';
+    if (estado === 'pendiente') return '🕒 Pendiente';
+    if (estado === 'en progreso') return '🔄 En progreso';
+    if (estado === 'completada') return '✅ Completada';
     return estado;
   };
 
-  if (loading && !error) { 
-    return (
-      <View style={[globalStyles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando tareas...</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Tareas del Día</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={globalStyles.container}>
+        <Text style={globalStyles.title}>Tareas del Día</Text>
 
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={globalStyles.errorText}>{error}</Text>
-          {authUserId && authToken && <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />}
-        </View>
-      )}
-
-      {!error && tareasDelDia.length === 0 && !loading && (
-        <Text style={globalStyles.emptyText}>No hay tareas asignadas para el día de hoy.</Text>
-      )}
-
-      {!error && tareasDelDia.map((tarea) => (
-        <View key={tarea.id} style={styles.tareaCard}>
-          <View style={styles.tareaHeader}>
-            <Text style={styles.tareaHora}>{tarea.hora}</Text>
-            <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-              {mostrarEstado(tarea.estado)}
-            </Text>
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={globalStyles.errorText}>{error}</Text>
+            <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
           </View>
-          <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-          <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-        </View>
-      ))}
-    </ScrollView>
+        )}
+
+        {!error && tareasDelDia.length === 0 && !loading && (
+          <Text style={globalStyles.emptyText}>No hay tareas asignadas para hoy.</Text>
+        )}
+
+        {loading && !error && (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text>Cargando tareas...</Text>
+          </View>
+        )}
+
+        {!loading && tareasDelDia.map(tarea => (
+          <View key={tarea.id} style={styles.tareaCard}>
+            <View style={styles.tareaHeader}>
+              <Text style={styles.tareaHora}>{tarea.hora}</Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
+                {mostrarEstado(tarea.estado)}
+              </Text>
+            </View>
+            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+            {tarea.estado === 'pendiente' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
+                color="#1E90FF"
+                disabled={actualizandoId === tarea.id}
+              />
+            )}
+
+            {tarea.estado === 'en progreso' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                color="#28a745"
+                disabled={actualizandoId === tarea.id}
+              />
+            )}
+          </View>
+        ))}
+      </ScrollView>
+
+      {/* Botón del calendario con la ruta corregida */}
+      <TouchableOpacity
+        style={styles.botonCalendario}
+        onPress={() => router.push('/trabajador/calendario-semanal')}
+      >
+        <Ionicons name="calendar-outline" size={30} color="white" />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const getEstadoColor = (estado: string) => {
-  const estadoNormalizado = estado ? estado.toLowerCase() : "";
-  if (estadoNormalizado === 'pendiente') return '#FFA500';
-  if (estadoNormalizado === 'en curso') return '#1E90FF';
-  if (estadoNormalizado === 'terminada' || estadoNormalizado === 'completada' || estadoNormalizado === 'finalizada') return '#32CD32';
+  if (estado === 'pendiente') return '#FFA500';
+  if (estado === 'completada') return '#32CD32';
+  if (estado === 'en progreso') return '#1E90FF';
   return '#666';
 };
 
@@ -275,5 +272,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     marginBottom: 5,
+  },
+  botonCalendario: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 30,
+    elevation: 5,
   },
 });
