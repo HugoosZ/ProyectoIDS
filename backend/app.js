@@ -26,12 +26,14 @@ const taskRoutes = require('./routes/tasks');
 const usersRoutes = require('./routes/users');
 //const aux = require('./routes/test.js')
 const authRoutes = require('./routes/authRoutes');
+const emailRoutes = require('./routes/emailRoutes');
 
 //Rutas publicas
 app.use('/api', taskRoutes);
 app.use('/api', usersRoutes);
 //app.use('/api', aux);
 app.use('/api', mainRouter);       
+app.use('/api/email', emailRoutes); // Nuevas rutas de correo electrónico
 
 
  // Rutas admin!!!
