@@ -11,9 +11,11 @@
     "ios": {
       "supportsTablet": true
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
+        "usesCleartextTraffic": true,
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
