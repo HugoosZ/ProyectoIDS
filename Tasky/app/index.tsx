@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+<<<<<<< HEAD
 import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native'; // ActivityIndicator AÑADIDO AQUÍ
 import globalStyles from './globalStyles'; // Asegúrate que la ruta sea correcta
 import { signInWithEmailAndPassword } from 'firebase/auth';
@@ -7,6 +8,17 @@ import { auth } from '../firebase'; // Asegúrate que la ruta a tu config de Fir
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Importar AsyncStorage
+=======
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import globalStyles from './globalStyles';
+import { auth } from '../firebase'; // ajusta si está en otra carpeta
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import type { UserCredential } from 'firebase/auth';
+import { fetchUsers } from '../lib/api/users';
+import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
+>>>>>>> ee8ae6c376b4d588e393d1fff90ac337d6f9436a
 
 const db = getFirestore();
 
@@ -54,6 +66,7 @@ export default function Index() {
       console.log(`Usuario encontrado. Email: ${email}. Intentando autenticar con Firebase Auth...`);
 
       // 2. Autenticar con Firebase Auth usando email y password
+<<<<<<< HEAD
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
 
@@ -93,6 +106,32 @@ export default function Index() {
       }
     } finally {
       setLoading(false);
+=======
+      try {
+        const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        const token = await user.getIdToken();
+        
+        console.log("TOKEN JWT:", token); // opcional
+        setJwt(token); 
+
+
+        try {
+          const response = await fetchUsers(token); 
+        } catch (error) {
+          console.error(" Error al validar token con backend:", error);
+        }
+
+        const rol = userData.isAdmin ? 'admin' : 'trabajador';
+        router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
+      } catch (error) {
+        console.error(error);
+      }
+  
+    } catch (error: any) {
+      console.error(error);
+      Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
+>>>>>>> ee8ae6c376b4d588e393d1fff90ac337d6f9436a
     }
   };
 
