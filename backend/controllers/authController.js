@@ -60,10 +60,10 @@ const login = async (req, res) => {
 
 const cambiarPassword = async (req, res) => {
     try {
-        const { rut, passwordActual, nuevaPassword, confirmarPassword } = req.body;
+        const { rut, nuevaPassword, confirmarPassword } = req.body;
 
         // Validaciones básicas
-        if (!rut || !passwordActual || !nuevaPassword || !confirmarPassword) {
+        if (!rut || !nuevaPassword || !confirmarPassword) {
             return res.status(400).json({
                 success: false,
                 message: 'Todos los campos son requeridos'
@@ -102,8 +102,12 @@ const cambiarPassword = async (req, res) => {
         }
 
         try {
-            // Aquí iría la lógica para verificar la contraseña actual y actualizar a la nueva
-            // Por ahora retornamos una respuesta de éxito simulada
+            // Aquí iría la lógica para actualizar la contraseña en Firebase
+            // Usando el RUT como identificador
+            await auth.updateUser(rut, {
+                password: nuevaPassword
+            });
+
             res.status(200).json({
                 success: true,
                 message: 'Contraseña actualizada exitosamente'
@@ -111,7 +115,7 @@ const cambiarPassword = async (req, res) => {
         } catch (authError) {
             return res.status(401).json({
                 success: false,
-                message: 'Error al actualizar la contraseña. Verifica tus credenciales actuales.'
+                message: 'Error al actualizar la contraseña. Usuario no encontrado.'
             });
         }
 
