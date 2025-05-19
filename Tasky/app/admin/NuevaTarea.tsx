@@ -4,24 +4,21 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../lib/context/AuthContext';
 import { fetchUsers } from '../../lib/api/users';
 import globalStyles from '../globalStyles';
+import { Picker } from '@react-native-picker/picker'; 
 
-export default function NuevaTarea() {
+
+export default function ReasignarTarea() {
   const { jwt } = useAuth();
   const router = useRouter();
 
   const [userData, setUserData] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [priority, setPriority] = useState('');
-  const [status, setStatus] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [tareas, setTareas] = useState<any[]>([]);
+  const [selectedTaskId, setSelectedTaskId] = useState('');
+  const [newAssignedToUid, setNewAssignedToUid] = useState('');
 
   useEffect(() => {
-    const validateUser = async () => {
+    const init = async () => {
       if (!jwt) {
         Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
         router.push('/');
@@ -34,74 +31,90 @@ export default function NuevaTarea() {
 
         const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
           method: 'GET',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+          headers: { Authorization: `Bearer ${jwt}` },
         });
 
         if (!res.ok) throw new Error("No autorizado");
-
         const data = await res.json();
         setIsAdmin(data.isAdmin);
+
+        const tareasRes = await fetch('https://proyecto-ids.vercel.app/api/tasks');
+        const tareasData = await tareasRes.json();
+        setTareas(tareasData);
       } catch (error) {
-        Alert.alert("Error", "No tienes permisos para crear tareas.");
+        Alert.alert("Error", "No tienes permisos para reasignar tareas.");
         router.back();
       }
     };
 
-    validateUser();
+    init();
   }, [jwt]);
 
-  const handleCreateTask = async () => {
+  const handleReassign = async () => {
     if (!isAdmin) {
-      Alert.alert("Error", "No tienes permisos para crear tareas.");
+      Alert.alert("Error", "No tienes permisos para reasignar tareas.");
+      return;
+    }
+
+    if (!selectedTaskId || !newAssignedToUid) {
+      Alert.alert("Error", "Debes seleccionar una tarea e ingresar el nuevo UID.");
       return;
     }
 
     try {
-      const response = await fetch('https://proyecto-ids.vercel.app/api/createTask', {
-        method: 'POST',
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/reassign-task/${selectedTaskId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${jwt}`,
         },
         body: JSON.stringify({
-          title,
-          description,
-          startTime,
-          endTime,
-          priority,
-          status,
-          assignedTo,
-          createdBy: userData?.uid,
+          newAssignedToUid,
+          adminUid: userData?.uid,
         }),
       });
 
-      if (!response.ok) throw new Error('Error al crear la tarea');
-      const data = await response.json();
+      const result = await response.json();
 
-      Alert.alert("Tarea creada", `ID: ${data.id}`);
+      if (!response.ok) throw new Error(result.message || 'Error al reasignar tarea');
+      Alert.alert("Éxito", result.message);
       router.back();
-    } catch (err) {
-      Alert.alert("Error", "No se pudo crear la tarea");
-      console.error(err);
+    } catch (error) {
+      Alert.alert("Error", error.message);
     }
   };
 
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Crear Nueva Tarea</Text>
+      <Text style={globalStyles.title}>Reasignar Tarea</Text>
 
-      <TextInput placeholder="Título" style={globalStyles.input} value={title} onChangeText={setTitle} />
-      <TextInput placeholder="Descripción" style={globalStyles.input} value={description} onChangeText={setDescription} />
-      <TextInput placeholder="Inicio (ISO)" style={globalStyles.input} value={startTime} onChangeText={setStartTime} />
-      <TextInput placeholder="Fin (ISO)" style={globalStyles.input} value={endTime} onChangeText={setEndTime} />
-      <TextInput placeholder="Prioridad (alta, media, baja)" style={globalStyles.input} value={priority} onChangeText={setPriority} />
-      <TextInput placeholder="Estado (pendiente, completada, etc.)" style={globalStyles.input} value={status} onChangeText={setStatus} />
-      <TextInput placeholder="Rut del trabajador" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
+      <Text style={globalStyles.subtitle}>Selecciona una tarea:</Text>
+      <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 20 }}>
+        <Picker
+          selectedValue={selectedTaskId}
+          onValueChange={(itemValue) => setSelectedTaskId(itemValue)}
+          style={{ height: 50, width: '100%' }}
+        >
+          <Picker.Item label="-- Selecciona una tarea --" value="" />
+          {tareas.map((tarea) => (
+            <Picker.Item
+              key={tarea.id}
+              label={`${tarea.title} (Asignado a: ${tarea.assignedTo})`}
+              value={tarea.id}
+            />
+          ))}
+        </Picker>
+      </View>
 
-      <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
-        <Text style={globalStyles.buttonText}>Crear Tarea</Text>
+      <TextInput
+        placeholder="RUT del nuevo trabajador asignado"
+        style={globalStyles.input}
+        value={newAssignedToUid}
+        onChangeText={setNewAssignedToUid}
+      />
+
+      <TouchableOpacity style={globalStyles.button} onPress={handleReassign}>
+        <Text style={globalStyles.buttonText}>Reasignar</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
@@ -110,4 +123,3 @@ export default function NuevaTarea() {
     </ScrollView>
   );
 }
-// Está en formato ISO pq no se ve el calendario en formato web 
