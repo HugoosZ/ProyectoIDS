@@ -114,6 +114,13 @@ export default function CalendarioSemanalTareas() {
       return '#e6f4ea';
     }
     return '#fff';
+  const getColorDeFondo = (fecha: string, estado: string) => {
+    const hoy = new Date();
+    const fechaTarea = new Date(fecha);
+    if (estado === 'completada' && fechaTarea < hoy) {
+      return '#e6f4ea';
+    }
+    return '#fff';
   };
 
   if (loading) {
