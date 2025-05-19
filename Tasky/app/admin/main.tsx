@@ -22,7 +22,6 @@ import globalStyles from '../globalStyles';
 import TopBar from '../../components/TopBar';
 import BottomBar from '../../components/BottomBar';
 
-
 export default function AdminMain() {
   const router = useRouter();
   const navigation = useNavigation();
@@ -91,10 +90,10 @@ export default function AdminMain() {
   const tareasFiltradas = tareas.filter((tarea) => {
     if (estadoFiltro === 'todas') return true;
     if (estadoFiltro === 'pendientes') {
-      return tarea.status === 'Pendiente' || tarea.status === 'En curso'||tarea.status ==='pendiente' ;
+      return tarea.status === 'Pendiente' || tarea.status === 'En curso' || tarea.status === 'pendiente';
     }
     if (estadoFiltro === 'finalizadas') {
-      return tarea.status === 'Completada' || tarea.status === 'Finalizado' ||tarea.status ==='completada' ;
+      return tarea.status === 'Completada' || tarea.status === 'Finalizado' || tarea.status === 'completada';
     }
     return true;
   });
@@ -108,7 +107,6 @@ export default function AdminMain() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      
       <TopBar />
 
       <View style={globalStyles.container}>
@@ -141,32 +139,37 @@ export default function AdminMain() {
         {tareasFiltradas.length === 0 ? (
           <Text>No hay tareas para mostrar</Text>
         ) : verPorUsuarios ? (
-          <ScrollView>
-            <Text style={globalStyles.subtitle}>Lista de usuarios</Text>
-            {Object.keys(tareasPorUsuario).map((usuario) => (
-              
-              <View key={usuario} style={{ marginBottom: 20 }}>
-                
-                <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>{usuario}</Text>
-                {tareasPorUsuario[usuario].map((tarea) => (
-                  
-                  <View key={tarea.id || Math.random().toString()} style={styles.tareaContainer}>
-                    
-                    <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                    <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
-                    <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
-                    <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-          </ScrollView>
+          <View style={{ flex: 1 }}>
+            {/* Título fijo */}
+            <Text style={[globalStyles.subtitle, { textAlign: 'center', marginBottom: 10 }]}>
+              Lista de usuarios
+            </Text>
+
+            {/* Lista de usuarios con scroll */}
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 16 }}>
+              {Object.keys(tareasPorUsuario).map((usuario) => (
+                <View key={usuario} style={{ marginBottom: 20 }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>
+                    {usuario}
+                  </Text>
+
+                  {tareasPorUsuario[usuario].map((tarea) => (
+                    <View key={tarea.id || Math.random().toString()} style={styles.tareaContainer}>
+                      <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
+                      <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
+                      <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
+                      <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
         ) : (
           <FlatList
             data={tareasFiltradas}
             keyExtractor={(item) => item.id || Math.random().toString()}
             renderItem={({ item: tarea }) => (
-              
               <View style={styles.tareaContainer}>
                 <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
                 <Text><Text style={styles.labelBold}>Asignado a:</Text> {tarea.assignedTo}</Text>
@@ -180,8 +183,6 @@ export default function AdminMain() {
       </View>
 
       <BottomBar />
-
-
     </SafeAreaView>
   );
 }
@@ -208,7 +209,7 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontSize: 16,
-    color: ' rgb(132, 106, 180)',
+    color: 'rgb(132, 106, 180)',
     fontWeight: 'bold',
   },
   label: {

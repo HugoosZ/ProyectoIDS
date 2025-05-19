@@ -1,16 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, TextInput, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/context/AuthContext';
-import { fetchUsers } from '../../lib/api/users';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
+import { useRouter } from 'expo-router';
 
-export default function NuevaTarea() {
-  const { jwt } = useAuth();
+const NuevaTarea = () => {
   const router = useRouter();
-
-  const [userData, setUserData] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -19,51 +21,38 @@ export default function NuevaTarea() {
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [createdBy, setCreatedBy] = useState('');
 
+  // Obtener automáticamente el userId del admin al montar la vista
   useEffect(() => {
-    const validateUser = async () => {
-      if (!jwt) {
-        Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
-        router.push('/');
-        return;
-      }
-
-      try {
-        const user = await fetchUsers(jwt);
-        setUserData(user);
-
-        const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
-        });
-
-        if (!res.ok) throw new Error("No autorizado");
-
-        const data = await res.json();
-        setIsAdmin(data.isAdmin);
-      } catch (error) {
-        Alert.alert("Error", "No tienes permisos para crear tareas.");
-        router.back();
+    const getUserId = async () => {
+      const storedUserId = await AsyncStorage.getItem('userId');
+      if (storedUserId) {
+        setCreatedBy(storedUserId);
       }
     };
-
-    validateUser();
-  }, [jwt]);
+    getUserId();
+  }, []);
 
   const handleCreateTask = async () => {
-    if (!isAdmin) {
-      Alert.alert("Error", "No tienes permisos para crear tareas.");
+    if (!title || !assignedTo || !startTime || !endTime || !status || !priority || !description) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
 
     try {
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (!token) {
+        Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
+        return;
+      }
+
       const response = await fetch('https://proyecto-ids.vercel.app/api/createTask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           title,
@@ -73,18 +62,28 @@ export default function NuevaTarea() {
           priority,
           status,
           assignedTo,
-          createdBy: userData?.uid,
+          createdBy,
         }),
       });
 
-      if (!response.ok) throw new Error('Error al crear la tarea');
       const data = await response.json();
 
-      Alert.alert("Tarea creada", `ID: ${data.id}`);
-      router.back();
-    } catch (err) {
-      Alert.alert("Error", "No se pudo crear la tarea");
-      console.error(err);
+      if (response.ok) {
+        Alert.alert('Éxito', 'Tarea creada correctamente');
+        setTitle('');
+        setDescription('');
+        setStartTime('');
+        setEndTime('');
+        setPriority('');
+        setStatus('');
+        setAssignedTo('');
+      } else {
+        console.error('Error en la respuesta del servidor:', data);
+        Alert.alert('Error', data.message || 'No se pudo crear la tarea');
+      }
+    } catch (error) {
+      console.error('Error al crear tarea:', error);
+      Alert.alert('Error', 'Ocurrió un error al crear la tarea');
     }
   };
 
@@ -98,7 +97,8 @@ export default function NuevaTarea() {
       <TextInput placeholder="Fin (ISO)" style={globalStyles.input} value={endTime} onChangeText={setEndTime} />
       <TextInput placeholder="Prioridad (alta, media, baja)" style={globalStyles.input} value={priority} onChangeText={setPriority} />
       <TextInput placeholder="Estado (pendiente, completada, etc.)" style={globalStyles.input} value={status} onChangeText={setStatus} />
-      <TextInput placeholder="Rut del trabajador" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
+      <TextInput placeholder="Rut del trabajador asignado" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
+      {/* Campo createdBy ya se llena automáticamente */}
 
       <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
         <Text style={globalStyles.buttonText}>Crear Tarea</Text>
@@ -110,4 +110,6 @@ export default function NuevaTarea() {
     </ScrollView>
   );
 }
-// Está en formato ISO pq no se ve el calendario en formato web 
+
+
+export default NuevaTarea;

@@ -1,37 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Alert, TextInput, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/context/AuthContext';
-import { fetchUsers } from '../../lib/api/users';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
 import { Picker } from '@react-native-picker/picker'; 
 
-
 export default function ReasignarTarea() {
-  const { jwt } = useAuth();
   const router = useRouter();
 
-  const [userData, setUserData] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [tareas, setTareas] = useState<any[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [newAssignedToUid, setNewAssignedToUid] = useState('');
+  const [adminUid, setAdminUid] = useState('');
 
   useEffect(() => {
     const init = async () => {
-      if (!jwt) {
-        Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
-        router.push('/');
-        return;
-      }
-
       try {
-        const user = await fetchUsers(jwt);
-        setUserData(user);
+        const token = await AsyncStorage.getItem('userToken');
+        const storedUserId = await AsyncStorage.getItem('userId');
+
+        if (!token || !storedUserId) {
+          Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
+          router.push('/');
+          return;
+        }
+
+        setAdminUid(storedUserId);
 
         const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
           method: 'GET',
-          headers: { Authorization: `Bearer ${jwt}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error("No autorizado");
@@ -48,7 +47,7 @@ export default function ReasignarTarea() {
     };
 
     init();
-  }, [jwt]);
+  }, []);
 
   const handleReassign = async () => {
     if (!isAdmin) {
@@ -57,20 +56,27 @@ export default function ReasignarTarea() {
     }
 
     if (!selectedTaskId || !newAssignedToUid) {
-      Alert.alert("Error", "Debes seleccionar una tarea e ingresar el nuevo UID.");
+      Alert.alert("Error", "Debes seleccionar una tarea e ingresar el nuevo RUT.");
       return;
     }
 
     try {
+      const token = await AsyncStorage.getItem('userToken');
+
+      if (!token) {
+        Alert.alert("Error", "Token no encontrado. Inicia sesión nuevamente.");
+        return;
+      }
+
       const response = await fetch(`https://proyecto-ids.vercel.app/api/reassign-task/${selectedTaskId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           newAssignedToUid,
-          adminUid: userData?.uid,
+          adminUid,
         }),
       });
 
@@ -79,7 +85,7 @@ export default function ReasignarTarea() {
       if (!response.ok) throw new Error(result.message || 'Error al reasignar tarea');
       Alert.alert("Éxito", result.message);
       router.back();
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert("Error", error.message);
     }
   };
@@ -117,7 +123,10 @@ export default function ReasignarTarea() {
         <Text style={globalStyles.buttonText}>Reasignar</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]}
+        onPress={() => router.back()}
+      >
         <Text style={globalStyles.buttonText}>Volver</Text>
       </TouchableOpacity>
     </ScrollView>
