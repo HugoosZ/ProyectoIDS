@@ -1,30 +1,24 @@
-import { useState, useRef } from 'react';
-import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
+// components/TopBar.tsx
+import React, { useRef, useState } from 'react';
 import {
-  Modal,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
+  TouchableOpacity,
+  Modal,
   Animated,
   Dimensions,
-  StyleSheet,
-  SafeAreaView,
+  TouchableWithoutFeedback,
+  Text,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import globalStyles from '../globalStyles';
-import TopBar from '../../components/TopBar';
-import BottomBar from '../../components/BottomBar';
+import globalStyles from '../app/globalStyles';
+import { useRouter } from 'expo-router';
 
-
-export default function AdminMain() {
-  const router = useRouter();
-  const navigation = useNavigation();
+const TopBar: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const screenWidth = Dimensions.get('window').width;
   const slideAnim = useRef(new Animated.Value(-screenWidth)).current;
   const backgroundOpacity = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
 
   const openMenu = () => {
     setModalVisible(true);
@@ -59,42 +53,26 @@ export default function AdminMain() {
     });
   };
 
+  const handleRoute = (route: string) => {
+    closeMenu();
+    router.push(route);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      {/* TopBar */}
+    <>
+      {/* TopBar visible */}
       <View style={globalStyles.topBar}>
         <TouchableOpacity onPress={openMenu}>
-          <Ionicons name="menu" size={32} color="#6508c8" />
+          <Ionicons name="menu" size={32} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => console.log('Notificaciones')}>
-          <Ionicons name="notifications-outline" size={32} color="#6508c8" />
+          <Ionicons name="notifications-outline" size={32} color="#fff" />
         </TouchableOpacity>
       </View>
 
-      {/* Contenido principal*/}
-      <View style={{ flex: 1 }}>
-        <View style={globalStyles.adminContainer}>
-          <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
-          
-        </View>
-      </View>
-
-      {/* BottomBar */}
-      <View style={globalStyles.bottomBar}>
-        <TouchableOpacity onPress={() => console.log('Calendario')}>
-          <Ionicons name="calendar-outline" size={28} color="#6508c8" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Tarea')}>
-          <Ionicons name="add" size={28} color="#6508c8" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Inicio')}>
-          <Ionicons name="home-outline" size={28} color="#6508c8" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Modal de menú lateral */}
+      {/* Menú lateral */}
       <Modal
-        transparent={true}
+        transparent
         visible={modalVisible}
         animationType="none"
         onRequestClose={closeMenu}
@@ -123,19 +101,19 @@ export default function AdminMain() {
                 </TouchableOpacity>
 
                 <View style={globalStyles.menuOptions}>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/VistaDiaria')}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/main')}>
                     <Text style={globalStyles.menuText}>Vista diaria</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/NuevaTarea')}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/NuevaTarea')}>
                     <Text style={globalStyles.menuText}>Nueva tarea</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/AddUsers')}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/AddUsers')}>
                     <Text style={globalStyles.menuText}>Añadir usuarios</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Analisis')}>
-                    <Text style={globalStyles.menuText}>Análisis</Text>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/ReasignarTarea')}>
+                    <Text style={globalStyles.menuText}>Reasignar tareas</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => router.push('/admin/Asistencia')}>
+                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/Asistencia')}>
                     <Text style={globalStyles.menuText}>Asistencia</Text>
                   </TouchableOpacity>
                 </View>
@@ -144,6 +122,8 @@ export default function AdminMain() {
           </Animated.View>
         </TouchableWithoutFeedback>
       </Modal>
-    </SafeAreaView>
+    </>
   );
-}
+};
+
+export default TopBar;

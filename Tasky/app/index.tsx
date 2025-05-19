@@ -21,6 +21,7 @@ export default function Index() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false); // Estado para feedback de carga
   const router = useRouter();
+  const { setJwt } = useAuth();
 
   const handleLogin = async () => {
     if (!rut || !password) {
