@@ -47,11 +47,7 @@ const globalStyles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     backgroundColor: 'rgba(137, 113, 187, 1)', // Establece el color morado
-    elevation: 5, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
-    shadowOffset: { width: 0, height: 2 }, // Desplazamiento de la sombra
-    shadowOpacity: 0.3, // Opacidad de la sombra
-    shadowRadius: 5, // Radio de la sombra
+    boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.3)',
   },
   buttonText: {
     fontSize: 18,
