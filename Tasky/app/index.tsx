@@ -43,8 +43,20 @@ export default function Index() {
       // Guardar el token en el contexto
       setJwt(data.token);
 
+      // Log para verificar la respuesta completa
+      console.log('Respuesta completa del servidor:', {
+        ...data,
+        token: '[TOKEN PRESENTE]' // Ocultamos el token real por seguridad
+      });
+
+      // Log para verificar el rol
+      console.log('Información de usuario:', {
+        isAdmin: data.data.isAdmin, // Accedemos a isAdmin dentro de data.data
+        token: data.token ? '[TOKEN PRESENTE]' : '[TOKEN AUSENTE]'
+      });
+
       // Redirigir según el rol del usuario
-      router.push(data.isAdmin ? '/admin/main' : '/trabajador/maint');
+      router.push(data.data.isAdmin ? '/admin/main' : '/trabajador/maint');
       
     } catch (error) {
       console.error('Error de login:', error);
