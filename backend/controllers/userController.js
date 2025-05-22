@@ -4,7 +4,7 @@ const { validarDigitoVerificador } = require('../utils/validadorRUT');
 
 exports.createUser = async (req, res) => {
     try {
-        const { email, password, rut, name, lastName, role } = req.body;
+        const { email, password, rut, name, lastName, role, isAdmin } = req.body;
     
         // Validar campos obligatorios
         if (!email || !password || !rut || !name || !lastName || !role) {
@@ -20,7 +20,7 @@ exports.createUser = async (req, res) => {
         }
     
         const newUser = await authService.createUserWithRole({
-            email, password, rut, name, lastName, role
+            email, password, rut, name, lastName, role, isAdmin
         });
     
         res.status(201).json(newUser);

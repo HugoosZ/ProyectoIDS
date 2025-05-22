@@ -4,7 +4,7 @@
 const admin = require('firebase-admin');
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
-    const { email, password, rut, name, lastName, role } = userData;
+    const { email, password, rut, name, lastName, role, isAdmin } = userData;
 
     // 1. Crear en Firebase Auth
     const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
