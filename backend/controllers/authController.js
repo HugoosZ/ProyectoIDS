@@ -132,4 +132,4 @@ const cambiarPassword = async (req, res) => {
 module.exports = {
     login,
     cambiarPassword
-}; 
+};

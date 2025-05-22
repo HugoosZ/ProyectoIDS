@@ -17,7 +17,7 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
     // iii) Esto se ejecuta SOLO cuando createUser() termine
     await admin.firestore().collection('users').doc(rut).set({   
 
-      isAdmin: false, //  Fijo en false
+      isAdmin, //  Fijo en false
       name,
       lastName,
       email,
@@ -28,3 +28,4 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
   
     return { rut, email, name, lastName, role }; 
   };
+  
