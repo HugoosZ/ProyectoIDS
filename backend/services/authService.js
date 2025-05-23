@@ -4,7 +4,7 @@
 const admin = require('firebase-admin');
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
-    const { email, password, rut, name, lastName, role } = userData;
+    const { email, password, rut, name, lastName, role, isAdmin } = userData;
 
     // 1. Crear en Firebase Auth
     const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
@@ -17,7 +17,7 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
     // iii) Esto se ejecuta SOLO cuando createUser() termine
     await admin.firestore().collection('users').doc(rut).set({   
 
-      isAdmin: false, //  Fijo en false
+      isAdmin, //  Fijo en false
       name,
       lastName,
       email,
@@ -28,3 +28,4 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
   
     return { rut, email, name, lastName, role }; 
   };
+  
