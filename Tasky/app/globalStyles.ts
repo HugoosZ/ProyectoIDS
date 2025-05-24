@@ -2,14 +2,15 @@ import { StyleSheet } from 'react-native';
 
 const globalStyles = StyleSheet.create({
   container: {
+    paddingTop: 40,
     flex: 1,
     justifyContent: 'flex-start', // Cambiado a flex-start para alinear desde la parte superior
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(234, 234, 234, 1)', // Fondo claro
+    backgroundColor: 'rgb(236, 236, 236)', // Fondo claro
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 30,
   },
@@ -19,8 +20,9 @@ const globalStyles = StyleSheet.create({
     alignSelf: 'center',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: ' rgb(109, 82, 160)',
     marginBottom: 10,
   },
   input: {
@@ -102,21 +104,27 @@ const globalStyles = StyleSheet.create({
     color: '#666',
   },
 
-  // Estilos para el Modal del menú deslizante
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Fondo oscuro semi-transparente
+    backgroundColor: 'rgba(0, 0, 0, 0.36)', // Fondo oscuro semi-transparente
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
   },
   modalContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: '80%',
     backgroundColor: 'white',
-    width: '70%', // Ancho del menú
-    height: '100%',
-    paddingTop: 50, // Espacio superior
-    paddingLeft: 20,
-    paddingRight: 20,
+    padding: 20,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    
   },
+  
   closeButton: {
     alignItems: 'flex-end',
   },
@@ -126,7 +134,7 @@ const globalStyles = StyleSheet.create({
     marginBottom: 20,
   },
   menuOptions: {
-    marginTop: 20,
+    marginTop: 15,
   },
   menuOption: {
     marginBottom: 15,
@@ -136,6 +144,34 @@ const globalStyles = StyleSheet.create({
     fontSize: 20,
     color: 'black',
   },
+  topBar: {
+    backgroundColor: 'rgb(90, 22, 163)', 
+    paddingTop: 15, 
+    paddingBottom: 15,
+    paddingHorizontal: 15,
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bottomBar: {
+    paddingTop: 15, 
+    paddingBottom: 25,
+    paddingHorizontal: 35,
+    width: '100%',
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  adminContainer: {
+    flexGrow: 1, // Necesario para ScrollView
+    justifyContent: 'center', // o 'flex-start', según tu diseño
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    backgroundColor: 'rgb(255, 255, 255)',
+  },  
+
 });
 
 export default globalStyles;
