@@ -3,17 +3,20 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
-## 👤 `GET /tasks/:userId`
+## 👤 `GET /tasks/:uid`
 
 **Descripción**:
-Devuelve todas las tareas asignadas a un usuario específico.
+Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID. Esta ruta es solo accesible para administradores.
 
 Parámetro en URL:
 
-    userId – UID del usuario
+    uid – UID del usuario
+
+**Headers**
+Authorization: Bearer <token_admin>
 
 **Respuesta**:
-Un array con las tareas cuyo campo assignedTo coincide con el userId.
+Un array con las tareas cuyo campo assignedTo coincide con el uid.
 
 ```js
 fetch("https://proyecto-ids.vercel.app/api/tasks/gxoyKkAMIPMAeeoUHRZjIQhUkH52")
@@ -29,8 +32,12 @@ Reasigna una tarea a otro usuario, validando que quien lo hace sea administrador
 **Parámetro en URL**:
     taskId – ID de la tarea a reasignar
 
+**Headers**:
+Authorization: Bearer <token_admin>
+Content-type: application/json
+
 **Respuesta**:
-Mensaje de éxito si la reasignación fue exitosa o error si falló alguna validación.
+Mensaje de éxito si la reasignación fue exitosa(junto con el uid del nuevo usuario asignado) o error si falló alguna validación.
 
 ```js
 fetch("https://proyecto-ids.vercel.app/api/reassign-task/pBxZsNAPlEakYecJ022U", {
@@ -122,17 +129,17 @@ fetch("https://proyecto-ids.vercel.app/api/createUser", {
 ```
 
 
-## `GET /statustasks/:userId`
+## `GET /statustasks/:uid`
 **Descripción**:
 Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana.
-Tanto el usuario como un administrador pueden consultar esta ruta.
+Tanto el usuario como un administrador pueden consultar esta ruta(el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera).
 
 
 **Parámetro en URL**:
-    userId – UID del usuario cuyas tareas se desean consultar.
+    uid – UID del usuario cuyas tareas se desean consultar.
 
 **Headers requeridos**:
-    Authorization: "Bearer <token>"
+    Authorization: "Bearer <token_del_user_o_admin>"
 
 ### Filtros disponibles (opcionales vía query params)
 
@@ -200,4 +207,50 @@ Crea una tarea con el siguiente formato (JSON):
 Permite realizar actualización en el estado de una tarea.
 
 Estados permitidos son `pendiente`, `en progreso` y `completada`.
+
+
+## `GET /my-pending-tasks`
+**Descripción**:
+Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autenticado.
+**Headers requeridos:**:
+    Authorization: "Bearer <token_usuario_normal_o_admin>"
+
+
+
+**Respuesta**:
+{
+    "tasks": [
+        {
+            "id": "pending_task_id_1",
+            "title": "Mi tarea pendiente",
+            "description": "...",
+            "assignedTo": "uid_del_token",
+            "status": "pendiente",
+            "priority": "media",
+            "startTime": "...",
+            "endTime": "...",
+            "createdAt": "..."
+        }
+    ]
+}
+
+
+## `GET /createTask`
+**Descripción**:
+Permite a un administrador crear una nueva tarea y asignarla a un usuario.
+**Headers**:
+Authorization: "Bearer <token_admin>"
+Content-Type: application/json
+
+**Cuerpo del request**:
+{
+    "assignedTo": "UID_del_usuario_receptor",
+    "createdBy": "UID_del_admin_creador",
+    "description": "Detalles de la tarea a realizar.",
+    "startTime": "2025-05-23T09:00:00.000Z", // Formato ISO 8601
+    "endTime": "2025-05-23T17:00:00.000Z",   // Formato ISO 8601
+    "priority": "normal", // Opciones: "alta", "media", "baja"
+    "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
+    "title": "Título corto de la tarea"
+}
 
