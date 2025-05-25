@@ -8,6 +8,7 @@
     "scheme": "tasky",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "entryPoint": "./node_modules/expo-router/entry.js",
     "ios": {
       "supportsTablet": true
     },
