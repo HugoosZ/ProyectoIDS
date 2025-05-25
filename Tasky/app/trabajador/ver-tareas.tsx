@@ -32,18 +32,17 @@ const globalStyles = StyleSheet.create({
 
 type Tarea = {
   id: string;
-  nombre: string;
-  descripcion: string;
-  estado: string;
-  hora: string;
+  title: string;
+  description: string;
+  status: string;
+  startTime?: string;
+  endTime?: string;
   priority?: string;
-  startTime?: string | Date;
-  endTime?: string | Date;
 };
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
-    const userId = await AsyncStorage.getItem('userId');
+    const userId = await AsyncStorage.getItem('userId'); // Aquí debe estar guardado el RUT como uid
     const token = await AsyncStorage.getItem('userToken');
     return { userId, token };
   } catch (e) {
@@ -53,7 +52,7 @@ const getStoredAuthData = async (): Promise<{ userId: string | null; token: stri
 };
 
 export default function VerTareas() {
-  const [tareasDelDia, setTareasDelDia] = useState<Tarea[]>([]);
+  const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
@@ -62,7 +61,7 @@ export default function VerTareas() {
   const router = useRouter();
 
   useEffect(() => {
-    const loadAuthData = async () => {
+    const loadAuth = async () => {
       const { userId, token } = await getStoredAuthData();
       if (userId && token) {
         setAuthUserId(userId);
@@ -72,76 +71,70 @@ export default function VerTareas() {
         setLoading(false);
       }
     };
-    loadAuthData();
+    loadAuth();
   }, []);
+
+  useEffect(() => {
+    if (authUserId && authToken) fetchTareas();
+  }, [authUserId, authToken]);
 
   const fetchTareas = async () => {
     if (!authUserId || !authToken) return;
 
     setLoading(true);
     setError(null);
-
     try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?today=true`, {
+      const res = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
         headers: {
-          "Authorization": `Bearer ${authToken}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
         },
       });
 
-      const data = await response.json();
-      const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
-        id: apiTask.id,
-        nombre: apiTask.title,
-        descripcion: apiTask.description,
-        estado: apiTask.status.toLowerCase(),
-        hora: apiTask.startTime
-          ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-          : 'N/A',
-        priority: apiTask.priority,
-        startTime: apiTask.startTime,
-        endTime: apiTask.endTime,
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.message || "Error al obtener tareas");
+
+      const tareasMapeadas = data.tasks.map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        description: t.description,
+        status: t.status.toLowerCase(),
+        startTime: t.startTime,
+        endTime: t.endTime,
+        priority: t.priority,
       }));
 
-      setTareasDelDia(tareas);
-    } catch (err: any) {
-      console.error("Error al obtener tareas:", err);
-      setError("Error al cargar las tareas.");
+      setTareas(tareasMapeadas);
+    } catch (e: any) {
+      console.error("Error al obtener tareas:", e);
+      setError(e.message || "Error al cargar tareas.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (authUserId && authToken) fetchTareas();
-  }, [authUserId, authToken]);
-
   const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
     if (!authToken) return;
+    setActualizandoId(tareaId);
 
     try {
-      setActualizandoId(tareaId);
-
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
-        method: 'PATCH',
+      const res = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
+        method: "PATCH",
         headers: {
-          "Authorization": `Bearer ${authToken}`,
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ status: nuevoEstado }),
       });
 
-      const resultado = await response.json();
-      console.log("Respuesta:", resultado);
+      const resultado = await res.json();
+      if (!res.ok) throw new Error(resultado.message || "No se pudo actualizar el estado.");
 
-      if (!response.ok) {
-        throw new Error(resultado.message || 'Error al actualizar tarea.');
-      }
-
-      await fetchTareas();
-    } catch (err: any) {
-      console.error("Error actualizando tarea:", err);
-      Alert.alert("Error", err.message || "No se pudo actualizar la tarea.");
+      fetchTareas();
+    } catch (e: any) {
+      console.error("Error al actualizar estado:", e);
+      Alert.alert("Error", e.message);
     } finally {
       setActualizandoId(null);
     }
@@ -154,10 +147,15 @@ export default function VerTareas() {
     return estado;
   };
 
+  const getHora = (startTime?: string) => {
+    if (!startTime) return 'N/A';
+    return new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={globalStyles.container}>
-        <Text style={globalStyles.title}>Tareas del Día</Text>
+        <Text style={globalStyles.title}>Tareas asignadas</Text>
 
         {error && (
           <View style={styles.errorContainer}>
@@ -166,8 +164,8 @@ export default function VerTareas() {
           </View>
         )}
 
-        {!error && tareasDelDia.length === 0 && !loading && (
-          <Text style={globalStyles.emptyText}>No hay tareas asignadas para hoy.</Text>
+        {!error && tareas.length === 0 && !loading && (
+          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
         )}
 
         {loading && !error && (
@@ -177,18 +175,18 @@ export default function VerTareas() {
           </View>
         )}
 
-        {!loading && tareasDelDia.map(tarea => (
+        {!loading && tareas.map(tarea => (
           <View key={tarea.id} style={styles.tareaCard}>
             <View style={styles.tareaHeader}>
-              <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-                {mostrarEstado(tarea.estado)}
+              <Text style={styles.tareaHora}>{getHora(tarea.startTime)}</Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.status) }]}>
+                {mostrarEstado(tarea.status)}
               </Text>
             </View>
-            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+            <Text style={styles.tareaNombre}>{tarea.title}</Text>
+            <Text style={styles.tareaDescripcion}>{tarea.description}</Text>
 
-            {tarea.estado === 'pendiente' && (
+            {tarea.status === 'pendiente' && (
               <Button
                 title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
                 onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
@@ -197,7 +195,7 @@ export default function VerTareas() {
               />
             )}
 
-            {tarea.estado === 'en progreso' && (
+            {tarea.status === 'en progreso' && (
               <Button
                 title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
                 onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
@@ -209,7 +207,6 @@ export default function VerTareas() {
         ))}
       </ScrollView>
 
-      {/* Botón del calendario con la ruta corregida */}
       <TouchableOpacity
         style={styles.botonCalendario}
         onPress={() => router.push('/trabajador/calendario-semanal')}
