@@ -16,9 +16,15 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         const decodedToken = await admin.auth().verifyIdToken(token);
         
         // Paso 3: Añade el UID (RUT) al request
-        req.user = {
-            uid: decodedToken.uid //  
-        };
+        req.user = decodedToken; // Aquí se guarda el token decodificado en el objeto request
+        // Esto permite acceder a los datos del usuario autenticado en las siguientes rutas
+
+        const userDoc = await admin.firestore().collection('users').doc(req.user.uid).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        req.user.empresaId = userDoc.data().empresaId;
+        req.user.isAdmin = userDoc.data().isAdmin;
         
         console.log(decodedToken) //Borrar esto !!! Es solo para pruebas!!
 
