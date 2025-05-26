@@ -87,40 +87,47 @@ fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
 
 ## `POST /createUser`
 **Descripción**:
-Permite a un administrador crear un nuevo usuario en la base de datos.
+Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication. El RUT del usuario se guardará como un campo adicional dentro del perfil del usuario.
 
 **Headers requeridos:**:
     Authorization: "Bearer <token>"
+    Content-Type: "application/json"
 
 
 **Cuerpo del request:**:
-    Debe contener los datos del nuevo usuario, por ejemplo:
+    Debe contener los datos del nuevo usuario, excluyendo el UID (ya que este será generado). 
 
 ```json
 {
-  "uid": "12345678-9",
-  "name": "Nombre Apellido",
-  "email": "correo@example.com",
+  "email": "correo.nuevo@example.com",
+  "password": "PasswordSeguro123",
+  "rut": "12.345.678-9",
+  "name": "Nombre de Usuario",
+  "lastName": "Apellido de Usuario",
+  "role": "user",
   "isAdmin": false
 }
 
 ```
 
 **Respuesta**:
-Mensaje de éxito si la creación fue exitosa o error si falló alguna validación o permisos.
+Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo el UID generado por Firebase, o un mensaje de error si falló alguna validación o permisos.
 
 **Ejemplo de fetch**:
 ```js
-fetch("https://proyecto-ids.vercel.app/api/createUser", {
+fetch("[https://proyecto-ids.vercel.app/api/createUser](https://proyecto-ids.vercel.app/api/createUser)", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer <token>"
+    "Authorization": "Bearer <token_admin>"
   },
   body: JSON.stringify({
-    uid: "12345678-9",
-    name: "Nombre Apellido",
-    email: "correo@example.com",
+    email: "nuevo.usuario.ejemplo@example.com",
+    password: "PasswordSeguro123",
+    rut: "12.345.678-9",
+    name: "Usuario",
+    lastName: "Ejemplo",
+    role: "user",
     isAdmin: false
   })
 })
