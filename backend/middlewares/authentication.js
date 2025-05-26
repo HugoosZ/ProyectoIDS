@@ -17,7 +17,8 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
         
         // Paso 3: Añade el UID (RUT) al request
         req.user = {
-            uid: decodedToken.uid //  
+            uid: decodedToken.uid, //  
+            email: decodedToken.email, // Email del usuario
         };
         
         console.log(decodedToken) //Borrar esto !!! Es solo para pruebas!!

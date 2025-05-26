@@ -10,6 +10,7 @@ app.use(express.json()); // permite entender formularios que recibe por ejemplo 
 app.use(express.urlencoded({extended: false}));
 
 const cors = require('cors');
+app.use(cors()); // Configuración de CORS para permitir solicitudes desde cualquier origen
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
