@@ -87,15 +87,16 @@ fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
 
 ## `POST /createUser`
 **Descripción**:
-Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication. El RUT del usuario se guardará como un campo adicional dentro del perfil del usuario.
+Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication. El RUT del usuario se guardará como un campo adicional dentro del perfil del usuario. El empresaId del nuevo usuario será automáticamente heredado del empresaId del administrador que realiza la creación. Si es el primer usuario de una nueva empresa (es decir, el primer administrador creado sin un padre), se le asignará un nuevo empresaId único.
 
 **Headers requeridos:**:
-    Authorization: "Bearer <token>"
+    Authorization: "Bearer <token>"(si el creador es un admin y se desea heredar el empresaId)
+
     Content-Type: "application/json"
 
 
 **Cuerpo del request:**:
-    Debe contener los datos del nuevo usuario, excluyendo el UID (ya que este será generado). 
+    Debe contener los datos del nuevo usuario, excluyendo el UID y el empresaId (ya que este será generado o heredado).
 
 ```json
 {
@@ -111,7 +112,7 @@ Permite a un administrador crear un nuevo usuario. El UID para este usuario ser�
 ```
 
 **Respuesta**:
-Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo el UID generado por Firebase, o un mensaje de error si falló alguna validación o permisos.
+Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo el UID generado por Firebase y el empresaId asignado, o un mensaje de error si falló alguna validación o permisos.
 
 **Ejemplo de fetch**:
 ```js
@@ -119,7 +120,7 @@ fetch("[https://proyecto-ids.vercel.app/api/createUser](https://proyecto-ids.ver
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer <token_admin>"
+    "Authorization": "Bearer <token_admin>" // Omitir si es el primer admin (ruta /createUserAUX)
   },
   body: JSON.stringify({
     email: "nuevo.usuario.ejemplo@example.com",
@@ -134,6 +135,9 @@ fetch("[https://proyecto-ids.vercel.app/api/createUser](https://proyecto-ids.ver
 .then(res => res.json())
 .then(data => console.log(data));
 ```
+
+**Consideración para la creación del primer administrador:**
+Para crear el primer administrador de una nueva empresa (cuando no hay un administrador padre para heredar un empresaId), se puede usar una ruta específica sin autenticación (ej. POST /api/createUserAUX) donde el sistema generará automáticamente un nuevo empresaId para este usuario. Este flujo es típicamente para la inicialización del sistema o un registro de empresa.
 
 
 ## `GET /statustasks/:uid`
