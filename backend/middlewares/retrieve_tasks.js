@@ -1,3 +1,5 @@
+const { db } = require('../firebase');
+
 exports.getAllTasks = async (req, res) => {
   try {
     const snapshot = await db.collection("tasks").get();

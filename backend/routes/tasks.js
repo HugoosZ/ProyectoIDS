@@ -5,6 +5,8 @@ const { checkAdminPrivileges } = require('../middlewares/authorization');
 const { verifyAndDecodeToken } = require('../middlewares/authentication');
 const { getDateRange } = require('../utils/dateFilters');
 const { taskStatus } = require('../controllers/taskController');
+const { getAllTasks } = require('../middlewares/retrieve_tasks');
+const { getUserTasks } = require('../middlewares/retrieve_tasks');
 
 const router = Router();
 
@@ -47,7 +49,7 @@ router.put('/reassign-task/:taskId', async (req, res) => {
 });
 
 //ruta para ver las tasks
-  router.get('/tasks', async (req, res) => {
+/*   router.get('/tasks', async (req, res) => {
     try {
       const snapshot = await db.collection('tasks').get();
       const tasks = snapshot.docs.map(doc => ({
@@ -60,7 +62,9 @@ router.put('/reassign-task/:taskId', async (req, res) => {
       console.error('Error al obtener tareas:', error);
       res.status(500).json({ error: 'Error al obtener tareas' });
     }
-  });
+  }); */
+
+router.get('/tasks', getAllTasks);
 
 router.get('/pendingTasks/:userId', async (req, res) => { // Visualizar tareas pendientes de forma general
   const { userId } = req.params;
@@ -80,7 +84,7 @@ router.get('/pendingTasks/:userId', async (req, res) => { // Visualizar tareas p
 });
 
   // Obtener todas las tareas de un usuario específico
-router.get('/tasks/:userId', async (req, res) => {
+/* router.get('/tasks/:userId', async (req, res) => {
   const { userId } = req.params;
   try {
     const snapshot = await db.collection('tasks').where('assignedTo', '==', userId).get();
@@ -94,7 +98,9 @@ router.get('/tasks/:userId', async (req, res) => {
     console.error('Error al obtener tareas:', error);
     res.status(500).json({ error: 'Error al obtener tareas' });
   }
-});
+}); */
+
+router.get('/tasks/:userId', getUserTasks);
 
 // Actualizar el estado de una tarea
 router.patch('/tasks/:taskId/status', verifyAndDecodeToken, async (req, res) => {
