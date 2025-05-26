@@ -42,3 +42,6 @@ Thumbs.db
 *.bak
 *.tmp
 .vercel
+
+# Archivos y directorios ignorados
+Tasky/
