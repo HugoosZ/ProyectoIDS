@@ -109,6 +109,19 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
       // Update the status
       await taskRef.update({ status });
 
+      // Registrar hora real de inicio
+      if (status === "en progreso" && !taskData.realStartTime) {
+        updateData.realStartTime = Timestamp.now();
+      }
+
+
+      // Registrar hora real de finalización
+      if (status === "completada" && !taskData.realEndTime) {
+        updateData.realEndTime = Timestamp.now();
+      }
+
+      await taskRef.update(updateData);
+
       res.json({ message: "Estado de la tarea actualizado exitosamente." });
     } catch (error) {
       console.error("Error al actualizar el estado de la tarea:", error);
@@ -116,5 +129,43 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
     }
   }
 );
+
+router.get("/tasks/done/today", verifyAndDecodeToken, async (req, res) => {
+  try {
+    const userId = req.user.uid;
+    const { startDate, endDate } = getDateRange("today");
+
+    const startTimestamp = Timestamp.fromDate(startDate);
+    const endTimestamp = Timestamp.fromDate(endDate);
+
+    const snapshot = await db
+      .collection("tasks")
+      .where("assignedTo", "==", userId)
+      .where("status", "==", "completada") // o "done", depende cómo esté en tu BD
+      .where("realStartTime", ">=", startTimestamp)
+      .where("realStartTime", "<=", endTimestamp)
+      .get();
+
+    const tasks = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.realEndTime) {
+        tasks.push({
+          id: doc.id,
+          description: data.description,
+          status: data.status,
+          realStartTime: data.realStartTime.toDate(),
+          realEndTime: data.realEndTime.toDate(),
+        });
+      }
+    });
+
+    return res.status(200).json(tasks);
+  } catch (error) {
+    console.error("Error al obtener tareas completadas del día:", error);
+    return res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
 
 module.exports = router;

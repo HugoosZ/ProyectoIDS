@@ -36,6 +36,8 @@ exports.createTask = async (req, res) => {
       startTime: Timestamp.fromDate(new Date(startTime)),
       status: status || "pending",
       title,
+      realStartTime: null,
+      realEndTime: null
     };
 
     const docRef = await db.collection("tasks").add(newTask);
