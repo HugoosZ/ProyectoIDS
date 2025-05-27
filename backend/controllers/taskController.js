@@ -9,7 +9,7 @@ exports.createTask = async (req, res) => {
       description,
       startTime,
       endTime,
-      priority,
+      priority, 
       status,
       title,
     } = req.body;
