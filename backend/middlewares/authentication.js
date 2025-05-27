@@ -20,6 +20,13 @@ exports.verifyAndDecodeToken = async (req, res, next) => {
             uid: decodedToken.uid, //  
             email: decodedToken.email, // Email del usuario
         };
+
+        const userDoc = await admin.firestore().collection('users').doc(req.user.uid).get();
+        if (!userDoc.exists) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        req.user.empresaId = userDoc.data().empresaId;
+        req.user.isAdmin = userDoc.data().isAdmin;
         
         console.log(decodedToken) //Borrar esto !!! Es solo para pruebas!!
 
