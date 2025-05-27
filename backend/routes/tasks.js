@@ -130,10 +130,17 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
   }
 );
 
-router.get("/tasks/done/today", verifyAndDecodeToken, async (req, res) => {
+router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) => {
   try {
-    const userId = req.user.uid;
+    const { userId: paramUserId } = req.params;
+    const tokenUserId = req.user.uid;
+
+    if (paramUserId !== tokenUserId) {
+      return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
+    }
+    
     const { startDate, endDate } = getDateRange("today");
+
 
     const startTimestamp = Timestamp.fromDate(startDate);
     const endTimestamp = Timestamp.fromDate(endDate);
