@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const { db } = require('../firebase');
 
 const { verifyAndDecodeToken } = require('../middlewares/authentication'); //  Middleware de autenticación
 const userController = require('../controllers/userController');
 const { checkAdminPrivileges } = require('../middlewares/authorization'); // Middleware de autorización
 // Se usa llaves en la asignacion de nombres para poder renombrarlos, si no, hay que ponerle el nombre del codigo y como son parecidos es mejor renombrar
-
+const { getDateRange } = require("../utils/dateFilters");
 
 
 router.get('/checkAdmin', verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
@@ -20,6 +21,59 @@ router.post('/createUserAUX', userController.createUser); //Ruta sin autenticaci
 
 router.get('/', async (req, res) => {
     res.send("¡Ruta /api/admin funciona correctamente!");
+});
+
+
+// Ruta para obtener todas las tareas pendientes, en progreso o no asignadas de un usuario específico
+router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
+  try {
+    const { status, userId, time } = req.query;
+    let query = db.collection("tasks");
+    const validStatuses = ["en curso", "pendiente", "completada", "cancelada"];
+
+    let dateFilter = null;
+    if (time === "today" || time === "week") {
+      dateFilter = getDateRange(time);
+    }
+
+    if (status === "sin asignar") {
+        // Tareas no asignadas: status = sin asignar y assignedTo = null
+        query = query
+            .where("status", "==", "sin asignar")
+            .where("assignedTo", "==", null);
+    } else if (validStatuses.includes(status)) {
+      // Tareas con cualquier otro estado
+        query = query.where("status", "==", status);
+        if (userId) {
+            query = query.where("assignedTo", "==", userId); // Si se especifica un usuario, filtrar por él
+        }
+    } else {
+        return res.status(400).json({
+            error: "Estado no válido. Los estados permitidos son: sin asignar, " + validStatuses.join(", ")
+        });
+    }
+
+   if (dateFilter) {
+      query = query
+        .where("startTime", ">=", dateFilter.startDate)
+        .where("startTime", "<=", dateFilter.endDate);
+    }
+
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      return res.status(404).json({ message: "No se encontraron tareas con ese estado" });
+    }
+    const tasks = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).json(tasks);
+
+  } catch (error) {
+    console.error("Error al obtener tareas:", error);
+    res.status(500).json({ error: "Error al obtener tareas" });
+  }
 });
 
 module.exports = router; 

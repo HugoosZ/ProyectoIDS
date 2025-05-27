@@ -238,3 +238,52 @@ fetch("https://proyecto-ids.vercel.app/api/tasks/done/gxoyKkAMIPMAeeoUHRZjIQhUkH
 })
 
 ```
+
+
+
+## `GET /admin/tasks`
+**Descripción**:
+Devuelve todas las tareas del sistema filtradas por estado, usuario asignado y/o rango de tiempo (día o semana).
+Solo administradores pueden acceder a esta ruta.
+
+**Headers requeridos**:
+    Authorization: "Bearer <token>"
+
+### Filtros disponibles (opcionales vía query params)
+
+| Parámetro | Tipo                  | Descripción |
+|-----------|-----------------------|-------------|
+| `status`  | string                | Filtra por estado de la tarea. Valores válidos: "sin asignar", "pendiente", "en curso", "completada".|
+| `userId`| string                | Filtra por ID del usuario asignado (assignedTo). No se aplica si status = "sin asignar".|
+| `time`   | string | Filtra tareas según la fecha de inicio (startTime). Valores válidos: "today" o "week". |
+
+
+> 🔸 **Nota**:El filtro time se aplica si está presente, y limita el rango entre el inicio y fin del día o semana actuales (usando Luxon internamente).
+
+**Respuesta**:
+  Devuelve una lista de tareas que cumplen los filtros aplicados.
+  donde cada tarea contiene:
+  - id, 
+  - title, 
+  - description, 
+  - status, 
+  - etc ..
+
+
+**Ejemplo de fetch**:
+
+```js
+const queryParams = new URLSearchParams({
+  status: "completada",
+  userId: "1234567-8", // Opcional
+  time: "today" //Opcional
+});
+
+fetch(`https://proyecto-ids.vercel.app/api/admin/tasks?${queryParams.toString()}`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  }
+})
+```
