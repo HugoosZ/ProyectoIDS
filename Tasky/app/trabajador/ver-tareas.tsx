@@ -209,13 +209,23 @@ export default function VerTareas() {
         ))}
       </ScrollView>
 
-      {/* Botón del calendario con la ruta corregida */}
-      <TouchableOpacity
-        style={styles.botonCalendario}
-        onPress={() => router.push('/trabajador/calendario-semanal')}
-      >
-        <Ionicons name="calendar-outline" size={30} color="white" />
-      </TouchableOpacity>
+      //adicion de barra de navegación inferior para incluir acceso a "turno" y "tareas completadas"
+      <View style={styles.barraInferior}>
+        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/turno')}>
+          <Ionicons name="time-outline" size={24} color="#007AFF" />
+          <Text style={styles.textoBotonBarra}>Turno</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/tareas_completadas')}>
+          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
+          <Text style={styles.textoBotonBarra}>Completadas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/calendario-semanal')}>
+          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+          <Text style={styles.textoBotonBarra}>Calendario</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -273,13 +283,22 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 5,
   },
-  botonCalendario: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 30,
-    elevation: 5,
+  barraInferior: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderColor: '#ccc',
+    backgroundColor: '#fff',
+  },
+  botonBarra: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textoBotonBarra: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
   },
 });

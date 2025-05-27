@@ -9,6 +9,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation } from '@react-navigation/native';
+
+
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
@@ -21,16 +24,16 @@ const getStoredAuthData = async (): Promise<{ userId: string | null; token: stri
   }
 };
 
-const Turno = () => {
-  const [turno, setTurno] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+const Turno=() =>{
+  const [turno, setTurno]=useState(false);
+  const [loading, setLoading]=useState(true);
+  const [userId, setUserId]=useState<string | null>(null);
+  const [token, setToken]=useState<string | null>(null);
 
-  useEffect(() => {
+  useEffect(() =>{
 
     //funcion para obtener datos del usuario y verificar si su turno esta activo
-    const fetchUserAndTurno=async () => {
+    const fetchUserAndTurno=async () =>{
       try {
         const { userId, token }=await getStoredAuthData();
         if (!userId || !token) throw new Error('Usuario no autenticado');
@@ -91,10 +94,11 @@ const Turno = () => {
     }
   };
 
-  const terminar_turno=async () => {
+  //funcion para terminar el turno
+  const terminar_turno=async () =>{
     if (!userId || !token) return;
 
-    try {
+    try{
 
       //falta ajustar fetch para terminar el turno
       /*
@@ -119,7 +123,7 @@ const Turno = () => {
     }
   };
 
-  if (loading) {
+  if(loading){
     return (
       <SafeAreaView style={styles.container}>
         <Text>Cargando turno...</Text>
@@ -129,6 +133,15 @@ const Turno = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <TouchableOpacity //adicion boton de volver a vista "ver-tareas"
+        style={styles.backButton}
+        onPress={() => router.push('/trabajador/ver-tareas')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="chevron-back" size={20} color="#111827" />
+        <Text style={styles.backText}>Volver</Text>
+      </TouchableOpacity>
+
       <View style={styles.card}>
         <Ionicons
           name={turno ? 'time-outline' : 'play-outline'}
@@ -164,13 +177,33 @@ const Turno = () => {
 
 export default Turno;
 
-const styles = StyleSheet.create({
+const styles=StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f3f4f6',
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 4,
   },
   card: {
     backgroundColor: '#ffffff',
@@ -184,6 +217,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
     elevation: 6,
+    alignSelf: 'center',
   },
   icon: {
     marginBottom: 20,
