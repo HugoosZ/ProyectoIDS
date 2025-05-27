@@ -96,12 +96,13 @@ exports.getUserTaskStatus = async (req, res) => {
 
     // 4. Aplicar filtros opcionales (status, priority, today, week)
     const { status, priority, today, week } = req.query;
-
-    if (status) {
+    
+    if (typeof status !== "undefined" && status !== null && status !== "") {
       tasksQuery = tasksQuery.where("status", "==", status);
       console.log("DEBUG: Filtro por status:", status);
     }
-    if (priority) {
+
+    if (typeof priority !== "undefined" && priority !== null && priority !== "") {
       tasksQuery = tasksQuery.where("priority", "==", priority);
       console.log("DEBUG: Filtro por priority:", priority);
     }
