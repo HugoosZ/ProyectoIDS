@@ -138,7 +138,7 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
     if (paramUserId !== tokenUserId) {
       return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
     }
-    
+
     const { startDate, endDate } = getDateRange("today");
 
 
@@ -147,7 +147,7 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
 
     const snapshot = await db
       .collection("tasks")
-      .where("assignedTo", "==", userId)
+      .where("assignedTo", "==", tokenUserId)
       .where("status", "==", "completada") // o "done", depende cómo esté en tu BD
       .where("realStartTime", ">=", startTimestamp)
       .where("realStartTime", "<=", endTimestamp)
