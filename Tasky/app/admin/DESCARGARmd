@@ -1,0 +1,5 @@
+npm install @react-native-picker/picker
+
+npm install react-native-modal-datetime-picker @react-native-community/datetimepicker
+
+npm install @react-native-async-storage/async-storage
