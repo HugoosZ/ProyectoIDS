@@ -1,29 +1,24 @@
+const { DateTime } = require("luxon");
+
 function getDateRange(filter) {
-  const now = new Date();
-  let startDate = null;
-  let endDate = null;
+  const now = DateTime.now().setZone("America/Santiago");
+  let startDate, endDate;
 
-  if (filter === 'today') {
-    startDate = new Date(now);
-    startDate.setHours(0, 0, 0, 0);
-
-    endDate = new Date(now);
-    endDate.setHours(23, 59, 59, 999);
+  if (filter === "today") {
+    startDate = now.startOf("day");
+    endDate = now.endOf("day");
   }
 
-  if (filter === 'week') {
-    const dayOfWeek = now.getDay(); // 0 (domingo) a 6 (sábado)
-    const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek); // ajustar si es domingo
-
-    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
-    startDate.setHours(0, 0, 0, 0);
-
-    endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 7);
-    endDate.setHours(0, 0, 0, 0);
+  if (filter === "week") {
+    const weekday = now.weekday; // 1 (lunes) a 7 (domingo)
+    startDate = now.minus({ days: weekday - 1 }).startOf("day");
+    endDate = startDate.plus({ days: 7 }).startOf("day");
   }
 
-  return { startDate, endDate };
+  return {
+    startDate: startDate.toJSDate(),
+    endDate: endDate.toJSDate(),
+  };
 }
 
 module.exports = { getDateRange };
