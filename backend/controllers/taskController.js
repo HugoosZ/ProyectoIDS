@@ -2,44 +2,43 @@ const { db } = require("../firebase");
 const { Timestamp } = require("firebase-admin/firestore");
 const { getDateRange } = require("../utils/dateFilters"); // OK
 
-exports.createTask = async (req, res) => { // OK
-  try {
-    const {
-      assignedTo,
-      createdBy,
-      description,
-      startTime,
-      endTime,
-      priority,
-      status,
-      title,
-    } = req.body;
+exports.createTask = async (req, res) => {
+  try {
+    const {
+      assignedTo,
+      createdBy,
+      description,
+      startTime,
+      endTime,
+      priority,
+      status,
+      title,
+    } = req.body; // Validate required fields
 
-    // Validate required fields
-    if (
-      !description ||
-      !title ||
-      !createdBy ||
-      !assignedTo ||
-      !startTime ||
-      !endTime
-    ) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
+    if (
+      !description ||
+      !title ||
+      !createdBy ||
+      !assignedTo ||
+      !startTime ||
+      !endTime
+    ) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
-    const newTask = {
-      assignedTo,
-      createdAt: Timestamp.now(),
-      createdBy,
-      description,
-      endTime: Timestamp.fromDate(new Date(endTime)),
-      priority: priority || "normal",
-      startTime: Timestamp.fromDate(new Date(startTime)),
-      status: status || "pending",
-      title,
+    const newTask = {
+      assignedTo,
+      createdAt: Timestamp.now(),
+      createdBy,
+      description,
+      endTime: Timestamp.fromDate(new Date(endTime)),
+      priority: priority || "normal",
+      startTime: Timestamp.fromDate(new Date(startTime)),
+      status: status || "pending",
+      title,
       realStartTime: null,
-      realEndTime: null
-    };
+      realEndTime: null,
+    };
 
     const docRef = await db.collection("tasks").add(newTask);
 
