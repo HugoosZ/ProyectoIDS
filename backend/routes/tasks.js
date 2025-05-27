@@ -132,15 +132,14 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
 
 router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) => {
   try {
-    const { userId: paramUserId } = req.params;
-    const tokenUserId = req.user.uid;
+    const { userId: paramUserId } = req.params; //ID del usuario desde los parámetros de la ruta
+    const tokenUserId = req.user.uid; //ID del usuario desde el jwt
 
     if (paramUserId !== tokenUserId) {
       return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
     }
 
-    const { startDate, endDate } = getDateRange("today");
-
+    const { startDate, endDate } = getDateRange("today"); //Parametros de la función getDateRange
 
     const startTimestamp = Timestamp.fromDate(startDate);
     const endTimestamp = Timestamp.fromDate(endDate);
@@ -148,9 +147,11 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
     const snapshot = await db
       .collection("tasks")
       .where("assignedTo", "==", tokenUserId)
-      .where("status", "==", "completada") // o "done", depende cómo esté en tu BD
-      .where("realStartTime", ">=", startTimestamp)
-      .where("realStartTime", "<=", endTimestamp)
+      .where("status", "==", "completada") 
+      .where("realStartTime", ">=", startTimestamp) //Tareas iniciadas despues del inicio del día
+      .where("realStartTime", "<=", endTimestamp) //Tareas iniciadas Antes del termino del día
+      .where("realEndTime", ">=", startTimestamp) //Tareas finalizadas despues del inicio del día
+      .where("realEndTime", "<=", endTimestamp) //Tareas finalizadas antes del termino del día
       .get();
 
     const tasks = [];
