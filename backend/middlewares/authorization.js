@@ -1,4 +1,5 @@
-const { db } = require('../firebase');
+const { db } = require("../firebase");
+
 
 exports.checkAdminPrivileges = async (req, res, next) => {
     try {

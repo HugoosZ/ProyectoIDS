@@ -176,4 +176,21 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
   }
 });
 
+router.get('/my-tasks', verifyAndDecodeToken, async (req, res) => {
+  const userId = req.user.uid; // Obtenemos el UID del token
+
+  try {
+    const snapshot = await db.collection('tasks').where('assignedTo', '==', userId).get();
+    const tasks = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  
+    res.status(200).json(tasks);
+  } catch (error) {
+    console.error('Error al obtener tareas del usuario autenticado:', error);
+    res.status(500).json({ error: 'Error al obtener tareas' });
+  }
+});
+
 module.exports = router;

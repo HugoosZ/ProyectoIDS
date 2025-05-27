@@ -3,17 +3,20 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
-## 👤 `GET /tasks/:userId`
+## 👤 `GET /tasks/:uid`
 
 **Descripción**:
-Devuelve todas las tareas asignadas a un usuario específico.
+Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID. Esta ruta es solo accesible para administradores.
 
 Parámetro en URL:
 
-    userId – UID del usuario
+    uid – UID del usuario
+
+**Headers**
+Authorization: Bearer <token_admin>
 
 **Respuesta**:
-Un array con las tareas cuyo campo assignedTo coincide con el userId.
+Un array con las tareas cuyo campo assignedTo coincide con el uid.
 
 ```js
 fetch("https://proyecto-ids.vercel.app/api/tasks/gxoyKkAMIPMAeeoUHRZjIQhUkH52")
@@ -29,8 +32,12 @@ Reasigna una tarea a otro usuario, validando que quien lo hace sea administrador
 **Parámetro en URL**:
     taskId – ID de la tarea a reasignar
 
+**Headers**:
+Authorization: Bearer <token_admin>
+Content-type: application/json
+
 **Respuesta**:
-Mensaje de éxito si la reasignación fue exitosa o error si falló alguna validación.
+Mensaje de éxito si la reasignación fue exitosa(junto con el uid del nuevo usuario asignado) o error si falló alguna validación.
 
 ```js
 fetch("https://proyecto-ids.vercel.app/api/reassign-task/pBxZsNAPlEakYecJ022U", {
@@ -80,40 +87,48 @@ fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
 
 ## `POST /createUser`
 **Descripción**:
-Permite a un administrador crear un nuevo usuario en la base de datos.
+Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication. El RUT del usuario se guardará como un campo adicional dentro del perfil del usuario. El empresaId del nuevo usuario será automáticamente heredado del empresaId del administrador que realiza la creación. Si es el primer usuario de una nueva empresa (es decir, el primer administrador creado sin un padre), se le asignará un nuevo empresaId único.
 
 **Headers requeridos:**:
-    Authorization: "Bearer <token>"
+    Authorization: "Bearer <token>"(si el creador es un admin y se desea heredar el empresaId)
+
+    Content-Type: "application/json"
 
 
 **Cuerpo del request:**:
-    Debe contener los datos del nuevo usuario, por ejemplo:
+    Debe contener los datos del nuevo usuario, excluyendo el UID y el empresaId (ya que este será generado o heredado).
 
 ```json
 {
-  "uid": "12345678-9",
-  "name": "Nombre Apellido",
-  "email": "correo@example.com",
+  "email": "correo.nuevo@example.com",
+  "password": "PasswordSeguro123",
+  "rut": "12.345.678-9",
+  "name": "Nombre de Usuario",
+  "lastName": "Apellido de Usuario",
+  "role": "user",
   "isAdmin": false
 }
 
 ```
 
 **Respuesta**:
-Mensaje de éxito si la creación fue exitosa o error si falló alguna validación o permisos.
+Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo el UID generado por Firebase y el empresaId asignado, o un mensaje de error si falló alguna validación o permisos.
 
 **Ejemplo de fetch**:
 ```js
-fetch("https://proyecto-ids.vercel.app/api/createUser", {
+fetch("[https://proyecto-ids.vercel.app/api/createUser](https://proyecto-ids.vercel.app/api/createUser)", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
-    "Authorization": "Bearer <token>"
+    "Authorization": "Bearer <token_admin>" // Omitir si es el primer admin (ruta /createUserAUX)
   },
   body: JSON.stringify({
-    uid: "12345678-9",
-    name: "Nombre Apellido",
-    email: "correo@example.com",
+    email: "nuevo.usuario.ejemplo@example.com",
+    password: "PasswordSeguro123",
+    rut: "12.345.678-9",
+    name: "Usuario",
+    lastName: "Ejemplo",
+    role: "user",
     isAdmin: false
   })
 })
@@ -121,18 +136,21 @@ fetch("https://proyecto-ids.vercel.app/api/createUser", {
 .then(data => console.log(data));
 ```
 
+**Consideración para la creación del primer administrador:**
+Para crear el primer administrador de una nueva empresa (cuando no hay un administrador padre para heredar un empresaId), se puede usar una ruta específica sin autenticación (ej. POST /api/createUserAUX) donde el sistema generará automáticamente un nuevo empresaId para este usuario. Este flujo es típicamente para la inicialización del sistema o un registro de empresa.
 
-## `GET /statustasks/:userId`
+
+## `GET /statustasks/:uid`
 **Descripción**:
 Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana.
-Tanto el usuario como un administrador pueden consultar esta ruta.
+Tanto el usuario como un administrador pueden consultar esta ruta(el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera).
 
 
 **Parámetro en URL**:
-    userId – UID del usuario cuyas tareas se desean consultar.
+    uid – UID del usuario cuyas tareas se desean consultar.
 
 **Headers requeridos**:
-    Authorization: "Bearer <token>"
+    Authorization: "Bearer <token_del_user_o_admin>"
 
 ### Filtros disponibles (opcionales vía query params)
 
@@ -202,21 +220,52 @@ Permite realizar actualización en el estado de una tarea.
 Estados permitidos son `pendiente`, `en progreso` y `completada`.
 
 
-## `GET /tasks/done/:userId/today`
+## `GET /my-pending-tasks`
 **Descripción**:
-Devuelve las tareas completadas por un usuario en el día actual, según el campo realStartTime.
-Solo el usuario autenticado puede acceder a su propia información (se valida mediante token).
+Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autenticado.
+**Headers requeridos:**:
+    Authorization: "Bearer <token_usuario_normal_o_admin>"
 
 
-
-**Parámetro en URL**:
-    userId – UID del usuario autenticado
-
-**Headers requeridos**:
-	  Authorization: "Bearer <token>"
-    
 
 **Respuesta**:
+{
+    "tasks": [
+        {
+            "id": "pending_task_id_1",
+            "title": "Mi tarea pendiente",
+            "description": "...",
+            "assignedTo": "uid_del_token",
+            "status": "pendiente",
+            "priority": "media",
+            "startTime": "...",
+            "endTime": "...",
+            "createdAt": "..."
+        }
+    ]
+}
+
+
+## `GET /createTask`
+**Descripción**:
+Permite a un administrador crear una nueva tarea y asignarla a un usuario.
+**Headers**:
+Authorization: "Bearer <token_admin>"
+Content-Type: application/json
+
+**Cuerpo del request**:
+{
+    "assignedTo": "UID_del_usuario_receptor",
+    "createdBy": "UID_del_admin_creador",
+    "description": "Detalles de la tarea a realizar.",
+    "startTime": "2025-05-23T09:00:00.000Z", // Formato ISO 8601
+    "endTime": "2025-05-23T17:00:00.000Z",   // Formato ISO 8601
+    "priority": "normal", // Opciones: "alta", "media", "baja"
+    "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
+    "title": "Título corto de la tarea"
+}
+
+
   Un array con las tareas completadas hoy. Cada tarea incluye:
     - id: ID de la tarea
     - description: descripción de la tarea
