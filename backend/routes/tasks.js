@@ -106,9 +106,8 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
           .json({ error: "No tienes permiso para modificar esta tarea." });
       }
 
-      // Update the status
-      await taskRef.update({ status });
 
+      const updateData = { status };
       // Registrar hora real de inicio
       if (status === "en progreso" && !taskData.realStartTime) {
         updateData.realStartTime = Timestamp.now();
@@ -119,7 +118,7 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
       if (status === "completada" && !taskData.realEndTime) {
         updateData.realEndTime = Timestamp.now();
       }
-
+      // Update the status
       await taskRef.update(updateData);
 
       res.json({ message: "Estado de la tarea actualizado exitosamente." });
