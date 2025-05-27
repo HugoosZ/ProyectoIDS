@@ -1,5 +1,6 @@
 const { db } = require("../firebase");
 const { Timestamp } = require("firebase-admin/firestore");
+const { getDateRange } = require("../utils/dateFilters"); // OK
 
 exports.createTask = async (req, res) => {
   try {
@@ -12,9 +13,8 @@ exports.createTask = async (req, res) => {
       priority,
       status,
       title,
-    } = req.body;
+    } = req.body; // Validate required fields
 
-    // Validate required fields
     if (
       !description ||
       !title ||
@@ -36,6 +36,8 @@ exports.createTask = async (req, res) => {
       startTime: Timestamp.fromDate(new Date(startTime)),
       status: status || "pending",
       title,
+      realStartTime: null,
+      realEndTime: null,
     };
 
     const docRef = await db.collection("tasks").add(newTask);
