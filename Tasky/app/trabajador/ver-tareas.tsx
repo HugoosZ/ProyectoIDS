@@ -209,7 +209,6 @@ export default function VerTareas() {
         ))}
       </ScrollView>
 
-      //adicion de barra de navegacion inferior para incluir acceso a "turno" y "tareas completadas"
       <View style={styles.barraInferior}>
         <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/turno')}>
           <Ionicons name="time-outline" size={24} color="#007AFF" />
