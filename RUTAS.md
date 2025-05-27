@@ -201,3 +201,40 @@ Permite realizar actualización en el estado de una tarea.
 
 Estados permitidos son `pendiente`, `en progreso` y `completada`.
 
+
+## `GET /tasks/done/:userId/today`
+**Descripción**:
+Devuelve las tareas completadas por un usuario en el día actual, según el campo realStartTime.
+Solo el usuario autenticado puede acceder a su propia información (se valida mediante token).
+
+
+
+**Parámetro en URL**:
+    userId – UID del usuario autenticado
+
+**Headers requeridos**:
+	  Authorization: "Bearer <token>"
+    
+
+**Respuesta**:
+  Un array con las tareas completadas hoy. Cada tarea incluye:
+    - id: ID de la tarea
+    - description: descripción de la tarea
+    - status: estado (completada)
+    - realStartTime: fecha de inicio real (formato JS Date)
+    - realEndTime: fecha de término real (formato JS Date)
+
+   Si el usuario en el parámetro no coincide con el token, se devuelve un error 403.
+
+
+**Ejemplo de fetch**:
+
+```js
+fetch("https://proyecto-ids.vercel.app/api/tasks/done/gxoyKkAMIPMAeeoUHRZjIQhUkH52/today", {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+})
+
+```
