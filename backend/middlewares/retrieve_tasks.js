@@ -3,9 +3,8 @@ const { db } = require("../firebase"); // Asegúrate de que importas 'db' de fir
 const { Timestamp } = require("firebase-admin/firestore"); // Para manejar fechas de Firestore
 const { getDateRange } = require("../utils/dateFilters"); // Asegúrate de que esta utilidad exista y funcione.
 
-exports.taskStatus = async (req, res) => {
+exports.getUserTaskStatus = async (req, res) => {
   try {
-    console.log("ola")
     
     const { userId } = req.params;
     const requestingUserId = req.userId; // ID del usuario que hace la petición (del token)
@@ -21,14 +20,12 @@ exports.taskStatus = async (req, res) => {
     }
 
     // 2. Verificar que el usuario solicitado existe
-    console.log("ola2")
     const requestedUserDoc = await db.collection("users").doc(userId).get();
     if (!requestedUserDoc.exists) {
       return res
         .status(404)
         .json({ error: "Usuario solicitado no encontrado" });
     }
-    console.log("ola3")
 
     // 3. Construir consulta base
     let tasksQuery = db.collection("tasks").where("assignedTo", "==", userId);
@@ -60,7 +57,6 @@ exports.taskStatus = async (req, res) => {
         .where("startTime", ">=", startDate)
         .where("startTime", "<", endDate);
     }
-    console.log("ola4")
 
     // 5. Ordenar por fecha de creación (nuevas primero)
     tasksQuery = tasksQuery.orderBy("createdAt", "desc");
