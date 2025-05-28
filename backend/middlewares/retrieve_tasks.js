@@ -3,7 +3,6 @@ const { db } = require("../firebase"); // Asegúrate de que importas 'db' de fir
 const { Timestamp } = require("firebase-admin/firestore"); // Para manejar fechas de Firestore
 const { getDateRange } = require("../utils/dateFilters"); // Asegúrate de que esta utilidad exista y funcione.
 
-
 exports.getUserTaskStatus = async (req, res) => {
   try {
     const { userId } = req.params; // UID del usuario cuyas tareas se quieren ver (el de la URL)
@@ -12,7 +11,6 @@ exports.getUserTaskStatus = async (req, res) => {
     const requestingUserId = req.user.uid;
     const requestingUserEmpresaId = req.user.empresaId;
     const requestingUserIsAdmin = req.user.isAdmin;
-    
 
     // 1. Obtener los datos del usuario solicitado (el del `:userId` en la URL)
     const requestedUserDoc = await db.collection("users").doc(userId).get();
@@ -26,14 +24,14 @@ exports.getUserTaskStatus = async (req, res) => {
         .json({ error: "Usuario solicitado no encontrado." });
     }
     //const requestedUserEmpresaId = requestedUserDoc.data().empresaId; // EmpresaId del usuario solicitado
-/*     console.log(
+    /*     console.log(
       "DEBUG: EmpresaId del usuario solicitado (desde Firestore):",
       requestedUserEmpresaId
     ); */
 
     // 2. Lógica de permisos (combinando la tuya con la base de tu compañero)
     // Un usuario NO admin solo puede ver sus propias tareas y debe estar en la misma empresa.
-/*     if (!requestingUserIsAdmin) {
+    /*     if (!requestingUserIsAdmin) {
       if (userId !== requestingUserId) {
         console.log(
           "DEBUG: Acceso denegado - Usuario NO admin intentó ver tareas de OTRO usuario."
@@ -69,10 +67,8 @@ exports.getUserTaskStatus = async (req, res) => {
     // 3. Construir la consulta a Firestore para obtener las tareas
     // La consulta siempre debe filtrar por el assignedTo (el uid de la URL)
     // y por el empresaId del usuario solicitado
-    let tasksQuery = db
-      .collection("tasks")
-      .where("assignedTo", "==", userId)
-      //.where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId DESACTIVADO TEMPORALMENTE
+    let tasksQuery = db.collection("tasks").where("assignedTo", "==", userId);
+    //.where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId DESACTIVADO TEMPORALMENTE
 
     // 4. Aplicar filtros opcionales (status, priority, today, week)
     const { status, priority, today, week } = req.query;
@@ -95,7 +91,6 @@ exports.getUserTaskStatus = async (req, res) => {
       tasksQuery = tasksQuery
         .where("startTime", ">=", startDate)
         .where("startTime", "<", endDate); // Usar < para semana completa
-
     }
 
     // 5. Ordenar los resultados

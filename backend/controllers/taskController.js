@@ -40,7 +40,7 @@ exports.createTask = async (req, res) => {
       realEndTime: null,
     };
 
-    const docRef = await db.collection("tasks").add(newTask);
+    const docRef = await db.collection("tasks").add(newTask);
 
     return res.status(201).json({ id: docRef.id, ...newTask });
   } catch (error) {
