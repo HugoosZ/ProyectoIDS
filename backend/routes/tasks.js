@@ -43,10 +43,18 @@ router.put("/reassign-task/:taskId", async (req, res) => {
     // Verifica que el admin existe y tiene permisos
     const adminDoc = await db.collection("users").doc(adminUid).get();
     if (!adminDoc.exists || !adminDoc.data().isAdmin) {
-      return res
-        .status(403)
-        .json({ error: "Solo administradores pueden reasignar tareas" });
+      return res.status(403).json({ error: "Solo administradores pueden reasignar tareas" });
     }
+
+    const taskRef = db.collection("tasks").doc(taskId);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+      return res.status(404).json({ error: "Tarea no encontrada" });
+    }
+
+    const taskData = taskDoc.data();
+    const previousAssignedToUid = taskData.assignedTo;
 
     // Verifica que el nuevo usuario existe
     const userDoc = await db.collection("users").doc(newAssignedToUid).get();
@@ -54,10 +62,44 @@ router.put("/reassign-task/:taskId", async (req, res) => {
       return res.status(404).json({ error: "Nuevo usuario no encontrado" });
     }
 
-    // Actualiza la tarea con el nuevo assignedTo (usando uid)
-    await db.collection("tasks").doc(taskId).update({
+    // Actualiza la tarea con el nuevo assignedTo
+    await taskRef.update({
       assignedTo: newAssignedToUid,
     });
+
+    const today = new Date().toISOString().split('T')[0];
+
+    // Restar 1 al currentTasks del usuario anterior
+    const previousAsistenciaQuery = await db.collection('asistencias')
+      .where('userId', '==', previousAssignedToUid)
+      .where('date', '==', today)
+      .limit(1)
+      .get();
+
+    if (!previousAsistenciaQuery.empty) {
+      const asistenciaDoc = previousAsistenciaQuery.docs[0];
+      const current = asistenciaDoc.data().currentTasks || 0;
+
+      await asistenciaDoc.ref.update({
+        currentTasks: Math.max(0, current - 1),
+      });
+    }
+
+    // Sumar 1 al currentTasks del nuevo usuario
+    const newAsistenciaQuery = await db.collection('asistencias')
+      .where('userId', '==', newAssignedToUid)
+      .where('date', '==', today)
+      .limit(1)
+      .get();
+
+    if (!newAsistenciaQuery.empty) {
+      const asistenciaDoc = newAsistenciaQuery.docs[0];
+      const current = asistenciaDoc.data().currentTasks || 0;
+
+      await asistenciaDoc.ref.update({
+        currentTasks: current + 1,
+      });
+    }
 
     res.status(200).json({ message: "Tarea reasignada con éxito" });
   } catch (error) {
@@ -120,14 +162,32 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => 
       if (status === "en progreso" && !taskData.realStartTime) {
         updateData.realStartTime = Timestamp.now();
       }
-
-
       // Registrar hora real de finalización
       if (status === "completada" && !taskData.realEndTime) {
         updateData.realEndTime = Timestamp.now();
       }
       // Update the status
       await taskRef.update(updateData);
+
+      // descontar currentTasks si pasa a "completada" 
+      if (status === "completada" && taskData.status !== "completada") {
+        const today = new Date().toISOString().split('T')[0];
+
+        const asistenciaQuery = await db.collection("asistencias")
+          .where("userId", "==", userId)
+          .where("date", "==", today)
+          .limit(1)
+          .get();
+
+        if (!asistenciaQuery.empty) {
+          const asistenciaDoc = asistenciaQuery.docs[0];
+          const currentCount = asistenciaDoc.data().currentTasks || 0;
+
+          await asistenciaDoc.ref.update({
+            currentTasks: Math.max(0, currentCount - 1),
+          });
+        }
+      }
 
       res.json({ message: "Estado de la tarea actualizado exitosamente." });
     } catch (error) {
