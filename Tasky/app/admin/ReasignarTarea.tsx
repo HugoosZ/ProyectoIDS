@@ -86,26 +86,33 @@ export default function ReasignarTarea() {
 
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Reasignar Tarea</Text>
+  <Text style={globalStyles.title}>Reasignar Tarea</Text>
 
-      <Text style={globalStyles.subtitle}>Selecciona una tarea:</Text>
-      <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 20 }}>
-        <Picker
-          selectedValue={selectedTaskId}
-          onValueChange={(itemValue) => setSelectedTaskId(itemValue)}
-          style={{ height: 50, width: '100%' }}
-        >
-          <Picker.Item label="-- Selecciona una tarea --" value="" />
-          {tareas.map((tarea) => (
-            <Picker.Item
-              key={tarea.id}
-              label={`${tarea.title} (Asignado a: ${tarea.assignedTo})`}
-              value={tarea.id}
-            />
-          ))}
-        </Picker>
-      </View>
-
+  <Text style={globalStyles.subtitle}>Selecciona una tarea:</Text>
+  <View style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 20 }}>
+    <Picker
+      selectedValue={selectedTaskId}
+      onValueChange={(itemValue) => setSelectedTaskId(itemValue)}
+      style={{ height: 50, width: '100%' }}
+    >
+      <Picker.Item label=" Selecciona una tarea" value="" />
+      {tareas
+        .filter(tarea => {
+          // Mostrar tareas SIN asignado (assignedTo vacío o null)
+          // O tareas con estado "pendiente" o "en progreso"
+          const isNotAssigned = tarea.assignedTo === null || tarea.assignedTo === "";
+          const isPendingOrInProgress = tarea.status === "pendiente" || tarea.status === "en progreso";
+          return isNotAssigned || isPendingOrInProgress;
+        })
+        .map((tarea) => (
+          <Picker.Item
+        key={tarea.id}
+        label={`${tarea.title} (Asignado a: ${tarea.assignedTo || 'No Asignado'})`} 
+        value={tarea.id}
+          />
+        ))}
+    </Picker>
+  </View>
       <TextInput
         placeholder="RUT del nuevo trabajador asignado"
         style={globalStyles.input}
