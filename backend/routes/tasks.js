@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const { db } = require("../firebase");
 const { createTask } = require("../controllers/taskController");
-const { checkAdminPrivileges } = require("../middlewares/authorization");
+const { checkAdminPrivileges, checkEmpresaId } = require("../middlewares/authorization");
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const { getDateRange } = require("../utils/dateFilters");
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
