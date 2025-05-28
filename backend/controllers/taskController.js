@@ -54,7 +54,35 @@ exports.createTask = async (req, res) => {
     };
 
     const docRef = await db.collection("tasks").add(newTask);
+    // Seccion para aumentar el contador de tareas actuales del usuario asignado
+    // Actualizar la asistencia del usuario asignado
+    const today = new Date().toISOString().split('T')[0];
 
+    // Buscar la asistencia del usuario para hoy
+    const asistenciaQuery = await db.collection('asistencias')
+      .where('userId', '==', assignedTo)
+      .where('date', '==', today)
+      .limit(1)
+      .get();
+
+    if (!asistenciaQuery.empty) {
+      const asistenciaDoc = asistenciaQuery.docs[0];
+      const currentCount = asistenciaDoc.data().currentTasks || 0;
+
+      await asistenciaDoc.ref.update({
+        currentTasks: currentCount + 1
+      });
+    } else {
+      // Crear la asistencia con currentTasks = 1
+      await db.collection('asistencias').add({
+        userId: assignedTo,
+        date: today,
+        currentTasks: 1,
+        checkInTime: null,
+        checkOutTime: null
+      });
+    }
+    
     return res.status(201).json({ id: docRef.id, ...newTask });
   } catch (error) {
     console.error("Error creating task:", error);
@@ -127,6 +155,7 @@ exports.getTasksByUserId = async (req, res) => {
 
 exports.getAllCompanyTasks = async (req, res) => {
     try {
+        console.log("ola")
         const userEmpresaId = req.user.empresaId;
 
         if (!userEmpresaId) {
@@ -140,7 +169,7 @@ exports.getAllCompanyTasks = async (req, res) => {
         if (snapshot.empty) {
             return res.status(200).json([]);
         }
-
+        console.log("ola2")
         const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Convertir Timestamps a formato legible (solo fecha, YYYY-MM-DD)
@@ -167,7 +196,7 @@ exports.getAllCompanyTasks = async (req, res) => {
             }
             return formattedTask;
         });
-
+        console.log("ola3")
         return res.status(200).json(formattedTasks);
 
     } catch (error) {
