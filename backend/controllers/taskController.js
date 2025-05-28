@@ -5,7 +5,7 @@ const { getDateRange } = require("../utils/dateFilters"); // OK
 exports.createTask = async (req, res) => {
   try {
     const createdByUid = req.user.uid;
-    const createdByEmpresaId = req.user.empresaId;
+    //const createdByEmpresaId = req.user.empresaId;
     const {
       assignedTo,
       description,
@@ -33,10 +33,10 @@ exports.createTask = async (req, res) => {
     }
     
     // 2. Verificar que el usuario 'assignedTo' pertenezca a la misma empresa que el administrador
-    const assignedUserEmpresaId = assignedUserDoc.data().empresaId;
+/*     const assignedUserEmpresaId = assignedUserDoc.data().empresaId;
     if (assignedUserEmpresaId !== createdByEmpresaId) {
         return res.status(403).json({ message: "No autorizado: No puede asignar tareas a usuarios de otras empresas" });
-    }
+    } */
 
     const newTask = {
       assignedTo,
@@ -50,7 +50,7 @@ exports.createTask = async (req, res) => {
       title,
       realStartTime: null,
       realEndTime: null,
-      empresaId: createdByEmpresaId,
+      //empresaId: createdByEmpresaId,
     };
 
     const docRef = await db.collection("tasks").add(newTask);
