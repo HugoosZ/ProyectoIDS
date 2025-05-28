@@ -107,7 +107,10 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
-        user: userData ? { uid: userDoc.id, ...userData } : null
+        user: userData ? {
+          name: userData.name || null,
+          email: userData.email || null
+        } : null
       };
     }));
 
