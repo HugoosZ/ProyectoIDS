@@ -41,6 +41,7 @@ export default function TareasCompletadas(){
 
       try {
         const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/done/${userId}/today`, {
+          method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
           },
