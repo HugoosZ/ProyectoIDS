@@ -28,7 +28,9 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
     const { status, userId, time } = req.query;
     let query = db.collection("tasks");
     const validStatuses = ["en curso", "pendiente", "completada", "cancelada"];
+    
 
+    console.log("Query parameters:", { status, userId, time });
     let dateFilter = null;
     if (time === "today" || time === "week") {
       dateFilter = getDateRange(time);
