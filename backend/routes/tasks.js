@@ -16,7 +16,7 @@ const router = Router();
 router.post("/createTask", verifyAndDecodeToken, checkAdminPrivileges, createTask); 
 
 //ruta para ver las tareas
-router.get("/tasks", getAllTasks);
+router.get("/tasks", verifyAndDecodeToken, taskController.getAllCompanyTasks);
 
 // Obtener todas las tareas de un usuario específico
 router.get("/tasks/:userId", verifyAndDecodeToken, checkEmpresaId, taskController.getTasksByUserId);

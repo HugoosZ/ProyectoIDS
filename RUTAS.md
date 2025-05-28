@@ -3,6 +3,31 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
+## 📝 `GET /tasks`
+
+**Descripción:**
+Devuelve todas las tareas que pertenecen a la misma empresa del usuario autenticado. Esta ruta permite a usuarios y administradores obtener una vista general de las actividades dentro de su propia organización.
+
+**Roles requeridos:** `Usuario` o `Administrador`.
+
+**Método:** `GET`
+
+**URL:** `/api/tasks`
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_usuario_autenticado>`
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Ejemplo de Solicitud (desde el cliente):**
+```javascript
+fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.app/api/tasks)", {
+  headers: {
+    'Authorization': 'Bearer <token_de_mi_usuario>'
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+```
 ## 📝 `GET /tasks/:userId`
 
 **Descripción:**

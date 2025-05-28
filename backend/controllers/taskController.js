@@ -124,3 +124,54 @@ exports.getTasksByUserId = async (req, res) => {
         return res.status(500).json({ message: "Internal Server Error" });
     }
 };
+
+exports.getAllCompanyTasks = async (req, res) => {
+    try {
+        const userEmpresaId = req.user.empresaId;
+
+        if (!userEmpresaId) {
+            return res.status(403).json({ message: "Forbidden: User is not associated with an enterprise." });
+        }
+
+        let query = db.collection("tasks").where("empresaId", "==", userEmpresaId);
+
+        const snapshot = await query.get();
+
+        if (snapshot.empty) {
+            return res.status(200).json([]);
+        }
+
+        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // Convertir Timestamps a formato legible (solo fecha, YYYY-MM-DD)
+        const formattedTasks = tasks.map(task => {
+            const formattedTask = { ...task };
+            if (formattedTask.createdAt instanceof Timestamp) {
+                formattedTask.createdAt = formattedTask.createdAt.toDate().toISOString().split('T')[0];
+            }
+            if (formattedTask.startTime instanceof Timestamp) {
+                formattedTask.startTime = formattedTask.startTime.toDate().toISOString().split('T')[0];
+            }
+            if (formattedTask.endTime instanceof Timestamp) {
+                formattedTask.endTime = formattedTask.endTime.toDate().toISOString().split('T')[0];
+            }
+            if (formattedTask.realStartTime instanceof Timestamp && formattedTask.realStartTime !== null) {
+                formattedTask.realStartTime = formattedTask.realStartTime.toDate().toISOString().split('T')[0];
+            } else if (formattedTask.realStartTime === null) {
+                formattedTask.realStartTime = null;
+            }
+            if (formattedTask.realEndTime instanceof Timestamp && formattedTask.realEndTime !== null) {
+                formattedTask.realEndTime = formattedTask.realEndTime.toDate().toISOString().split('T')[0];
+            } else if (formattedTask.realEndTime === null) {
+                formattedTask.realEndTime = null;
+            }
+            return formattedTask;
+        });
+
+        return res.status(200).json(formattedTasks);
+
+    } catch (error) {
+        console.error("Error fetching all company tasks:", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
