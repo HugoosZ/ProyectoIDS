@@ -87,7 +87,7 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
   try {
     // Filtra asistencias por trabajadores presentes y sin tareas
     const query = db.collection("asistencias")
-      .where("isPresent", "==", true)
+      //.where("isPresent", "==", true)
       .where("currentTasks", "==", 0);
 
     const snapshot = await query.get();
