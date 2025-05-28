@@ -10,13 +10,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
-
+const router = useRouter();
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
     const userId = await AsyncStorage.getItem('userId');
-    const token = await AsyncStorage.getItem('token');
+    const token = await AsyncStorage.getItem('userToken');
     return { userId, token };
   } catch (e) {
     console.error('Error al obtener datos de autenticación:', e);
@@ -71,20 +72,17 @@ const Turno=() =>{
 
     try {
 
-      //falta ajustar fetch para iniciar el turno
-      /*
-      const response=await fetch(`https://proyecto-ids.vercel.app/api/`, {
+      const response=await fetch(`https://proyecto-ids.vercel.app/api/checkIn/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({userId}),
       });
-      */
 
       if (response.ok){
         setTurno(true);
+        Alert.alert('Éxito', 'Turno iniciado correctamente');
       }else{
         throw new Error('No se pudo iniciar el turno');
       }
@@ -99,21 +97,17 @@ const Turno=() =>{
     if (!userId || !token) return;
 
     try{
-
-      //falta ajustar fetch para terminar el turno
-      /*
-      const response=await fetch(`https://proyecto-ids.vercel.app/api/`, {
-        method: 'POST',
+      const response=await fetch(`https://proyecto-ids.vercel.app/api/checkOut/${userId}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ userId}),
       });
-      */
 
       if (response.ok){
         setTurno(false);
+        Alert.alert('Éxito', 'Turno finalizado correctamente');
       } else {
         throw new Error('No se pudo terminar el turno');
       }
@@ -133,7 +127,7 @@ const Turno=() =>{
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity //adicion boton de volver a vista "ver-tareas"
+      <TouchableOpacity
         style={styles.backButton}
         onPress={() => router.push('/trabajador/ver-tareas')}
         activeOpacity={0.8}
