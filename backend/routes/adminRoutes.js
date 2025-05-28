@@ -80,4 +80,35 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 }
 );
 
+
+// Ruta para obtener informacion de trabajadores que esten presentes y que no tengan tareas asignadas en el bloque de tiempo en el que se tienen asignadas las tareas
+
+router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
+  try {
+    let query = db.collection("asistencias")
+
+    query = query
+      //.where("isPresent", "==", true)
+      .where("currentTasks", "==", 0)
+
+    const snapshot = await query.get();
+
+    if (snapshot.empty) {
+      return res.status(404).json({ message: "No se encontraron trabajadores presentes sin tareas asignadas" });
+    }
+
+
+    const workers = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.status(200).json(workers);
+  } catch (error) {
+    console.error("Error al obtener trabajadores y sus tareas:", error);
+    res.status(500).json({ error: "Error al obtener trabajadores y sus tareas" });
+  }
+});
+
+
 module.exports = router;

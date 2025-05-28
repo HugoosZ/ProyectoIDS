@@ -3,26 +3,71 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
-## 👤 `GET /tasks/:uid`
+## 📝 `GET /tasks`
 
-**Descripción**:
-Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID. Esta ruta es solo accesible para administradores.
+**Descripción:**
+Devuelve todas las tareas que pertenecen a la misma empresa del usuario autenticado. Esta ruta permite a usuarios y administradores obtener una vista general de las actividades dentro de su propia organización.
 
-Parámetro en URL:
+**Roles requeridos:** `Usuario` o `Administrador`.
 
-    uid – UID del usuario
+**Método:** `GET`
 
-**Headers**
-Authorization: Bearer <token_admin>
+**URL:** `/api/tasks`
 
-**Respuesta**:
-Un array con las tareas cuyo campo assignedTo coincide con el uid.
+**Headers:**
+* `Authorization`: `Bearer <token_del_usuario_autenticado>`
+* `Content-Type`: `application/json` (opcional para GET)
 
-```js
-fetch("https://proyecto-ids.vercel.app/api/tasks/gxoyKkAMIPMAeeoUHRZjIQhUkH52")
-  .then(res => res.json())
-  .then(data => console.log(data));
+**Ejemplo de Solicitud (desde el cliente):**
+```javascript
+fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.app/api/tasks)", {
+  headers: {
+    'Authorization': 'Bearer <token_de_mi_usuario>'
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+```
+## 📝 `GET /tasks/:userId`
 
+**Descripción:**
+Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID.
+Esta ruta aplica las siguientes reglas de autorización:
+* Un **usuario normal** solo puede consultar sus *propias* tareas (es decir, el `:userId` en la URL debe coincidir con su propio UID autenticado).
+* Un **administrador** puede consultar las tareas de *cualquier* usuario, **siempre y cuando ese usuario pertenezca a la misma empresa** que el administrador.
+
+**Roles requeridos:** `Usuario` o `Administrador` (con las restricciones mencionadas).
+
+**Método:** `GET`
+
+**URL:** `/api/tasks/:userId`
+
+**Parámetros de URL:**
+* `userId` (string): UID del usuario cuyas tareas se desean consultar.
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_usuario_autenticado>`
+* `Content-Type`: `application/json` (aunque no es estrictamente necesario para GET)
+
+**Ejemplo de Solicitud (desde el cliente):**
+```javascript
+// Para un usuario normal viendo sus propias tareas
+fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_MI_PROPIO_USUARIO](https://proyecto-ids.vercel.app/api/tasks/UID_DE_MI_PROPIO_USUARIO)", {
+  headers: {
+    'Authorization': 'Bearer <token_de_mi_propio_usuario>'
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+
+// Para un administrador viendo tareas de un usuario de su misma empresa
+fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA](https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA)", {
+  headers: {
+    'Authorization': 'Bearer <token_del_administrador>'
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
 ```
 
 ## `PUT /reassign-task/:taskId`
@@ -211,6 +256,9 @@ Crea una tarea con el siguiente formato (JSON):
 "title": ""
 }
 ```
+## Notas importantes sobre el cuerpo de la solicitud:##
+Los campos createdBy y empresaId no deben ser enviados en el cuerpo de la solicitud. Estos valores se obtienen automáticamente del token del administrador autenticado (req.user) para garantizar la seguridad y la correcta asociación.
+Los campos createdAt, realStartTime y realEndTime también se gestionan automáticamente por el servidor.
 
 ## `PATCH /tasks/:taskId/status`
 **Descripción:**
@@ -246,7 +294,7 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 }
 
 
-## `GET /createTask`
+## `POST /createTask`
 **Descripción**:
 Permite a un administrador crear una nueva tarea y asignarla a un usuario.
 **Headers**:
