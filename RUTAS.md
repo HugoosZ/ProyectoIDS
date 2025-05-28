@@ -384,3 +384,42 @@ fetch(`https://proyecto-ids.vercel.app/api/admin/tasks?${queryParams.toString()}
   }
 })
 ```
+
+## `GET /admin/workers/isPresent/NoTasks`
+**Descripción**:
+Devuelve una lista de trabajadores presentes(De momento desactivado) que no tienen tareas asignadas actualmente (currentTasks === 0).
+Esta ruta solo puede ser accedida por administradores.
+
+**Headers requeridos**:
+    Authorization: "Bearer <token>"
+
+**Respuesta**:
+Una lista de objetos que contienen información de la tabla asistencia y los datos básicos del usuario asociado (nombre y correo electrónico).
+
+```
+  {
+    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
+    "isPresent": true,
+    "currentTasks": 0,
+    "userId": "UID_DEL_USUARIO",
+    "user": {
+      "name": "Nombre del Usuario",
+      "email": "correo@example.com"
+  }
+```
+
+
+
+
+**Ejemplo de fetch**:
+
+```js
+fetch("https://proyecto-ids.vercel.app/api/admin/workers/isPresent/NoTasks", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <token_del_admin>"
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
+```
