@@ -7,6 +7,8 @@ const { getDateRange } = require("../utils/dateFilters");
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
 const { checkIn, checkOut } = require('../controllers/attendanceController');
 const { Timestamp } = require("firebase-admin/firestore");
+const taskController = require("../controllers/taskController"); 
+
 
 const router = Router();
 
@@ -17,7 +19,7 @@ router.post("/createTask", verifyAndDecodeToken, checkAdminPrivileges, createTas
 router.get("/tasks", getAllTasks);
 
 // Obtener todas las tareas de un usuario específico
-router.get("/tasks/:userId", getUserTasks);
+router.get("/tasks/:userId", verifyAndDecodeToken, checkEmpresaId, taskController.getTasksByUserId);
 
 // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
