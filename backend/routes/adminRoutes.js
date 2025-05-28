@@ -27,7 +27,7 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
   try {
     const { status, userId, time } = req.query;
     let query = db.collection("tasks");
-    const validStatuses = ["en curso", "pendiente", "completada", "cancelada"];
+    const validStatuses = ["en progreso", "pendiente", "completada", "cancelada"];
     
 
     console.log("Query parameters:", { status, userId, time });
