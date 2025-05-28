@@ -90,17 +90,12 @@ exports.getUserTaskStatus = async (req, res) => {
       tasksQuery = tasksQuery
         .where("startTime", ">=", startDate)
         .where("startTime", "<=", endDate);
-      console.log(
-        `DEBUG: Filtro por tareas de HOY (startTime entre ${startDate.toDate()} y ${endDate.toDate()}).`
-      );
     } else if (week === "true") {
       const { startDate, endDate } = getDateRange("week");
       tasksQuery = tasksQuery
         .where("startTime", ">=", startDate)
         .where("startTime", "<", endDate); // Usar < para semana completa
-      console.log(
-        `DEBUG: Filtro por tareas de la SEMANA (startTime entre ${startDate.toDate()} y ${endDate.toDate()}).`
-      );
+
     }
 
     // 5. Ordenar los resultados
