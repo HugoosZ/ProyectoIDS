@@ -3,61 +3,72 @@ const { db } = require("../firebase"); // Asegúrate de que importas 'db' de fir
 const { Timestamp } = require("firebase-admin/firestore"); // Para manejar fechas de Firestore
 const { getDateRange } = require("../utils/dateFilters"); // Asegúrate de que esta utilidad exista y funcione.
 
-exports.getUserTaskStatus = async (req, res) => {
+exports.taskStatus = async (req, res) => {
   try {
+    console.log("ola")
+    
+    const { userId } = req.params;
+    const requestingUserId = req.userId; // ID del usuario que hace la petición (del token)
 
-    const { userId: userId } = req.params; //ID del usuario desde los parámetros de la ruta
-    const tokenUserId = req.user.uid; //ID del usuario desde el jwt
+    // 1. Verificar permisos (solo el propio usuario o admin puede ver sus tareas)
+    const userDoc = await db.collection("users").doc(requestingUserId).get();
+    const userData = userDoc.data();
 
-    if (userId !== tokenUserId) {
-      return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
+    if (userId !== requestingUserId && !userData.isAdmin) {
+      return res
+        .status(403)
+        .json({ error: "No autorizado para ver estas tareas" });
     }
 
-/* 
-    // 1. Obtener los datos del usuario solicitado (el del `:userId` en la URL)
+    // 2. Verificar que el usuario solicitado existe
+    console.log("ola2")
     const requestedUserDoc = await db.collection("users").doc(userId).get();
+    if (!requestedUserDoc.exists) {
+      return res
+        .status(404)
+        .json({ error: "Usuario solicitado no encontrado" });
+    }
+    console.log("ola3")
 
-    const requestedUserData = requestedUserDoc.data();
-    const { empresaId, isAdmin } = requestedUserDoc.data();
-    
-    const requestedUserEmpresaId = requestedUserDoc.data().empresaId; // EmpresaId del usuario solicitado
+    // 3. Construir consulta base
+    let tasksQuery = db.collection("tasks").where("assignedTo", "==", userId);
 
-    let tasksQuery = db
-      .collection("tasks")
-      .where("assignedTo", "==", userId)
-      .where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId
+    // 4. Aplicar filtros opcionales
+    const { status, priority } = req.query;
 
- */    // 4. Aplicar filtros opcionales (status, priority, today, week)
-    const { status, priority, today, week } = req.query;
-    
-    if (typeof status !== "undefined" && status !== null && status !== "") {
-      tasksQuery = tasksQuery.where("status", "==", status);
+    if (status) {
+      tasksQuery = tasksQuery.where("status", "==", status); // filtro de estado
     }
 
-    if (typeof priority !== "undefined" && priority !== null && priority !== "") {
-      tasksQuery = tasksQuery.where("priority", "==", priority);
+    if (priority) {
+      tasksQuery = tasksQuery.where("priority", "==", priority); // filtro de prioridad
     }
 
-    // Considerar "today" y "week" mutuamente excluyentes (se usa else if)
+    const { today, week } = req.query;
     if (today === "true") {
+      // filtro por dia
       const { startDate, endDate } = getDateRange("today");
       tasksQuery = tasksQuery
         .where("startTime", ">=", startDate)
         .where("startTime", "<=", endDate);
-    } else if (week === "true") {
+    }
+    
+    if (week === "true") {
+      // filtro por semana
       const { startDate, endDate } = getDateRange("week");
       tasksQuery = tasksQuery
         .where("startTime", ">=", startDate)
-        .where("startTime", "<", endDate); // Usar < para semana completa
+        .where("startTime", "<", endDate);
     }
+    console.log("ola4")
 
-    // 5. Ordenar los resultados
+    // 5. Ordenar por fecha de creación (nuevas primero)
     tasksQuery = tasksQuery.orderBy("createdAt", "desc");
 
-    // 6. Ejecutar la consulta
+    // 6. Ejecutar consulta
     const snapshot = await tasksQuery.get();
 
-    // 7. Formatear la respuesta
+    // 7. Formatear respuesta
     const tasks = snapshot.docs.map((doc) => {
       const taskData = doc.data();
       return {
@@ -68,26 +79,30 @@ exports.getUserTaskStatus = async (req, res) => {
         priority: taskData.priority,
         startTime: taskData.startTime?.toDate() || null,
         endTime: taskData.endTime?.toDate() || null,
-        createdAt: taskData.createdAt.toDate()
-        //empresaId: taskData.empresaId, 
+        createdAt: taskData.createdAt.toDate(),
       };
     });
-
 
     res.status(200).json({
       user: {
         id: userId,
         name: requestedUserDoc.data().name,
         lastName: requestedUserDoc.data().lastName,
-        //empresaId: requestedUserDoc.data().empresaId, // Incluir el empresaId del usuario solicitado
       },
       count: tasks.length,
       tasks,
     });
   } catch (error) {
-    console.error("Error al obtener tareas (getUserTaskStatus):", error);
+    console.error("Error al obtener tareas:", error);
+
+    if (error.code === 3) {
+      return res
+        .status(400)
+        .json({ error: "Parámetros de consulta inválidos" });
+    }
+
     res.status(500).json({
-      error: "Error interno del servidor al obtener tareas.",
+      error: "Error al obtener tareas",
       details: error.message,
     });
   }
