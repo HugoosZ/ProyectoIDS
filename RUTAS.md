@@ -3,6 +3,90 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
+## 📝 `GET /api/users`
+**Descripción**:
+Permite a un usuario autenticado con rol de `admin` obtener la lista de todos los usuarios registrados **dentro de su propia empresa**. La respuesta se filtra automáticamente por el `empresaId` del administrador que realiza la solicitud, garantizando la seguridad y la visibilidad de datos solo dentro de la empresa.
+
+**Headers**:
+Authorization: "Bearer <token_admin>"
+Content-Type: application/json
+
+**Cuerpo del request**:
+No aplica (GET request).
+
+**Parámetros de Ruta (URL Parameters)**:
+No aplica.
+
+**Respuestas Posibles**:
+
+* **`200 OK`**: Retorna un array de objetos de usuario de la misma empresa del administrador.
+    ```json
+    [
+        {
+            "id": "userUID1",
+            "name": "Juan",
+            "lastName": "Perez",
+            "email": "juan.perez@empresaA.com",
+            "isAdmin": false,
+            "empresaId": "empresa_A"
+            // Otros campos relevantes del usuario, excepto sensibles como contraseñas
+        },
+        {
+            "id": "userUID2",
+            "name": "Maria",
+            "lastName": "Gonzalez",
+            "email": "maria.gonzalez@empresaA.com",
+            "isAdmin": true,
+            "empresaId": "empresa_A"
+        }
+    ]
+    ```
+    * Si no hay usuarios en la empresa del administrador, devuelve un array vacío: `[]`
+
+* **`401 Unauthorized`**: Si el token JWT no es válido o está ausente.
+    ```json
+    {
+        "message": "Unauthorized: Invalid or missing token."
+    }
+    ```
+
+* **`403 Forbidden`**: Si el usuario autenticado no tiene rol de `admin` o no está asociado a una empresa.
+    ```json
+    {
+        "error": "Se requiere rol admin"
+    }
+    ```
+    ```json
+    {
+        "message": "Forbidden: Admin user is not associated with an enterprise."
+    }
+    ```
+
+* **`500 Internal Server Error`**: Si ocurre un error inesperado en el servidor.
+    ```json
+    {
+        "error": "Error interno del servidor al obtener usuarios",
+        "details": "Mensaje de error técnico"
+    }
+    ```
+
+**Ejemplo de fetch**:
+
+```javascript
+const token = '<TOKEN_DE_ADMIN_EMPRESA_A>'; // Reemplaza con un token JWT válido de un administrador
+
+fetch("[https://proyecto-ids.vercel.app/api/users](https://proyecto-ids.vercel.app/api/users)", {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));
+```
+
 ## 📝 `GET /tasks`
 
 **Descripción:**
@@ -240,41 +324,34 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
 })
 ```
 
-## `POST /createTask`
-**Descripción:**
-
-Crea una tarea con el siguiente formato (JSON):
-```
-{
-"assignedTo": "",
-"createdBy": "",
-"description": "",
-"startTime": "",
-"endTime": "",
-"priority": "",
-"status": "",
-"title": ""
-}
-```
 ## Notas importantes sobre el cuerpo de la solicitud:##
 Los campos createdBy y empresaId no deben ser enviados en el cuerpo de la solicitud. Estos valores se obtienen automáticamente del token del administrador autenticado (req.user) para garantizar la seguridad y la correcta asociación.
 Los campos createdAt, realStartTime y realEndTime también se gestionan automáticamente por el servidor.
 
-## `PATCH /tasks/:taskId/status`
-**Descripción:**
+## `PATCH /api/tasks/:taskId/status`
+**Descripción**:
+Permite a un usuario autenticado actualizar el estado de una tarea específica por su ID. La operación está restringida:
+* Un **usuario normal** solo puede actualizar el estado de las tareas que le están **asignadas**.
+* Un **administrador** puede actualizar el estado de cualquier tarea **dentro de su misma empresa**.
+* Cuando el estado cambia a `"en progreso"`, se registra `realStartTime` si no está ya establecido.
+* Cuando el estado cambia a `"completada"`, se registra `realEndTime` si no está ya establecido y se descuenta 1 de `currentTasks` en el registro de asistencia del usuario asignado.
 
-Permite realizar actualización en el estado de una tarea.
+**Headers**:
+Authorization: "Bearer <token>"
+Content-Type: application/json
 
-Estados permitidos son `pendiente`, `en progreso` y `completada`.
-
+**Cuerpo del request**:
+```json
+{
+    "status": "completada" // "pendiente", "en progreso"
+}
+```
 
 ## `GET /my-pending-tasks`
 **Descripción**:
 Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autenticado.
 **Headers requeridos:**:
     Authorization: "Bearer <token_usuario_normal_o_admin>"
-
-
 
 **Respuesta**:
 {
@@ -296,12 +373,14 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 
 ## `POST /createTask`
 **Descripción**:
-Permite a un administrador crear una nueva tarea y asignarla a un usuario.
+Permite a un administrador crear una nueva tarea y asignarla a un usuario. La tarea creada **heredará automáticamente el `empresaId` del administrador** que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador.
+
 **Headers**:
 Authorization: "Bearer <token_admin>"
 Content-Type: application/json
 
 **Cuerpo del request**:
+```json
 {
     "assignedTo": "UID_del_usuario_receptor",
     "createdBy": "UID_del_admin_creador",
@@ -312,28 +391,26 @@ Content-Type: application/json
     "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
     "title": "Título corto de la tarea"
 }
+```
 
-
-  Un array con las tareas completadas hoy. Cada tarea incluye:
-    - id: ID de la tarea
-    - description: descripción de la tarea
-    - status: estado (completada)
-    - realStartTime: fecha de inicio real (formato JS Date)
-    - realEndTime: fecha de término real (formato JS Date)
-
-   Si el usuario en el parámetro no coincide con el token, se devuelve un error 403.
-
-
-**Ejemplo de fetch**:
-
-```js
-fetch("https://proyecto-ids.vercel.app/api/tasks/done/gxoyKkAMIPMAeeoUHRZjIQhUkH52/today", {
-  method: "GET",
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-})
-
+**Respuesta**:
+```json
+{
+    "message": "Tarea creada exitosamente.",
+    "taskId": "ID_DE_LA_NUEVA_TAREA",
+    "task": {
+        "id": "ID_DE_LA_NUEVA_TAREA",
+        "assignedTo": "UID_del_usuario_receptor",
+        "createdBy": "UID_del_admin_creador",
+        "description": "Detalles de la tarea a realizar.",
+        "startTime": "2025-05-23T09:00:00.000Z",
+        "endTime": "2025-05-23T17:00:00.000Z",
+        "priority": "normal",
+        "status": "pendiente",
+        "title": "Título corto de la tarea",
+        "empresaId": "ID_DE_LA_EMPRESA_DEL_ADMIN" // <--- Campo crucial
+    }
+}
 ```
 
 
@@ -383,4 +460,43 @@ fetch(`https://proyecto-ids.vercel.app/api/admin/tasks?${queryParams.toString()}
     "Content-Type": "application/json"
   }
 })
+```
+
+## `GET /admin/workers/isPresent/NoTasks`
+**Descripción**:
+Devuelve una lista de trabajadores presentes(De momento desactivado) que no tienen tareas asignadas actualmente (currentTasks === 0).
+Esta ruta solo puede ser accedida por administradores.
+
+**Headers requeridos**:
+    Authorization: "Bearer <token>"
+
+**Respuesta**:
+Una lista de objetos que contienen información de la tabla asistencia y los datos básicos del usuario asociado (nombre y correo electrónico).
+
+```
+  {
+    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
+    "isPresent": true,
+    "currentTasks": 0,
+    "userId": "UID_DEL_USUARIO",
+    "user": {
+      "name": "Nombre del Usuario",
+      "email": "correo@example.com"
+  }
+```
+
+
+
+
+**Ejemplo de fetch**:
+
+```js
+fetch("https://proyecto-ids.vercel.app/api/admin/workers/isPresent/NoTasks", {
+  method: "GET",
+  headers: {
+    "Authorization": "Bearer <token_del_admin>"
+  }
+})
+.then(res => res.json())
+.then(data => console.log(data));
 ```

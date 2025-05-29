@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { db } = require("../firebase");
-const { createTask } = require("../controllers/taskController");
+const { createTask, getAllCompanyTasks, getTasksByUserId, updateTaskStatus } = require("../controllers/taskController");
 const { checkAdminPrivileges, checkEmpresaId } = require("../middlewares/authorization");
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const { getDateRange } = require("../utils/dateFilters");
@@ -19,6 +19,9 @@ router.get("/tasks", verifyAndDecodeToken, taskController.getAllCompanyTasks);
 
 // Obtener todas las tareas de un usuario específico
 router.get("/tasks/:userId", verifyAndDecodeToken, checkEmpresaId, taskController.getTasksByUserId);
+
+// Actualizar el estado de una tarea
+router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);
 
 // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
@@ -121,74 +124,8 @@ router.get("/pendingTasks/:userId", async (req, res) => {
   }
 });
 
-// Actualizar el estado de una tarea
-router.patch("/tasks/:taskId/status", verifyAndDecodeToken, async (req, res) => {
-    try {
-      const { taskId } = req.params;
-      const { status } = req.body;
-      const userId = req.user.uid;
-
-      const validStatuses = ["pendiente", "en progreso", "completada"];
-      if (!validStatuses.includes(status)) {
-        return res.status(400).json({ error: "Estado inválido." });
-      }
-
-      const taskRef = db.collection("tasks").doc(taskId);
-      const taskDoc = await taskRef.get();
-
-      if (!taskDoc.exists) {
-        return res.status(404).json({ error: "Tarea no encontrada." });
-      }
-
-      const taskData = taskDoc.data();
-
-      // Ensure the task belongs to the user
-      if (taskData.assignedTo !== userId) {
-        return res
-          .status(403)
-          .json({ error: "No tienes permiso para modificar esta tarea." });
-      }
 
 
-      const updateData = { status };
-      // Registrar hora real de inicio
-      if (status === "en progreso" && !taskData.realStartTime) {
-        updateData.realStartTime = Timestamp.now();
-      }
-      // Registrar hora real de finalización
-      if (status === "completada" && !taskData.realEndTime) {
-        updateData.realEndTime = Timestamp.now();
-      }
-      // Update the status
-      await taskRef.update(updateData);
-
-      // descontar currentTasks si pasa a "completada" 
-      if (status === "completada" && taskData.status !== "completada") {
-        const today = new Date().toISOString().split('T')[0];
-
-        const asistenciaQuery = await db.collection("asistencias")
-          .where("userId", "==", userId)
-          .where("date", "==", today)
-          .limit(1)
-          .get();
-
-        if (!asistenciaQuery.empty) {
-          const asistenciaDoc = asistenciaQuery.docs[0];
-          const currentCount = asistenciaDoc.data().currentTasks || 0;
-
-          await asistenciaDoc.ref.update({
-            currentTasks: Math.max(0, currentCount - 1),
-          });
-        }
-      }
-
-      res.json({ message: "Estado de la tarea actualizado exitosamente." });
-    } catch (error) {
-      console.error("Error al actualizar el estado de la tarea:", error);
-      res.status(500).json({ error: "Error al actualizar el estado." });
-    }
-  }
-);
 
 router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) => {
   try {

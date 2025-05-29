@@ -85,11 +85,10 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 
 router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
-    let query = db.collection("asistencias")
-
-    query = query
+    // Filtra asistencias por trabajadores presentes y sin tareas
+    const query = db.collection("asistencias")
       //.where("isPresent", "==", true)
-      .where("currentTasks", "==", 0)
+      .where("currentTasks", "==", 0);
 
     const snapshot = await query.get();
 
@@ -97,10 +96,22 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
       return res.status(404).json({ message: "No se encontraron trabajadores presentes sin tareas asignadas" });
     }
 
+    // Para cada asistencia encontrada, buscar los datos del usuario correspondiente
+    const workers = await Promise.all(snapshot.docs.map(async (doc) => {
+      const asistenciaData = doc.data();
+      const userId = asistenciaData.userId;
 
-    const workers = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
+      const userDoc = await db.collection("users").doc(userId).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+
+      return {
+        asistenciaId: doc.id,
+        ...asistenciaData,
+        user: userData ? {
+          name: userData.name || null,
+          email: userData.email || null
+        } : null
+      };
     }));
 
     res.status(200).json(workers);
