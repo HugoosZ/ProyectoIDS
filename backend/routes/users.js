@@ -1,8 +1,15 @@
 const { Router } = require('express');
 const { db } = require('../firebase');
 const { verifyAndDecodeToken } = require('../middlewares/authentication');
+const { checkIn, checkOut } = require('../controllers/attendanceController');
 
 const router = Router();
+
+// Ruta para CheckIn de asistencia del usuario
+router.post('/checkIn/:userId', verifyAndDecodeToken, checkIn);
+
+// Ruta para CheckOut de asistencia del usuario
+router.patch('/checkOut/:userId', verifyAndDecodeToken, checkOut);
 
 router.get('/users', async (req, res) => {
   try {

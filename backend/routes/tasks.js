@@ -5,7 +5,6 @@ const { checkAdminPrivileges, checkEmpresaId } = require("../middlewares/authori
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const { getDateRange } = require("../utils/dateFilters");
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
-const { checkIn, checkOut } = require('../controllers/attendanceController');
 const { Timestamp } = require("firebase-admin/firestore");
 const taskController = require("../controllers/taskController"); 
 
@@ -23,12 +22,6 @@ router.get("/tasks/:userId", verifyAndDecodeToken, checkEmpresaId, taskControlle
 
 // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
-
-// Ruta para CheckIn de asistencia del usuario
-router.post('/checkIn/:userId', verifyAndDecodeToken, checkIn);
-
-// Ruta para CheckOut de asistencia del usuario
-router.patch('/checkOut/:userId', verifyAndDecodeToken, checkOut);
 
 // Reasignar tarea a usuario usando uid en lugar de rut
 router.put("/reassign-task/:taskId", async (req, res) => {
