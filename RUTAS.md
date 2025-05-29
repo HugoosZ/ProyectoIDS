@@ -3,6 +3,90 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
+## 📝 `GET /api/users`
+**Descripción**:
+Permite a un usuario autenticado con rol de `admin` obtener la lista de todos los usuarios registrados **dentro de su propia empresa**. La respuesta se filtra automáticamente por el `empresaId` del administrador que realiza la solicitud, garantizando la seguridad y la visibilidad de datos solo dentro de la empresa.
+
+**Headers**:
+Authorization: "Bearer <token_admin>"
+Content-Type: application/json
+
+**Cuerpo del request**:
+No aplica (GET request).
+
+**Parámetros de Ruta (URL Parameters)**:
+No aplica.
+
+**Respuestas Posibles**:
+
+* **`200 OK`**: Retorna un array de objetos de usuario de la misma empresa del administrador.
+    ```json
+    [
+        {
+            "id": "userUID1",
+            "name": "Juan",
+            "lastName": "Perez",
+            "email": "juan.perez@empresaA.com",
+            "isAdmin": false,
+            "empresaId": "empresa_A"
+            // Otros campos relevantes del usuario, excepto sensibles como contraseñas
+        },
+        {
+            "id": "userUID2",
+            "name": "Maria",
+            "lastName": "Gonzalez",
+            "email": "maria.gonzalez@empresaA.com",
+            "isAdmin": true,
+            "empresaId": "empresa_A"
+        }
+    ]
+    ```
+    * Si no hay usuarios en la empresa del administrador, devuelve un array vacío: `[]`
+
+* **`401 Unauthorized`**: Si el token JWT no es válido o está ausente.
+    ```json
+    {
+        "message": "Unauthorized: Invalid or missing token."
+    }
+    ```
+
+* **`403 Forbidden`**: Si el usuario autenticado no tiene rol de `admin` o no está asociado a una empresa.
+    ```json
+    {
+        "error": "Se requiere rol admin"
+    }
+    ```
+    ```json
+    {
+        "message": "Forbidden: Admin user is not associated with an enterprise."
+    }
+    ```
+
+* **`500 Internal Server Error`**: Si ocurre un error inesperado en el servidor.
+    ```json
+    {
+        "error": "Error interno del servidor al obtener usuarios",
+        "details": "Mensaje de error técnico"
+    }
+    ```
+
+**Ejemplo de fetch**:
+
+```javascript
+const token = '<TOKEN_DE_ADMIN_EMPRESA_A>'; // Reemplaza con un token JWT válido de un administrador
+
+fetch("[https://proyecto-ids.vercel.app/api/users](https://proyecto-ids.vercel.app/api/users)", {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error('Error:', error));
+```
+
 ## 📝 `GET /tasks`
 
 **Descripción:**
