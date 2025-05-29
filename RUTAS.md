@@ -324,22 +324,6 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
 })
 ```
 
-## `POST /createTask`
-**Descripción:**
-
-Crea una tarea con el siguiente formato (JSON):
-```
-{
-"assignedTo": "",
-"createdBy": "",
-"description": "",
-"startTime": "",
-"endTime": "",
-"priority": "",
-"status": "",
-"title": ""
-}
-```
 ## Notas importantes sobre el cuerpo de la solicitud:##
 Los campos createdBy y empresaId no deben ser enviados en el cuerpo de la solicitud. Estos valores se obtienen automáticamente del token del administrador autenticado (req.user) para garantizar la seguridad y la correcta asociación.
 Los campos createdAt, realStartTime y realEndTime también se gestionan automáticamente por el servidor.
@@ -389,12 +373,14 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 
 ## `POST /createTask`
 **Descripción**:
-Permite a un administrador crear una nueva tarea y asignarla a un usuario.
+Permite a un administrador crear una nueva tarea y asignarla a un usuario. La tarea creada **heredará automáticamente el `empresaId` del administrador** que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador.
+
 **Headers**:
 Authorization: "Bearer <token_admin>"
 Content-Type: application/json
 
 **Cuerpo del request**:
+```json
 {
     "assignedTo": "UID_del_usuario_receptor",
     "createdBy": "UID_del_admin_creador",
@@ -405,28 +391,26 @@ Content-Type: application/json
     "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
     "title": "Título corto de la tarea"
 }
+```
 
-
-  Un array con las tareas completadas hoy. Cada tarea incluye:
-    - id: ID de la tarea
-    - description: descripción de la tarea
-    - status: estado (completada)
-    - realStartTime: fecha de inicio real (formato JS Date)
-    - realEndTime: fecha de término real (formato JS Date)
-
-   Si el usuario en el parámetro no coincide con el token, se devuelve un error 403.
-
-
-**Ejemplo de fetch**:
-
-```js
-fetch("https://proyecto-ids.vercel.app/api/tasks/done/gxoyKkAMIPMAeeoUHRZjIQhUkH52/today", {
-  method: "GET",
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-})
-
+**Respuesta**:
+```json
+{
+    "message": "Tarea creada exitosamente.",
+    "taskId": "ID_DE_LA_NUEVA_TAREA",
+    "task": {
+        "id": "ID_DE_LA_NUEVA_TAREA",
+        "assignedTo": "UID_del_usuario_receptor",
+        "createdBy": "UID_del_admin_creador",
+        "description": "Detalles de la tarea a realizar.",
+        "startTime": "2025-05-23T09:00:00.000Z",
+        "endTime": "2025-05-23T17:00:00.000Z",
+        "priority": "normal",
+        "status": "pendiente",
+        "title": "Título corto de la tarea",
+        "empresaId": "ID_DE_LA_EMPRESA_DEL_ADMIN" // <--- Campo crucial
+    }
+}
 ```
 
 
