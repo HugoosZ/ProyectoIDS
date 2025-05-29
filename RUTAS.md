@@ -260,21 +260,30 @@ Crea una tarea con el siguiente formato (JSON):
 Los campos createdBy y empresaId no deben ser enviados en el cuerpo de la solicitud. Estos valores se obtienen automáticamente del token del administrador autenticado (req.user) para garantizar la seguridad y la correcta asociación.
 Los campos createdAt, realStartTime y realEndTime también se gestionan automáticamente por el servidor.
 
-## `PATCH /tasks/:taskId/status`
-**Descripción:**
+## `PATCH /api/tasks/:taskId/status`
+**Descripción**:
+Permite a un usuario autenticado actualizar el estado de una tarea específica por su ID. La operación está restringida:
+* Un **usuario normal** solo puede actualizar el estado de las tareas que le están **asignadas**.
+* Un **administrador** puede actualizar el estado de cualquier tarea **dentro de su misma empresa**.
+* Cuando el estado cambia a `"en progreso"`, se registra `realStartTime` si no está ya establecido.
+* Cuando el estado cambia a `"completada"`, se registra `realEndTime` si no está ya establecido y se descuenta 1 de `currentTasks` en el registro de asistencia del usuario asignado.
 
-Permite realizar actualización en el estado de una tarea.
+**Headers**:
+Authorization: "Bearer <token>"
+Content-Type: application/json
 
-Estados permitidos son `pendiente`, `en progreso` y `completada`.
-
+**Cuerpo del request**:
+```json
+{
+    "status": "completada" // "pendiente", "en progreso"
+}
+```
 
 ## `GET /my-pending-tasks`
 **Descripción**:
 Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autenticado.
 **Headers requeridos:**:
     Authorization: "Bearer <token_usuario_normal_o_admin>"
-
-
 
 **Respuesta**:
 {
