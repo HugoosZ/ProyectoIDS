@@ -121,5 +121,36 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
   }
 });
 
+// Ruta para obtener la asistencia de todos los usuarios o de uno específico
+router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
+  try {
+    const { userId } = req.query;
+    let query = db.collection("asistencias");
+    if (userId) {
+      query = query.where("userId", "==", userId);
+    }
+    const snapshot = await query.get();
+    if (snapshot.empty) {
+      return res.status(404).json({ message: "No se encontró asistencia para el/los usuario(s)" });
+    }
+    const attendance = await Promise.all(snapshot.docs.map(async (doc) => {
+      const asistenciaData = doc.data();
+      const userDoc = await db.collection("users").doc(asistenciaData.userId).get();
+      const userData = userDoc.exists ? userDoc.data() : null;
+      return {
+        asistenciaId: doc.id,
+        ...asistenciaData,
+        user: userData ? {
+          name: userData.name || null,
+          email: userData.email || null
+        } : null
+      };
+    }));
+    res.status(200).json(attendance);
+  } catch (error) {
+    console.error("Error al obtener asistencia:", error);
+    res.status(500).json({ error: "Error al obtener asistencia" });
+  }
+});
 
 module.exports = router;
