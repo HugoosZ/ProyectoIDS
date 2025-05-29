@@ -121,17 +121,22 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
   }
 });
 
-// Ruta para obtener la asistencia de todos los usuarios o de uno específico
+// Ruta para obtener la asistencia de todos los usuarios, de uno específico, presentes o ausentes
 router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, isPresent } = req.query;
     let query = db.collection("asistencias");
     if (userId) {
       query = query.where("userId", "==", userId);
     }
+    if (isPresent === "true") {
+      query = query.where("isPresent", "==", true);
+    } else if (isPresent === "false") {
+      query = query.where("isPresent", "==", false);
+    }
     const snapshot = await query.get();
     if (snapshot.empty) {
-      return res.status(404).json({ message: "No se encontró asistencia para el/los usuario(s)" });
+      return res.status(404).json({ message: "No se encontró asistencia para el/los usuario(s) con los filtros dados" });
     }
     const attendance = await Promise.all(snapshot.docs.map(async (doc) => {
       const asistenciaData = doc.data();
