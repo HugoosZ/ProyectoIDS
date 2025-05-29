@@ -54,35 +54,7 @@ exports.createTask = async (req, res) => {
     };
 
     const docRef = await db.collection("tasks").add(newTask);
-    // Seccion para aumentar el contador de tareas actuales del usuario asignado
-    // Actualizar la asistencia del usuario asignado
-    const today = new Date().toISOString().split('T')[0];
 
-    // Buscar la asistencia del usuario para hoy
-    const asistenciaQuery = await db.collection('asistencias')
-      .where('userId', '==', assignedTo)
-      .where('date', '==', today)
-      .limit(1)
-      .get();
-
-    if (!asistenciaQuery.empty) {
-      const asistenciaDoc = asistenciaQuery.docs[0];
-      const currentCount = asistenciaDoc.data().currentTasks || 0;
-
-      await asistenciaDoc.ref.update({
-        currentTasks: currentCount + 1
-      });
-    } else {
-      // Crear la asistencia con currentTasks = 1
-      await db.collection('asistencias').add({
-        userId: assignedTo,
-        date: today,
-        currentTasks: 1,
-        checkInTime: null,
-        checkOutTime: null
-      });
-    }
-    
     return res.status(201).json({ id: docRef.id, ...newTask });
   } catch (error) {
     console.error("Error creating task:", error);
@@ -155,7 +127,6 @@ exports.getTasksByUserId = async (req, res) => {
 
 exports.getAllCompanyTasks = async (req, res) => {
     try {
-        console.log("ola")
         const userEmpresaId = req.user.empresaId;
 
         if (!userEmpresaId) {
@@ -169,7 +140,7 @@ exports.getAllCompanyTasks = async (req, res) => {
         if (snapshot.empty) {
             return res.status(200).json([]);
         }
-        console.log("ola2")
+
         const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Convertir Timestamps a formato legible (solo fecha, YYYY-MM-DD)
@@ -196,11 +167,94 @@ exports.getAllCompanyTasks = async (req, res) => {
             }
             return formattedTask;
         });
-        console.log("ola3")
+
         return res.status(200).json(formattedTasks);
 
     } catch (error) {
         console.error("Error fetching all company tasks:", error);
         return res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a 'updateTaskStatus' para ser más específica
+    try {
+        const { taskId } = req.params;
+        const { status } = req.body;
+        const { uid: requestingUserUid, empresaId: requestingUserEmpresaId, isAdmin: requestingUserIsAdmin } = req.user;
+
+        if (!taskId) {
+            return res.status(400).json({ message: "Task ID is required." });
+        }
+        if (!status) {
+            return res.status(400).json({ message: "Status is required for update." });
+        }
+
+        const validStatuses = ["pendiente", "en progreso", "completada"]; // Cuidado con tildes si se usan en la DB
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: "Estado inválido. Los estados permitidos son: 'pendiente', 'en progreso', 'completada'." });
+        }
+
+        const taskRef = db.collection("tasks").doc(taskId);
+        const taskDoc = await taskRef.get();
+
+        if (!taskDoc.exists) {
+            return res.status(404).json({ message: "Tarea no encontrada." });
+        }
+
+        const taskData = taskDoc.data();
+
+        // 1. Verificación de EmpresaId (Obligatorio para cualquier operación)
+        if (taskData.empresaId !== requestingUserEmpresaId) {
+            console.log(`DEBUG: Acceso denegado - Tarea de otra empresa. Tarea empresaId: ${taskData.empresaId}, Usuario empresaId: ${requestingUserEmpresaId}`);
+            return res.status(403).json({ message: "No autorizado: No puedes actualizar tareas de otra empresa." });
+        }
+
+        // 2. Verificación de Permisos (User vs Admin)
+        if (!requestingUserIsAdmin && taskData.assignedTo !== requestingUserUid) {
+            // Si no es admin Y la tarea no le está asignada, denegar.
+            console.log(`DEBUG: Acceso denegado - Usuario no admin intentó actualizar tarea no asignada. Tarea asignada a: ${taskData.assignedTo}, Usuario: ${requestingUserUid}`);
+            return res.status(403).json({ message: "No autorizado: Solo puedes actualizar tareas asignadas a ti mismo o si eres administrador de la empresa." });
+        }
+        // Si es admin, y la empresaId ya se validó, puede continuar.
+        // Si es el usuario asignado, y la empresaId ya se validó, puede continuar.
+
+        const updateData = { status };
+
+        // Lógica de realStartTime y realEndTime (conservada de tu compañero)
+        if (status === "en progreso" && !taskData.realStartTime) {
+            updateData.realStartTime = Timestamp.now();
+        }
+        if (status === "completada" && !taskData.realEndTime) {
+            updateData.realEndTime = Timestamp.now();
+        }
+
+        await taskRef.update(updateData);
+
+        // Lógica para descontar currentTasks si pasa a "completada" (conservada de tu compañero)
+        if (status === "completada" && taskData.status !== "completada") {
+            const today = new Date().toISOString().split('T')[0];
+            const asistenciaQuery = await db.collection("asistencias")
+                .where("userId", "==", taskData.assignedTo) // Importante: Usar el userId asignado a la tarea, no el que hace la solicitud si el admin la completa
+                .where("date", "==", today)
+                .limit(1)
+                .get();
+
+            if (!asistenciaQuery.empty) {
+                const asistenciaDoc = asistenciaQuery.docs[0];
+                const currentCount = asistenciaDoc.data().currentTasks || 0;
+                await asistenciaDoc.ref.update({
+                    currentTasks: Math.max(0, currentCount - 1),
+                });
+                console.log(`DEBUG: Tarea completada para usuario ${taskData.assignedTo}. currentTasks actualizado.`);
+            } else {
+                console.log(`DEBUG: No se encontró registro de asistencia para ${taskData.assignedTo} el día ${today}. No se actualizó currentTasks.`);
+            }
+        }
+
+        res.status(200).json({ message: "Estado de la tarea actualizado exitosamente." });
+
+    } catch (error) {
+        console.error("Error al actualizar el estado de la tarea:", error);
+        res.status(500).json({ message: "Error interno del servidor al actualizar el estado.", details: error.message });
     }
 };
