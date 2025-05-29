@@ -500,3 +500,60 @@ fetch("https://proyecto-ids.vercel.app/api/admin/workers/isPresent/NoTasks", {
 .then(res => res.json())
 .then(data => console.log(data));
 ```
+
+## `GET /admin/attendance`
+**Descripción**:
+Permite a un administrador obtener los registros de asistencia de todos los usuarios, de un usuario específico, o filtrar por presencia/ausencia. Devuelve información de la asistencia junto con los datos básicos del usuario asociado (nombre y correo electrónico).
+
+**Roles requeridos:** Administrador (token JWT válido y privilegios de admin).
+
+**Headers requeridos:**
+    Authorization: "Bearer <token_admin>"
+    Content-Type: "application/json" (opcional para GET)
+
+**Parámetros de consulta (query params) opcionales:**
+| Parámetro  | Tipo    | Descripción                                                                 |
+|------------|---------|-----------------------------------------------------------------------------|
+| userId     | string  | Filtra por el UID del usuario.                                               |
+| isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
+
+**Respuesta:**
+- 200 OK: Devuelve un array de objetos de asistencia, cada uno con los datos de asistencia y los datos básicos del usuario asociado.
+- 404: Si no se encuentra asistencia con los filtros dados.
+- 401/403: Si el token es inválido o el usuario no es admin.
+- 500: Error interno del servidor.
+
+**Ejemplo de respuesta:**
+```json
+[
+  {
+    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
+    "userId": "UID_DEL_USUARIO",
+    "isPresent": true,
+    "currentTasks": 0,
+    "horaEntrada": "2025-05-29T08:00:00.000Z",
+    "horaSalida": null,
+    "user": {
+      "name": "Nombre del Usuario",
+      "email": "correo@example.com"
+    }
+  }
+]
+```
+
+**Ejemplo de fetch:**
+```js
+const queryParams = new URLSearchParams({
+  userId: "UID_DEL_USUARIO", // Opcional
+  isPresent: "true" // Opcional: "true" o "false"
+});
+
+fetch(`https://proyecto-ids.vercel.app/api/admin/attendance?${queryParams.toString()}`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+})
+  .then(res => res.json())
+  .then(data => console.log(data));
+```
