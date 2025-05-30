@@ -11,7 +11,6 @@ const AddUsers = () => {
   const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState('');
   const [rut, setRUT] = useState('');
   const [token, setToken] = useState<string | null>(null);
 
@@ -24,7 +23,7 @@ const AddUsers = () => {
   }, []);
 
   const manejarEnvio = async () => {
-    if (!nombre || !apellido || !email || !password || !rol || !rut) {
+    if (!nombre || !apellido || !email || !password || !rut) {
       Alert.alert('Campos requeridos', 'Por favor completa todos los campos.');
       return;
     }
@@ -47,8 +46,9 @@ const AddUsers = () => {
           password,
           name: nombre,
           lastName: apellido,
-          role: rol,
+          role: "user",
           isAdmin: false
+
         })
       });
 
@@ -58,7 +58,6 @@ const AddUsers = () => {
         setApellido('');
         setEmail('');
         setPassword('');
-        setRol('');
         setRUT('');
       } else {
         const error = await res.text();
@@ -99,12 +98,6 @@ const AddUsers = () => {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-      />
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Rol/Cargo"
-        value={rol}
-        onChangeText={setRol}
       />
       <TextInput
         style={globalStyles.input}

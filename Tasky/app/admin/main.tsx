@@ -1,26 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'expo-router';
-import { useNavigation } from '@react-navigation/native';
 import {
-  Modal,
   Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
-  Animated,
   Dimensions,
   StyleSheet,
   SafeAreaView,
   FlatList,
   ScrollView,
   Switch,
-  Platform,
 } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
 import TopBar from '../../components/TopBar';
 import BottomBar from '../../components/BottomBar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Tarea = {
   id: string;
@@ -32,54 +25,28 @@ type Tarea = {
 };
 
 export default function AdminMain() {
-  const router = useRouter();
-  const navigation = useNavigation();
-  const [modalVisible, setModalVisible] = useState(false);
   const screenWidth = Dimensions.get('window').width;
-  const slideAnim = useRef(new Animated.Value(-screenWidth)).current;
-  const backgroundOpacity = useRef(new Animated.Value(0)).current;
 
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [estadoFiltro, setEstadoFiltro] = useState('todas');
   const [verPorUsuarios, setVerPorUsuarios] = useState(false);
 
-  const openMenu = () => {
-    setModalVisible(true);
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-      Animated.timing(backgroundOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-    ]).start();
-  };
-
-  const closeMenu = () => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: -screenWidth,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-      Animated.timing(backgroundOpacity, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
-      setModalVisible(false);
-    });
-  };
-
   useEffect(() => {
     const fetchTareas = async () => {
       try {
-        const res = await fetch("https://proyecto-ids.vercel.app/api/tasks");
+        const token = await AsyncStorage.getItem('userToken');
+
+        if (!token) {
+          Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
+          return;
+        }
+
+        const res = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
+        });
         const data = await res.json();
         setTareas(data);
       } catch (error) {

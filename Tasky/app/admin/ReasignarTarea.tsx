@@ -98,8 +98,6 @@ export default function ReasignarTarea() {
       <Picker.Item label=" Selecciona una tarea" value="" />
       {tareas
         .filter(tarea => {
-          // Mostrar tareas SIN asignado (assignedTo vacío o null)
-          // O tareas con estado "pendiente" o "en progreso"
           const isNotAssigned = tarea.assignedTo === null || tarea.assignedTo === "";
           const isPendingOrInProgress = tarea.status === "pendiente" || tarea.status === "en progreso";
           return isNotAssigned || isPendingOrInProgress;
