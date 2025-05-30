@@ -1,37 +1,22 @@
-// en common js
-const admin = require('firebase-admin');
+//Aquí está la lógica para conectarnos a Firebase  
 
-// Inicializar solo si no está inicializado
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(), // o usa admin.credential.cert() con tu key
-    databaseURL: "https://<your-project-id>.firebaseio.com"
-  });
-}
-
-// Exportar auth y db
-const auth = admin.auth();
-const db = admin.firestore();
-
-module.exports = { auth, db };
+require('dotenv').config();
+//require('dotenv').config({ path: './db.env'});
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
+const { getAuth } = require('firebase-admin/auth');
 
 
+// 1. Parsear y asignar correctamente las credenciales
+const firebaseCredentials = JSON.parse(process.env.FIREBASE_CREDENTIALS);
 
-/*// Importar el SDK de Firebase Admin
-import admin from 'firebase-admin';
+// 2. Inicializar Firebase con las credenciales
+const firebaseApp = initializeApp({
+    credential: cert(firebaseCredentials) // Usar la variable ya definida
+});
 
-// Inicializar solo si no está inicializado
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.applicationDefault(), // o admin.credential.cert() si usas una key JSON
-    databaseURL: "https://<your-project-id>.firebaseio.com"
-  });
-}
+// 3. Obtener Firestore
+const db = getFirestore();
+const auth = getAuth();
 
-const auth = admin.auth();
-const db = admin.firestore();
-
-export { auth, db };
-*/
-
-
+module.exports = { db, auth };

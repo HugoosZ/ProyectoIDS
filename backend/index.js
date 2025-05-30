@@ -1,5 +1,12 @@
-const app= require('./app.js')  //recupera lo que se exporta en app
-//import app from './app.js'; // 👈 Extensión .js obligatoria
+const app = require('./app.js');
 
-app.listen(3000)
-console.log('server is running on port 3000') //para mostrar lo que muestra app
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  });
+
+} else {
+  module.exports = app; // Para Vercel
+}
