@@ -7,7 +7,12 @@ exports.checkIn = async (req, res) => {
   try {
     const uid = userId;
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    const now = new Date().toISOString();
+    //const now = new Date().toISOString();
+    const now = new Date();
+    const formatted = new Intl.DateTimeFormat('es-CL', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    }).format(now);
 
     const docId = `${uid}_${today}`;
     const docRef = db.collection("asistencias").doc(docId);
@@ -16,7 +21,7 @@ exports.checkIn = async (req, res) => {
     const existingDoc = await docRef.get();
 
     // Si ya esta dentro del chechIn no es posible hacerlo denuevo
-    if (existingDoc.exists && existingDoc.data().checkIn) {
+    if (existingDoc.data().isPresent == true) {
       return res.status(400).json({
         error: "Ya se ha registrado una entrada.",
       });
@@ -24,14 +29,13 @@ exports.checkIn = async (req, res) => {
 
     await docRef.set({
       userId: uid,
-      date: today,
-      checkIn: now,
+      checkIn: formatted,
       isPresent: true,
     });
 
     res.status(200).json({
       message: "Entrada registrada correctamente.",
-      checkIn: now,
+      checkIn: formatted,
     });
   } catch (err) {
     res.status(500).json({
@@ -46,7 +50,12 @@ exports.checkOut = async (req, res) => {
   try {
     const uid = userId;
     const today = new Date().toISOString().split("T")[0];
-    const now = new Date().toISOString();
+    //const now = new Date().toISOString();
+    const now = new Date();
+    const formatted = new Intl.DateTimeFormat('es-CL', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+    }).format(now);
 
     const docId = `${uid}_${today}`;
     const docRef = db.collection("asistencias").doc(docId);
@@ -59,20 +68,20 @@ exports.checkOut = async (req, res) => {
       });
     }
 
-    if (existingDoc.data().checkOut) {
+    if (existingDoc.data().isPresent == false) {
       return res.status(400).json({
         error: "Ya se ha registrado una salida.",
       });
     }
 
     await docRef.update({
-      checkOut: now,
+      checkOut: formatted,
       isPresent: false,
     });
 
     res.status(200).json({
       message: "Salida registrada correctamente.",
-      checkOut: now,
+      checkOut: formatted,
     });
   } catch (err) {
     res.status(500).json({
