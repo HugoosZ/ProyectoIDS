@@ -2,10 +2,22 @@ const { db } = require("../firebase");
 const { Timestamp } = require("firebase-admin/firestore");
 const { getDateRange } = require("../utils/dateFilters"); // OK
 
+
+// Función para verificar si dos rangos de tiempo se superponen
+function doTimeRangesOverlap(fromTime1, toTime1, fromTime2, toTime2) {
+    const start1 = fromTime1 instanceof Timestamp ? fromTime1.toDate().getTime() : new Date(fromTime1).getTime();
+    const end1 = toTime1 instanceof Timestamp ? toTime1.toDate().getTime() : new Date(toTime1).getTime();
+    const start2 = fromTime2 instanceof Timestamp ? fromTime2.toDate().getTime() : new Date(fromTime2).getTime();
+    const end2 = toTime2 instanceof Timestamp ? toTime2.toDate().getTime() : new Date(toTime2).getTime();
+
+    // No overlap if one period ends before the other begins
+    return start1 < end2 && start2 < end1;
+}
+
 exports.createTask = async (req, res) => {
   try {
     const createdByUid = req.user.uid;
-    //const createdByEmpresaId = req.user.empresaId;
+    const createdByEmpresaId = req.user.empresaId;
     const {
       assignedTo,
       description,
@@ -17,29 +29,84 @@ exports.createTask = async (req, res) => {
     } = req.body; // Validate required fields
 
     if (
-      !description ||
-      !title ||
-      !assignedTo ||
-      !startTime ||
-      !endTime
+    !description ||
+    !title ||
+    !assignedTo || // Asegurarse de que assignedTo existe
+    !Array.isArray(assignedTo) || // Asegurarse de que assignedTo es un array
+    assignedTo.length === 0 || // Asegurarse de que el array no esté vacío
+    !startTime ||
+    !endTime
     ) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({ message: "Faltan campos obligatorios o 'assignedTo' no es un array válido." });
     }
 
-    // 1. Verificar si el usuario 'assignedTo' existe
-    const assignedUserDoc = await db.collection('users').doc(assignedTo).get();
-    if (!assignedUserDoc.exists) {
-        return res.status(404).json({ message: `Assigned user with UID '${assignedTo}' not found.` });
-    }
-    
-    // 2. Verificar que el usuario 'assignedTo' pertenezca a la misma empresa que el administrador
-/*     const assignedUserEmpresaId = assignedUserDoc.data().empresaId;
-    if (assignedUserEmpresaId !== createdByEmpresaId) {
-        return res.status(403).json({ message: "No autorizado: No puede asignar tareas a usuarios de otras empresas" });
-    } */
+
+        const newStartTime = new Date(startTime);
+        const newEndTime = new Date(endTime);
+     // Validar que startTime y endTime sean fechas válidas       
+        if (isNaN(newStartTime.getTime()) || isNaN(newEndTime.getTime())) {
+        return res.status(400).json({ message: "startTime y endTime deben ser fechas válidas." });
+        }
+    // Validar que startTime sea anterior a endTime
+        if (newEndTime <= newStartTime) {
+            return res.status(400).json({ message: "La fecha y hora de fin (endTime) debe ser posterior a la de inicio (startTime)." });
+        }
+
+
+// --- INICIO DE VALIDACIONES DE USUARIOS ASIGNADOS ---
+        const usersToAssign = []; // Array para almacenar los UIDs validados
+        for (const uid of assignedTo) { 
+            const userDoc = await db.collection('users').doc(uid).get();
+            if (!userDoc.exists) {
+                return res.status(404).json({ message: `Usuario asignado con UID '${uid}' no encontrado.` });
+            }
+
+            const userData = userDoc.data();
+
+            // 1. Verificar que el usuario 'assignedTo' pertenezca a la misma empresa que el administrador
+            if (userData.empresaId !== createdByEmpresaId) {
+                return res.status(403).json({ message: `No autorizado: No puede asignar tareas al usuario '${uid}' de otra empresa.` });
+            }
+
+            // 2. Verificar si el usuario está 'activo laboralmente' (isPresent en asistencias)
+            // Asumimos que la asistencia se registra diariamente con docId = `${uid}_${today}`
+            const today = new Date().toISOString().split('T')[0];
+            const asistenciaDoc = await db.collection('asistencias').doc(`${uid}_${today}`).get();
+
+            if (!asistenciaDoc.exists || !asistenciaDoc.data().isPresent) {
+                return res.status(400).json({ message: `El usuario '${uid}' no está activo laboralmente (no ha registrado su entrada hoy).` });
+            }
+
+            // 3. Verificar solapamiento de tareas para cada usuario asignado
+            // Obtener tareas existentes del usuario en el rango de la nueva tarea
+            const existingTasksSnapshot = await db.collection('tasks')
+                .where('assignedTo', 'array-contains', uid) // Buscar tareas donde el usuario está en el array assignedTo
+                .where('empresaId', '==', createdByEmpresaId) // Solo tareas de la misma empresa
+                // No podemos filtrar por rango de tiempo directamente aquí con array-contains y dos rangos.
+                // Así que obtendremos todas las tareas del usuario de la empresa y filtramos en código.
+                .get();
+
+            for (const doc of existingTasksSnapshot.docs) {
+                const existingTask = doc.data();
+                // Omitir la verificación si la tarea existente ya está completada
+                if (existingTask.status === 'completada') {
+                    continue;
+                }
+
+                if (doTimeRangesOverlap(existingTask.startTime, existingTask.endTime, newStartTime, newEndTime)) {
+                    return res.status(400).json({
+                        message: `Conflicto de horario: El usuario '${uid}' ya tiene una tarea '${existingTask.title}' (ID: ${doc.id}) que se solapa con el horario de la nueva tarea.`
+                    });
+                }
+            }
+            usersToAssign.push(uid); // Si todas las validaciones pasan, añadir el UID a la lista final
+        }
+
+
+
 
     const newTask = {
-      assignedTo,
+      assignedTo: usersToAssign,
       createdAt: Timestamp.now(),
       createdBy: createdByUid,
       description,
@@ -50,7 +117,7 @@ exports.createTask = async (req, res) => {
       title,
       realStartTime: null,
       realEndTime: null,
-      //empresaId: createdByEmpresaId,
+      empresaId: createdByEmpresaId,
     };
 
     const docRef = await db.collection("tasks").add(newTask);
@@ -210,7 +277,7 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         }
 
         // 2. Verificación de Permisos (User vs Admin)
-        if (!requestingUserIsAdmin && taskData.assignedTo !== requestingUserUid) {
+        if (!requestingUserIsAdmin && taskData.assignedTo.includes(requestingUserUid) !== requestingUserUid) {
             // Si no es admin Y la tarea no le está asignada, denegar.
             console.log(`DEBUG: Acceso denegado - Usuario no admin intentó actualizar tarea no asignada. Tarea asignada a: ${taskData.assignedTo}, Usuario: ${requestingUserUid}`);
             return res.status(403).json({ message: "No autorizado: Solo puedes actualizar tareas asignadas a ti mismo o si eres administrador de la empresa." });
@@ -234,7 +301,7 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         if (status === "completada" && taskData.status !== "completada") {
             const today = new Date().toISOString().split('T')[0];
             const asistenciaQuery = await db.collection("asistencias")
-                .where("userId", "==", taskData.assignedTo) // Importante: Usar el userId asignado a la tarea, no el que hace la solicitud si el admin la completa
+                .where("userId", "==", requestingUserUid) // Importante: Usar el userId asignado a la tarea, no el que hace la solicitud si el admin la completa
                 .where("date", "==", today)
                 .limit(1)
                 .get();
@@ -245,9 +312,9 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
                 await asistenciaDoc.ref.update({
                     currentTasks: Math.max(0, currentCount - 1),
                 });
-                console.log(`DEBUG: Tarea completada para usuario ${taskData.assignedTo}. currentTasks actualizado.`);
+                console.log(`DEBUG: Tarea completada para usuario ${requestingUserUid}. currentTasks actualizado.`);
             } else {
-                console.log(`DEBUG: No se encontró registro de asistencia para ${taskData.assignedTo} el día ${today}. No se actualizó currentTasks.`);
+                console.log(`DEBUG: No se encontró registro de asistencia para ${requestingUserUid} el día ${today}. No se actualizó currentTasks.`);
             }
         }
 
