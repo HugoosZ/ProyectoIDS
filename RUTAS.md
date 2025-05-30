@@ -371,47 +371,25 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 }
 
 
-## `POST /createTask`
-**Descripción**:
-Permite a un administrador crear una nueva tarea y asignarla a un usuario. La tarea creada **heredará automáticamente el `empresaId` del administrador** que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador.
+## `POST /api/createTask`
+
+**Descripción**: Permite a un administrador crear una nueva tarea y asignarla a uno o **múltiples usuarios**. La tarea creada heredará automáticamente el `empresaId` del administrador que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador. Se realizan validaciones estrictas para asegurar la correcta asignación, incluyendo la verificación de la existencia del usuario, pertenencia a la misma empresa, estado de actividad laboral (check-in), y solapamiento de horarios con tareas existentes.
 
 **Headers**:
-Authorization: "Bearer <token_admin>"
-Content-Type: application/json
+- `Authorization`: "Bearer <token_admin>"
+- `Content-Type`: `application/json`
 
-**Cuerpo del request**:
+**Cuerpo del Request**:
 ```json
 {
-    "assignedTo": "UID_del_usuario_receptor",
-    "createdBy": "UID_del_admin_creador",
-    "description": "Detalles de la tarea a realizar.",
-    "startTime": "2025-05-23T09:00:00.000Z", // Formato ISO 8601
-    "endTime": "2025-05-23T17:00:00.000Z",   // Formato ISO 8601
-    "priority": "normal", // Opciones: "alta", "media", "baja"
-    "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
-    "title": "Título corto de la tarea"
+    "assignedTo": ["UID_del_usuario_1", "UID_del_usuario_2", "UID_del_usuario_N"],
+    "description": "Detalles completos y claros de la tarea a realizar, incluyendo cualquier información relevante para su ejecución.",
+    "startTime": "2025-05-30T09:00:00.000Z", // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+    "endTime": "2025-05-30T10:00:00.000Z",   // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+    "priority": "normal", // Opciones válidas: "alta", "media", "baja". Si no se especifica, el valor por defecto es "normal".
+    "status": "pendiente", // Opciones válidas: "pendiente", "en progreso", "completada". Si no se especifica, el valor por defecto es "pendiente".
+    "title": "Título corto y descriptivo de la tarea."
 }
-```
-
-**Respuesta**:
-```json
-{
-    "message": "Tarea creada exitosamente.",
-    "taskId": "ID_DE_LA_NUEVA_TAREA",
-    "task": {
-        "id": "ID_DE_LA_NUEVA_TAREA",
-        "assignedTo": "UID_del_usuario_receptor",
-        "createdBy": "UID_del_admin_creador",
-        "description": "Detalles de la tarea a realizar.",
-        "startTime": "2025-05-23T09:00:00.000Z",
-        "endTime": "2025-05-23T17:00:00.000Z",
-        "priority": "normal",
-        "status": "pendiente",
-        "title": "Título corto de la tarea",
-        "empresaId": "ID_DE_LA_EMPRESA_DEL_ADMIN" // <--- Campo crucial
-    }
-}
-```
 
 
 
