@@ -494,8 +494,11 @@ Permite a un administrador obtener los registros de asistencia de todos los usua
 |------------|---------|-----------------------------------------------------------------------------|
 | userId     | string  | Filtra por el UID del usuario.                                               |
 | isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
+| time      | string | "today" para filtrar por el día actual, "week" para la semana actual |
 
-**Respuesta:**
+> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
+
+**Respuesta**:
 - 200 OK: Devuelve un array de objetos de asistencia, cada uno con los datos de asistencia y los datos básicos del usuario asociado.
 - 404: Si no se encuentra asistencia con los filtros dados.
 - 401/403: Si el token es inválido o el usuario no es admin.
@@ -535,3 +538,71 @@ fetch(`https://proyecto-ids.vercel.app/api/admin/attendance?${queryParams.toStri
   .then(res => res.json())
   .then(data => console.log(data));
 ```
+
+## `GET /User/attendance/:userId`
+**Descripción**:
+Permite a un usuario autenticado consultar su propio historial de asistencia, con opción de filtrar por presencia (`isPresent`) y por rango de tiempo (`today` o `week`).
+
+**Roles requeridos:** Usuario autenticado (solo puede consultar su propio UID).
+
+**Headers requeridos:**
+    Authorization: "Bearer <token_usuario>"
+    Content-Type: "application/json" (opcional para GET)
+
+**Parámetros de ruta:**
+- `userId` (string): UID del usuario autenticado (debe coincidir con el del token).
+
+**Parámetros de consulta (query params) opcionales:**
+| Parámetro  | Tipo    | Descripción                                                                 |
+|------------|---------|-----------------------------------------------------------------------------|
+| isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
+| time       | string  | "today" para solo hoy, "week" para la semana actual.                         |
+
+> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
+
+
+**Respuesta:**
+- 200 OK: Devuelve un array de objetos de asistencia del usuario.
+- 404: Si no se encuentra asistencia con los filtros dados.
+- 403: Si el usuario intenta consultar la asistencia de otro usuario.
+- 401: Si el token es inválido.
+- 500: Error interno del servidor.
+
+**Ejemplo de respuesta:**
+```json
+[
+  {
+    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
+    "userId": "UID_DEL_USUARIO",
+    "isPresent": true,
+    "currentTasks": 0,
+    "startTime": "2025-05-29T08:00:00.000Z",
+    "endTime": null,
+    "user": {
+      "name": "Nombre del Usuario",
+      "email": "correo@example.com"
+    }
+  }
+]
+```
+
+**Ejemplo de fetch:**
+```js
+const token = '<TOKEN_USUARIO>'; // JWT del usuario autenticado
+const userId = '<UID_DEL_USUARIO>'; // Debe coincidir con el del token
+const queryParams = new URLSearchParams({
+  isPresent: "true", // Opcional
+  time: "today" // Opcional
+});
+
+fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?${queryParams.toString()}`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+})
+  .then(res => res.json())
+  .then(data => console.log(data));
+```
+
+---

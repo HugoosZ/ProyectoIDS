@@ -124,7 +124,7 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
 // Ruta para obtener la asistencia de todos los usuarios, de uno específico, presentes o ausentes
 router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
-    const { userId, isPresent } = req.query;
+    const { userId, isPresent, time } = req.query;
     let query = db.collection("asistencias");
     if (userId) {
       query = query.where("userId", "==", userId);
@@ -133,6 +133,12 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
       query = query.where("isPresent", "==", true);
     } else if (isPresent === "false") {
       query = query.where("isPresent", "==", false);
+    }
+    if (time === "today" || time === "week") {
+      const dateFilter = getDateRange(time);
+      query = query
+        .where("startTime", ">=", dateFilter.startDate)
+        .where("startTime", "<=", dateFilter.endDate);
     }
     const snapshot = await query.get();
     if (snapshot.empty) {
