@@ -137,8 +137,8 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
     if (time === "today" || time === "week") {
       const dateFilter = getDateRange(time);
       query = query
-        .where("startTime", ">=", dateFilter.startDate)
-        .where("startTime", "<=", dateFilter.endDate);
+        .where("date", ">=", dateFilter.startDate)
+        .where("date", "<=", dateFilter.endDate);
     }
     const snapshot = await query.get();
     if (snapshot.empty) {

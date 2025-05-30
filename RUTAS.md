@@ -606,3 +606,29 @@ fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?${queryPara
 ```
 
 ---
+
+## Cambios importantes en los filtros de asistencia
+
+A partir de la versión X.X.X, los filtros de fecha (`time=today` o `time=week`) en las rutas de asistencia (`/admin/attendance` y `/User/attendance/:userId`) operan sobre el campo `date` (string, formato `YYYY-MM-DD`) de la colección `asistencias`.
+
+- El campo `date` representa la fecha de la asistencia en formato string, por ejemplo: `"2025-05-28"`.
+- Los filtros `time=today` y `time=week` ahora buscan registros donde `date` esté en el rango correspondiente.
+- Si no se especifica `time`, se devuelven todos los registros que cumplan los demás filtros.
+
+**Ejemplo de consulta filtrando por hoy:**
+```js
+fetch(`https://proyecto-ids.vercel.app/api/admin/attendance?time=today`, {
+  method: "GET",
+  headers: { "Authorization": `Bearer ${token}` }
+})
+```
+
+**Ejemplo de consulta filtrando por semana:**
+```js
+fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?time=week`, {
+  method: "GET",
+  headers: { "Authorization": `Bearer ${token}` }
+})
+```
+
+> **Nota:** El campo `startTime` ya no se utiliza para filtrar asistencias. El filtrado es por el campo `date` (string).
