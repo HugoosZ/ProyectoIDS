@@ -12,12 +12,13 @@ function getDateRange(filter) {
   if (filter === "week") {
     const weekday = now.weekday; // 1 (lunes) a 7 (domingo)
     startDate = now.minus({ days: weekday - 1 }).startOf("day");
-    endDate = startDate.plus({ days: 7 }).startOf("day");
+    endDate = startDate.plus({ days: 6 }).endOf("day");
   }
 
+  // Convertir a string 'YYYY-MM-DD'
   return {
-    startDate: startDate.toJSDate(),
-    endDate: endDate.toJSDate(),
+    startDate: startDate.toFormat("yyyy-MM-dd"),
+    endDate: endDate.toFormat("yyyy-MM-dd"),
   };
 }
 

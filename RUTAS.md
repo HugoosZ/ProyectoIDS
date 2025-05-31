@@ -371,47 +371,25 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 }
 
 
-## `POST /createTask`
-**Descripción**:
-Permite a un administrador crear una nueva tarea y asignarla a un usuario. La tarea creada **heredará automáticamente el `empresaId` del administrador** que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador.
+## `POST /api/createTask`
+
+**Descripción**: Permite a un administrador crear una nueva tarea y asignarla a uno o **múltiples usuarios**. La tarea creada heredará automáticamente el `empresaId` del administrador que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador. Se realizan validaciones estrictas para asegurar la correcta asignación, incluyendo la verificación de la existencia del usuario, pertenencia a la misma empresa, estado de actividad laboral (check-in), y solapamiento de horarios con tareas existentes.
 
 **Headers**:
-Authorization: "Bearer <token_admin>"
-Content-Type: application/json
+- `Authorization`: "Bearer <token_admin>"
+- `Content-Type`: `application/json`
 
-**Cuerpo del request**:
+**Cuerpo del Request**:
 ```json
 {
-    "assignedTo": "UID_del_usuario_receptor",
-    "createdBy": "UID_del_admin_creador",
-    "description": "Detalles de la tarea a realizar.",
-    "startTime": "2025-05-23T09:00:00.000Z", // Formato ISO 8601
-    "endTime": "2025-05-23T17:00:00.000Z",   // Formato ISO 8601
-    "priority": "normal", // Opciones: "alta", "media", "baja"
-    "status": "pendiente", // Opciones: "pendiente", "en progreso", "completada"
-    "title": "Título corto de la tarea"
+    "assignedTo": ["UID_del_usuario_1", "UID_del_usuario_2", "UID_del_usuario_N"],
+    "description": "Detalles completos y claros de la tarea a realizar, incluyendo cualquier información relevante para su ejecución.",
+    "startTime": "2025-05-30T09:00:00.000Z", // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+    "endTime": "2025-05-30T10:00:00.000Z",   // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
+    "priority": "normal", // Opciones válidas: "alta", "media", "baja". Si no se especifica, el valor por defecto es "normal".
+    "status": "pendiente", // Opciones válidas: "pendiente", "en progreso", "completada". Si no se especifica, el valor por defecto es "pendiente".
+    "title": "Título corto y descriptivo de la tarea."
 }
-```
-
-**Respuesta**:
-```json
-{
-    "message": "Tarea creada exitosamente.",
-    "taskId": "ID_DE_LA_NUEVA_TAREA",
-    "task": {
-        "id": "ID_DE_LA_NUEVA_TAREA",
-        "assignedTo": "UID_del_usuario_receptor",
-        "createdBy": "UID_del_admin_creador",
-        "description": "Detalles de la tarea a realizar.",
-        "startTime": "2025-05-23T09:00:00.000Z",
-        "endTime": "2025-05-23T17:00:00.000Z",
-        "priority": "normal",
-        "status": "pendiente",
-        "title": "Título corto de la tarea",
-        "empresaId": "ID_DE_LA_EMPRESA_DEL_ADMIN" // <--- Campo crucial
-    }
-}
-```
 
 
 
@@ -516,8 +494,11 @@ Permite a un administrador obtener los registros de asistencia de todos los usua
 |------------|---------|-----------------------------------------------------------------------------|
 | userId     | string  | Filtra por el UID del usuario.                                               |
 | isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
+| time      | string | "today" para filtrar por el día actual, "week" para la semana actual |
 
-**Respuesta:**
+> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
+
+**Respuesta**:
 - 200 OK: Devuelve un array de objetos de asistencia, cada uno con los datos de asistencia y los datos básicos del usuario asociado.
 - 404: Si no se encuentra asistencia con los filtros dados.
 - 401/403: Si el token es inválido o el usuario no es admin.
@@ -557,3 +538,71 @@ fetch(`https://proyecto-ids.vercel.app/api/admin/attendance?${queryParams.toStri
   .then(res => res.json())
   .then(data => console.log(data));
 ```
+
+## `GET /User/attendance/:userId`
+**Descripción**:
+Permite a un usuario autenticado consultar su propio historial de asistencia, con opción de filtrar por presencia (`isPresent`) y por rango de tiempo (`today` o `week`).
+
+**Roles requeridos:** Usuario autenticado (solo puede consultar su propio UID).
+
+**Headers requeridos:**
+    Authorization: "Bearer <token_usuario>"
+    Content-Type: "application/json" (opcional para GET)
+
+**Parámetros de ruta:**
+- `userId` (string): UID del usuario autenticado (debe coincidir con el del token).
+
+**Parámetros de consulta (query params) opcionales:**
+| Parámetro  | Tipo    | Descripción                                                                 |
+|------------|---------|-----------------------------------------------------------------------------|
+| isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
+| time       | string  | "today" para solo hoy, "week" para la semana actual.                         |
+
+> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
+
+
+**Respuesta:**
+- 200 OK: Devuelve un array de objetos de asistencia del usuario.
+- 404: Si no se encuentra asistencia con los filtros dados.
+- 403: Si el usuario intenta consultar la asistencia de otro usuario.
+- 401: Si el token es inválido.
+- 500: Error interno del servidor.
+
+**Ejemplo de respuesta:**
+```json
+[
+  {
+    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
+    "userId": "UID_DEL_USUARIO",
+    "isPresent": true,
+    "currentTasks": 0,
+    "startTime": "2025-05-29T08:00:00.000Z",
+    "endTime": null,
+    "user": {
+      "name": "Nombre del Usuario",
+      "email": "correo@example.com"
+    }
+  }
+]
+```
+
+**Ejemplo de fetch:**
+```js
+const token = '<TOKEN_USUARIO>'; // JWT del usuario autenticado
+const userId = '<UID_DEL_USUARIO>'; // Debe coincidir con el del token
+const queryParams = new URLSearchParams({
+  isPresent: "true", // Opcional
+  time: "today" // Opcional
+});
+
+fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?${queryParams.toString()}`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${token}`
+  }
+})
+  .then(res => res.json())
+  .then(data => console.log(data));
+```
+
+---
