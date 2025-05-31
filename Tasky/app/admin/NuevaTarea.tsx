@@ -21,12 +21,38 @@ const NuevaTarea = () => {
   const [endTime, setEndTime] = useState('');
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+
   const [createdBy, setCreatedBy] = useState('');
 
 
   const [isStartPickerVisible, setStartPickerVisible] = useState(false);
   const [isEndPickerVisible, setEndPickerVisible] = useState(false);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+  
+      try {
+        const response = await fetch('https://proyecto-ids.vercel.app/api/users', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+  
+        const data = await response.json();
+        setUsers(data); // Asegúrate de que la API devuelve un array
+      } catch (error) {
+        console.error('Error al obtener usuarios:', error);
+      }
+    };
+  
+    fetchUsers();
+  }, []);
+  
+
 
   const handleConfirmStart = (date: Date) => {
     setStartTime(date.toISOString());
@@ -103,6 +129,7 @@ const NuevaTarea = () => {
 
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
+      <ScrollView>
       <Text style={globalStyles.title}>Crear Nueva Tarea</Text>
 
       <TextInput placeholder="Título" style={globalStyles.input} value={title} onChangeText={setTitle} />
@@ -142,13 +169,37 @@ const NuevaTarea = () => {
 
       <TextInput placeholder="Prioridad (alta, media, baja)" style={globalStyles.input} value={priority} onChangeText={setPriority} />
       <TextInput placeholder="Estado (pendiente, completada, etc.)" style={globalStyles.input} value={status} onChangeText={setStatus} />
-      <TextInput placeholder="Rut del trabajador asignado" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
 
+            <View style={{ marginBottom: 16 }}>
+              
+        <Text style={globalStyles.label}>Selecciona trabajadores:</Text>
+        {users.map((user) => (
+          <TouchableOpacity
+            key={user.id}
+            style={{
+              padding: 10,
+              backgroundColor: assignedTo.includes(user.id) ? '#cce5ff' : '#eee',
+              marginVertical: 4,
+              borderRadius: 5,
+            }}
+            onPress={() => {
+              setAssignedTo((prev) =>
+                prev.includes(user.id)
+                  ? prev.filter((id) => id !== user.id)
+                  : [...prev, user.id]
+              );
+            }}
+          >
+            <Text>{user.name} {user.lastName} ({user.rut})</Text>
+          </TouchableOpacity>
+        ))}
+        
+      </View>
 
       <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
         <Text style={globalStyles.buttonText}>Crear Tarea</Text>
       </TouchableOpacity>
-
+      </ScrollView>
       <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
         <Text style={globalStyles.buttonText}>Volver</Text>
       </TouchableOpacity>
