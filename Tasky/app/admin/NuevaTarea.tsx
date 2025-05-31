@@ -12,6 +12,24 @@ import globalStyles from '../globalStyles';
 import { useRouter } from 'expo-router';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 
+/*Como administrador,quiero crear tareas con descripción, tiempo estimado y la opción de relevo,
+para que el sistema sepa cómo deben ser ejecutadas y quiénes serán los responsables.                       
+El formulario de creación de tareas debe permitir ingresar:
+Descripción (obligatoria)
+Tiempo estimado en minutos (obligatorio)
+Opción: ¿requiere relevo? (sí / no)
+ Si la tarea no requiere relevo:
+Se asigna a un único trabajador.
+El trabajador podrá iniciarla y finalizarla en un tiempo mínimo definido por el sistema (por ejemplo: 5 minutos).
+Si intenta finalizar antes del tiempo mínimo, se muestra un mensaje de advertencia y no se permite.
+ Si la tarea requiere relevo:
+Se debe asignar un trabajador saliente, y opcionalmente un trabajador entrante.
+El sistema debe generar un código de relevo al finalizar la tarea por parte del saliente.
+El trabajador entrante debe ingresar ese código para asumir la tarea.
+La tarea no se considera finalizada hasta que se registre el relevo exitoso.
+Si el código no se valida en un tiempo máximo (por ejemplo, 10 minutos), se alerta al supervisor.
+ Si falta algún dato obligatorio (descripción, tiempo estimado, opción de relevo), el sistema debe impedir la creación y mostrar un mensaje de error claro.*/
+
 const NuevaTarea = () => {
   const router = useRouter();
 
@@ -43,7 +61,7 @@ const NuevaTarea = () => {
         });
   
         const data = await response.json();
-        setUsers(data); // Asegúrate de que la API devuelve un array
+        setUsers(data); 
       } catch (error) {
         console.error('Error al obtener usuarios:', error);
       }
