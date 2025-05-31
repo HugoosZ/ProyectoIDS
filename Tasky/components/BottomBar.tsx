@@ -1,4 +1,3 @@
-// components/BottomBar.tsx
 import React from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -22,5 +21,4 @@ const BottomBar = () => {
     </View>
   );
 };
-
 export default BottomBar;

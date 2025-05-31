@@ -9,6 +9,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import type { UserCredential } from 'firebase/auth';
 import { fetchUsers } from '../lib/api/users';
 import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const db = getFirestore();
 
@@ -45,15 +46,11 @@ export default function Index() {
         console.log("TOKEN JWT:", token); // opcional
         setJwt(token); 
 
-
-        try {
-          const response = await fetchUsers(token); 
-        } catch (error) {
-          console.error(" Error al validar token con backend:", error);
-        }
+        await AsyncStorage.setItem('userToken', token);
+        await AsyncStorage.setItem('userId', user.uid);
 
         const rol = userData.isAdmin ? 'admin' : 'trabajador';
-        router.push(rol === 'admin' ? '/admin/main' : '/trabajador/maint');
+        router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
       } catch (error) {
         console.error(error);
       }
