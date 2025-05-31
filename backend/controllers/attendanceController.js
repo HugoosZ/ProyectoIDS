@@ -21,7 +21,7 @@ exports.checkIn = async (req, res) => {
     const existingDoc = await docRef.get();
 
     // Si ya esta dentro del chechIn no es posible hacerlo denuevo
-    if (existingDoc.data().isPresent == true) {
+    if (existingDoc.exists && existingDoc.data().isPresent == true) {
       return res.status(400).json({
         error: "Ya se ha registrado una entrada.",
       });
@@ -29,6 +29,7 @@ exports.checkIn = async (req, res) => {
 
     await docRef.set({
       userId: uid,
+      date: today,
       checkIn: formatted,
       isPresent: true,
     });
@@ -76,6 +77,7 @@ exports.checkOut = async (req, res) => {
 
     await docRef.update({
       checkOut: formatted,
+      date: today,
       isPresent: false,
     });
 
