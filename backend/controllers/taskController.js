@@ -325,3 +325,53 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         res.status(500).json({ message: "Error interno del servidor al actualizar el estado.", details: error.message });
     }
 };
+
+// Genera un código numérico aleatorio de 6 dígitos
+function generate6DigitCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+exports.generarCodigoRelevo = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { uid: requestingUserUid, empresaId: requestingUserEmpresaId, isAdmin } = req.user;
+    const { minutosValidez } = req.body; // El tiempo de validez en minutos lo envía el frontend
+
+    if (!taskId) {
+      return res.status(400).json({ message: "Task ID is required." });
+    }
+    if (!minutosValidez || isNaN(minutosValidez) || minutosValidez <= 0) {
+      return res.status(400).json({ message: "El tiempo de validez (minutosValidez) debe ser un número mayor a 0." });
+    }
+
+    const taskRef = db.collection("tasks").doc(taskId);
+    const taskDoc = await taskRef.get();
+    if (!taskDoc.exists) {
+      return res.status(404).json({ message: "Tarea no encontrada." });
+    }
+    const taskData = taskDoc.data();
+
+    // Verificar que la tarea pertenezca a la empresa del usuario
+    if (taskData.empresaId !== requestingUserEmpresaId) {
+      return res.status(403).json({ message: "No autorizado: No puedes generar código para tareas de otra empresa." });
+    }
+    // Verificar que el usuario sea uno de los asignados a la tarea o admin
+    if (!isAdmin && !taskData.assignedTo.includes(requestingUserUid)) {
+      return res.status(403).json({ message: "No autorizado: Solo los trabajadores asignados o un administrador pueden generar el código de relevo." });
+    }
+
+    // Generar código y expiración
+    const code = generate6DigitCode();
+    const expiresAt = new Date(Date.now() + parseInt(minutosValidez) * 60000);
+
+    await taskRef.update({
+      reliefCode: code,
+      reliefCodeExpiresAt: expiresAt,
+    });
+
+    return res.status(200).json({ code, expiresAt });
+  } catch (error) {
+    console.error("Error generando código de relevo:", error);
+    return res.status(500).json({ message: "Error interno al generar código de relevo." });
+  }
+};

@@ -6,8 +6,7 @@ const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const { getDateRange } = require("../utils/dateFilters");
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
 const { Timestamp } = require("firebase-admin/firestore");
-const taskController = require("../controllers/taskController"); 
-
+const taskController = require("../controllers/taskController");
 
 const router = Router();
 
@@ -25,6 +24,10 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);
 
 // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
+
+// Ruta para generar código de 6 digitos para relevo
+router.post('/tasks/:taskId/generarCodigoRelevo', 
+verifyAndDecodeToken, taskController.generarCodigoRelevo);
 
 // Reasignar tarea a usuario usando uid en lugar de rut
 router.put("/reassign-task/:taskId", async (req, res) => {
