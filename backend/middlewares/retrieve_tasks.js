@@ -2,6 +2,7 @@
 const { db } = require("../firebase"); // Asegúrate de que importas 'db' de firebase.js
 const { Timestamp } = require("firebase-admin/firestore"); // Para manejar fechas de Firestore
 const { getDateRange } = require("../utils/dateFilters"); // Asegúrate de que esta utilidad exista y funcione.
+const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
 
 exports.getUserTaskStatus = async (req, res) => {
   try {
@@ -115,11 +116,17 @@ exports.getUserTaskStatus = async (req, res) => {
       };
     });
 
+    // Desencriptar nombre y apellido
+    let name = requestedUserDoc.data().name;
+    let lastName = requestedUserDoc.data().lastName;
+    try { name = decrypt(name); } catch (e) {}
+    try { lastName = decrypt(lastName); } catch (e) {}
+
     res.status(200).json({
       user: {
         id: userId,
-        name: requestedUserDoc.data().name,
-        lastName: requestedUserDoc.data().lastName,
+        name,
+        lastName,
         //empresaId: requestedUserDoc.data().empresaId, // Incluir el empresaId del usuario solicitado
       },
       count: tasks.length,

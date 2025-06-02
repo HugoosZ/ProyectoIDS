@@ -1,6 +1,7 @@
 const authService = require('../services/authService');
 const { validarDigitoVerificador } = require('../utils/validadorRUT');
 const { v4: uuidv4 } = require('uuid');
+const { encrypt } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado
 
 exports.createUser = async (req, res) => {
   // console.log("DEBUG: Contenido de req.body al inicio de createUser:", req.body);
@@ -47,7 +48,7 @@ exports.createUser = async (req, res) => {
     }
 
     // Validar formato del RUT (ej: 12345678-9)
-    if (!/^\d{7,8}-[\dkK]$/.test(rut)) {
+    if (!/^[\d]{7,8}-[\dkK]$/.test(rut)) {
       return res.status(400).json({ error: "RUT inválido" });
     }
     if (!validarDigitoVerificador(rut)) {
@@ -56,12 +57,17 @@ exports.createUser = async (req, res) => {
         .json({ error: "RUT inválido: dígito verificador incorrecto" });
     }
 
+    // Cifrar datos sensibles antes de crear el usuario
+    const encryptedRut = encrypt(rut);
+    const encryptedName = encrypt(name);
+    const encryptedLastName = encrypt(lastName);
+
     const newUser = await authService.createUserWithRole({
       email,
       password,
-      rut,
-      name,
-      lastName,
+      rut: encryptedRut, // Guardar cifrado
+      name: encryptedName, // Guardar cifrado
+      lastName: encryptedLastName, // Guardar cifrado
       role,
       isAdmin,
       empresaId: finalEmpresaId,
@@ -84,4 +90,3 @@ exports.createUser = async (req, res) => {
   }
 };
 
-  

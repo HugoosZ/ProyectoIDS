@@ -4,6 +4,7 @@ const { verifyAndDecodeToken } = require('../middlewares/authentication');
 const { checkIn, checkOut } = require('../controllers/attendanceController');
 const { checkAdminPrivileges } = require('../middlewares/authorization');
 const { getDateRange } = require("../utils/dateFilters");
+const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
 
 const router = Router();
 
@@ -34,12 +35,21 @@ router.get('/users', verifyAndDecodeToken, checkAdminPrivileges, async (req, res
 
         const users = snapshot.docs.map(doc => {
             const userData = doc.data();
+            let name = userData.name;
+            let lastName = userData.lastName;
+            let rut = userData.rut;
+            try { name = decrypt(name); } catch (e) {}
+            try { lastName = decrypt(lastName); } catch (e) {}
+            try { rut = decrypt(rut); } catch (e) {}
             // Opcional: Eliminar campos sensibles antes de enviar la respuesta
             delete userData.password; // Si almacenas contraseñas, elimínala
             // delete userData.someOtherSensitiveField;
             return {
                 id: doc.id,
-                ...userData
+                ...userData,
+                name,
+                lastName,
+                rut
             };
         });
 

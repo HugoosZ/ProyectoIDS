@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();  // Usa el Router de express directamente
 
 const {db} = require('../firebase'); // para traer el objeto db que se exporta de firebase.js
+const { decrypt } = require('../utils/crypto'); // <-- Importa la función decrypt
 
 
 router.get('/', async (req, res) => {
@@ -19,14 +20,24 @@ router.get("/users", async (req, res) => {
     const querySnapshot = await db.collection("users").get();
 
     // 2. Mapear los datos de cada documento a un array de objetos
-    const users = querySnapshot.docs.map((doc) => ({
-      rut: doc.id,
-      isAdmin: doc.data().isAdmin,
-      name: doc.data().name,
-      lastName: doc.data().lastName,
-      email: doc.data().email,
-      role: doc.data().role,
-    }));
+    const users = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      let name = data.name;
+      let lastName = data.lastName;
+      let rut = data.rut;
+      // Desencriptar si existen
+      try { name = decrypt(name); } catch (e) {}
+      try { lastName = decrypt(lastName); } catch (e) {}
+      try { rut = decrypt(rut); } catch (e) {}
+      return {
+        rut,
+        isAdmin: data.isAdmin,
+        name,
+        lastName,
+        email: data.email,
+        role: data.role,
+      };
+    });
 
     // 3. Enviar la respuesta como JSON
     res.status(200).json(users);
