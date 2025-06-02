@@ -33,7 +33,6 @@ const Turno=() =>{
 
   useEffect(() =>{
 
-    //funcion para obtener datos del usuario y verificar si su turno esta activo
     const fetchUserAndTurno=async () =>{
       try {
         const { userId, token }=await getStoredAuthData();
@@ -41,20 +40,32 @@ const Turno=() =>{
 
         setUserId(userId);
         setToken(token);
-
-        //falta ajustar fetch para obtener el estado del turno
-        /*
-        const response=await fetch(`https://proyecto-ids.vercel.app/api/`, {
+        
+        const response=await fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?isPresent=true&time=today`, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
         });
 
         const data=await response.json();
-        setTurno(data.turnoActivo);
-        */
+        console.log('Datos de asistencia:', data);
+
+      if (Array.isArray(data) && data.length > 0){
+        const today = new Date().toISOString().split('T')[0];
+      const asistenciaHoy = data.find((d) => d.date === today);
+
+        if(asistenciaHoy && asistenciaHoy.isPresent===true){
+          setTurno(true);
+        }else{
+          setTurno(false);
+        }
+      }
+      else {
+        setTurno(false);
+
+      }
+        
       } catch (err) {
         console.error('Error cargando turno:', err);
         Alert.alert('Error', 'No se pudo cargar el estado del turno');
@@ -80,11 +91,15 @@ const Turno=() =>{
         },
       });
 
+      const data=await response.json();
+       console.log('Info checkIn:', data);
+
       if (response.ok){
         setTurno(true);
-        Alert.alert('Éxito', 'Turno iniciado correctamente');
+        Alert.alert('Éxito', data.message||'Turno iniciado correctamente');
       }else{
-        throw new Error('No se pudo iniciar el turno');
+        const errorMsg=data?.error||'No se pudo iniciar el turno';
+        Alert.alert('Aviso', errorMsg);
       }
     } catch (err){
       console.error(err);
@@ -109,6 +124,8 @@ const Turno=() =>{
         setTurno(false);
         Alert.alert('Éxito', 'Turno finalizado correctamente');
       } else {
+        const errorData=await response.json();
+        console.error('Error al terminar turno:', errorData);
         throw new Error('No se pudo terminar el turno');
       }
     } catch (err) {
@@ -154,9 +171,11 @@ const Turno=() =>{
         </Text>
 
         <TouchableOpacity
+          disabled={loading}
           style={[
             styles.button,
             turno ? styles.buttonSecondary : styles.buttonPrimary,
+            loading && {opacity: 0.6},
           ]}
           onPress={turno ? terminar_turno : iniciar_turno}
         >
