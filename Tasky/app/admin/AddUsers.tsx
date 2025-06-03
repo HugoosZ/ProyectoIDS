@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +12,7 @@ const AddUsers = () => {
   const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
   const [rut, setRUT] = useState('');
   const [token, setToken] = useState<string | null>(null);
 
@@ -24,11 +26,13 @@ const AddUsers = () => {
 
   const manejarEnvio = async () => {
     if (!nombre || !apellido || !email || !password || !rut) {
+
       Alert.alert('Campos requeridos', 'Por favor completa todos los campos.');
       return;
     }
 
     if (!token) {
+
       Alert.alert('Error de autenticación', 'Token no disponible. Inicia sesión nuevamente.');
       return;
     }
@@ -39,7 +43,7 @@ const AddUsers = () => {
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
-        },
+         },
         body: JSON.stringify({
           rut,
           email,
@@ -53,6 +57,7 @@ const AddUsers = () => {
       });
 
       if (res.ok) {
+
         Alert.alert('Usuario creado', 'El trabajador fue registrado exitosamente.');
         setNombre('');
         setApellido('');
@@ -72,7 +77,6 @@ const AddUsers = () => {
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
       <Text style={globalStyles.title}>Agregar Nuevo Trabajador</Text>
-
       <TextInput
         style={globalStyles.input}
         placeholder="Nombre"

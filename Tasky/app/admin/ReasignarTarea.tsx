@@ -223,11 +223,10 @@ export default function ReasignarTarea() {
                     style={styles.picker}
                 >
                     <Picker.Item label=" Selecciona una tarea" value="" />
-                    {/* Tu lógica de filtro original, envuelta para asegurar que 'tareas' es un array */}
+                    
                     {Array.isArray(tareas) && tareas
                         .filter(tarea => {
                             // Normalizamos los valores para asegurar que el filtro sea robusto,
-                            // como en la explicación anterior, pero usando tu lógica original.
                             const assignedToNormalized = tarea.assignedTo === null || typeof tarea.assignedTo === 'undefined' ? '' : tarea.assignedTo;
                             const statusNormalized = tarea.status?.toLowerCase(); // Asegúrate de comparar en minúsculas
 
@@ -257,7 +256,6 @@ export default function ReasignarTarea() {
                     )}
                 </Picker>
             </View>
-
             <Text style={globalStyles.subtitle}>Reasignar a:</Text>
             <View style={styles.pickerWrapper}>
                 <Picker
@@ -275,7 +273,6 @@ export default function ReasignarTarea() {
                     ))}
                 </Picker>
             </View>
-
             <TouchableOpacity style={globalStyles.button} onPress={handleReassign}>
                 <Text style={globalStyles.buttonText}>Reasignar</Text>
             </TouchableOpacity>
