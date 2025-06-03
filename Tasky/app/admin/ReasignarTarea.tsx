@@ -38,7 +38,6 @@ export default function ReasignarTarea() {
 
   const fetchUsuarios = async (token: string) => {
     try {
-      // Obtener todos los usuarios
       const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
@@ -46,31 +45,25 @@ export default function ReasignarTarea() {
       if (!resUsers.ok) throw new Error('Error al obtener usuarios');
       const dataUsers: Usuario[] = await resUsers.json();
 
-      // Obtener asistencias para filtrar usuarios presentes hoy
-      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/attendance', {
+      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true', {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!resAttendance.ok) throw new Error('Error al obtener asistencias');
-      const attendanceData = await resAttendance.json();
+      const attendanceDataRaw = await resAttendance.json();
 
-      const today = new Date().toISOString().slice(0, 10);
+      // Convertir a array si viene como objeto
+      const attendanceData = Array.isArray(attendanceDataRaw)
+        ? attendanceDataRaw
+        : Object.values(attendanceDataRaw);
 
-      // Usuarios presentes: tienen checkIn hoy y no checkOut o checkOut > checkIn
+      // Solo usuarios con isPresent === true ya filtrado por la API
       const presentUserIds = new Set(
-        attendanceData
-          .filter((att: any) =>
-            att.date === today &&
-            att.checkIn &&
-            (!att.checkOut || new Date(att.checkOut) > new Date(att.checkIn))
-          )
-          .map((att: any) => att.userId)
+        attendanceData.map((att: any) => att.userId)
       );
 
-      // Filtrar usuarios presentes
       const filteredUsers = dataUsers.filter((user) => presentUserIds.has(user.id));
 
-      // Crear mapa id -> nombre completo
       const map: Record<string, string> = {};
       filteredUsers.forEach((u) => {
         map[u.id] = `${u.name} ${u.lastName}`;
@@ -151,7 +144,8 @@ export default function ReasignarTarea() {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('userToken');
-      if (!token) {
+      const adminUid = await AsyncStorage.getItem('userId');
+      if (!token || !adminUid) {
         Alert.alert('Error', 'Inicia sesión nuevamente.');
         router.push('/');
         return;
@@ -164,12 +158,12 @@ export default function ReasignarTarea() {
         },
         body: JSON.stringify({
           newAssignedToUid: selectedUserId,
-          adminUid: '', // opcional, si quieres agregarlo
+          adminUid: adminUid,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error al reasignar tarea');
-      Alert.alert('Éxito', data.message);
+      Alert.alert('Éxito', data.message || 'Tarea reasignada correctamente');
       router.back();
     } catch (error: any) {
       console.error(error);
