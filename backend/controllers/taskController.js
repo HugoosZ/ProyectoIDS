@@ -26,7 +26,39 @@ exports.createTask = async (req, res) => {
       priority,
       status,
       title,
-    } = req.body; // Validate required fields
+      requiereRelevo, // booleano
+      trabajadorSaliente, // UID
+      trabajadorEntrante // UID opcional
+    } = req.body;
+
+    // Validaciones obligatorias
+    if (!description || typeof requiereRelevo === 'undefined') {
+      return res.status(400).json({ message: "Faltan campos obligatorios: descripción o la opción de relevo." });
+    }
+    if (typeof requiereRelevo !== 'boolean') {
+      return res.status(400).json({ message: "El campo 'requiereRelevo' debe ser booleano (true/false)." });
+    }
+    // El tiempo estimado se define por startTime y endTime (obligatorios más abajo)
+
+    if (!requiereRelevo) {
+      // Tarea SIN relevo: solo un trabajador
+      if (!assignedTo || !Array.isArray(assignedTo) || assignedTo.length !== 1) {
+        return res.status(400).json({ message: "Las tareas sin relevo deben asignarse a un único trabajador." });
+      }
+    } else {
+      // Tarea CON relevo: trabajador saliente obligatorio
+      if (!trabajadorSaliente) {
+        return res.status(400).json({ message: "Las tareas con relevo requieren un trabajador saliente." });
+      }
+      // El assignedTo debe contener al menos el saliente
+      if (!assignedTo || !Array.isArray(assignedTo) || !assignedTo.includes(trabajadorSaliente)) {
+        return res.status(400).json({ message: "El trabajador saliente debe estar en la lista de asignados." });
+      }
+      // Si hay entrante, debe estar en assignedTo
+      if (trabajadorEntrante && !assignedTo.includes(trabajadorEntrante)) {
+        return res.status(400).json({ message: "El trabajador entrante debe estar en la lista de asignados si se especifica." });
+      }
+    }
 
     if (
     !description ||
@@ -115,8 +147,12 @@ exports.createTask = async (req, res) => {
       startTime: Timestamp.fromDate(new Date(startTime)),
       status: status || "pending",
       title,
-      realStartTime: null,
-      realEndTime: null,
+      requiereRelevo,
+      trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
+      trabajadorEntrante: requiereRelevo ? (trabajadorEntrante || null) : null,
+      codigoRelevo: null, // Se generará al finalizar por el saliente
+      relevoValidado: false, // Se marcará true cuando el entrante valide el código
+      relevoExpira: null, // Timestamp de expiración del código de relevo
       empresaId: createdByEmpresaId,
     };
 
