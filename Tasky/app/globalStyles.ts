@@ -10,7 +10,7 @@ const globalStyles = StyleSheet.create({
     backgroundColor: 'rgba(137, 113, 187, 1)',
   },
   title: {
-    fontSize: 30,
+    fontSize: 25,
     fontWeight: 'bold',
     marginBottom: 30,
     textAlign: 'center', 
