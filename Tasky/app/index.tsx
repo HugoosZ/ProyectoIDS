@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, SafeAreaView, View } from 'react-native';
 import globalStyles from './globalStyles';
 import { auth } from '../firebase'; // ajusta si está en otra carpeta
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
@@ -62,67 +62,79 @@ export default function Index() {
   };
 
   return (
-    <View style={globalStyles.container}>
-      <Text style={globalStyles.title}>¡Bienvenid@ a Tasky!</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.centerContainer}>
 
-      <Image
-        source={require('../assets/images/logotasky.jpg')}
-        style={styles.image}
-      />
-
-      <View style={globalStyles.formContainer}>
-        <Text style={globalStyles.subtitle}>Ingresa a tu cuenta</Text>
-
-        <TextInput
-          style={globalStyles.input}
-          placeholder="RUT (Ej: 12345678-9)"
-          placeholderTextColor="#999"
-          value={rut}
-          onChangeText={setRut}
-        />
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={globalStyles.input}
-            placeholder="Contraseña"
-            secureTextEntry={!showPassword} // Si showPassword es false, ocultar la contraseña
-            placeholderTextColor="#999"
-            value={password}
-            onChangeText={setPassword}
+        <View style={globalStyles.card}>
+          <Image
+            source={require('../assets/images/logotasky.jpg')}
+            style={globalStyles.logo}
           />
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)} // Cambiar el estado de showPassword
-            style={styles.eyeIcon}
-          >
-            <Ionicons
-              name={showPassword ? 'eye-off' : 'eye'}
-              size={24}
-              color="#999"
+
+          <Text style={[globalStyles.title, globalStyles.titleCentered]}>
+            ¡Bienvenid@ a Tasky!
+          </Text>
+
+          <View style={globalStyles.formContainer}>
+            <Text style={[globalStyles.subtitle, globalStyles.PurpleText]}>
+              Ingresa a tu cuenta
+            </Text>
+
+            <TextInput
+              style={globalStyles.input}
+              placeholder="RUT (Ej: 12345678-9)"
+              placeholderTextColor="#999"
+              value={rut}
+              onChangeText={setRut}
             />
-          </TouchableOpacity>
+
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={globalStyles.input}
+                placeholder="Contraseña"
+                secureTextEntry={!showPassword}
+                placeholderTextColor="#999"
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={24}
+                  color="#999"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={globalStyles.button} onPress={handleLogin}>
+              <Text style={globalStyles.buttonText}>Iniciar sesión</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.push('/forgotPassword')}>
+              <Text style={globalStyles.forgotPasswordText}>
+                ¿Olvidaste tu contraseña?
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <TouchableOpacity style={globalStyles.button} onPress={handleLogin}>
-          <Text style={globalStyles.buttonText}>Iniciar sesión</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push('/forgotPassword')}>
-          <Text style={globalStyles.registerLink}>
-            ¿Olvidaste tu contraseña?
-          </Text>
-        </TouchableOpacity>
-
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  image: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 40,
-    height: 40,
+safeArea: {
+    flex: 1,
+    backgroundColor: 'rgba(137, 113, 187, 1)', // morado solo para esta pantalla
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   passwordContainer: {
     position: 'relative',

@@ -4,37 +4,38 @@ const globalStyles = StyleSheet.create({
   container: {
     paddingTop: 40,
     flex: 1,
-    justifyContent: 'flex-start', // Cambiado a flex-start para alinear desde la parte superior
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgb(236, 236, 236)', // Fondo claro
+    backgroundColor: 'rgba(137, 113, 187, 1)',
   },
   title: {
-    fontSize: 22,
+    fontSize: 30,
     fontWeight: 'bold',
     marginBottom: 30,
+    textAlign: 'center', 
   },
   formContainer: {
     width: '100%',
-    maxWidth: 300, // Ancho del formulario
+    maxWidth: 300,
     alignSelf: 'center',
   },
   subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: ' rgb(109, 82, 160)',
+    color: '#fff', 
     marginBottom: 10,
   },
   input: {
     width: '100%',
-    height: 40, // Hicimos los inputs más delgados verticalmente
-    borderColor: 'rgba(137, 113, 187, 1)', // Borde morado
+    height: 40,
+    borderColor: 'rgba(137, 113, 187, 1)',
     borderWidth: 1,
-    borderRadius: 15, // Bordes redondeados
+    borderRadius: 15,
     paddingHorizontal: 15,
     marginBottom: 15,
     fontSize: 16,
-    backgroundColor: 'rgba(210, 210, 210, 1)', // Fondo más claro
+    backgroundColor: 'rgba(210, 210, 210, 1)',
   },
   registerText: {
     fontSize: 14,
@@ -43,17 +44,17 @@ const globalStyles = StyleSheet.create({
   },
   button: {
     width: '100%',
-    height: 40, // Hicimos los botones más delgados verticalmente
-    borderRadius: 25, // Bordes redondeados
+    height: 40,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
-    backgroundColor: 'rgba(137, 113, 187, 1)', // Establece el color morado
-    elevation: 5, // Sombra en Android
-    shadowColor: '#000', // Sombra en iOS
-    shadowOffset: { width: 0, height: 2 }, // Desplazamiento de la sombra
-    shadowOpacity: 0.3, // Opacidad de la sombra
-    shadowRadius: 5, // Radio de la sombra
+    backgroundColor: 'rgba(137, 113, 187, 1)',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   buttonText: {
     fontSize: 18,
@@ -61,8 +62,52 @@ const globalStyles = StyleSheet.create({
     color: '#fff',
   },
   registerLink: {
+    color: '#fff', // Cambiado a blanco para el link
+    fontWeight: '500',
+  },
+
+  // NUEVOS ESTILOS AGREGADOS
+ card: {
+    backgroundColor: 'rgba(233, 233, 233, 1)', 
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    width: '90%',
+    maxWidth: 400,
+  },
+
+  logo: {
+  width: 150,
+  height: 150,
+  alignSelf: 'center',
+  marginBottom: 20,
+  resizeMode: 'contain',
+  borderRadius: 15,  // borde redondeado total (círculo)
+},
+
+
+  forgotPasswordText: {
+    textAlign: 'center',
+    textDecorationLine: 'underline',
     color: 'rgba(137, 113, 187, 1)',
     fontWeight: '500',
+    marginTop: 10,
+  },
+
+  titleCentered: {
+    textAlign: 'center',
+  },
+
+  whiteText: {
+    color: '#fff',
+  },
+
+  PurpleText: {
+    color: 'rgba(137, 113, 187, 1)',
   },
 
  // Estilos adicionales para Header y DateTime
