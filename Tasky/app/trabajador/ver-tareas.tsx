@@ -41,6 +41,8 @@ type Tarea = {
   endTime?: string | Date;
 };
 
+const MINUTOS_MINIMOS = 15; // minutos mínimos para poder terminar tarea
+
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
     const userId = await AsyncStorage.getItem('userId');
@@ -84,7 +86,7 @@ export default function VerTareas() {
     try {
       const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?today=true`, {
         headers: {
-          "Authorization": `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
       });
@@ -116,8 +118,42 @@ export default function VerTareas() {
     if (authUserId && authToken) fetchTareas();
   }, [authUserId, authToken]);
 
+  const hayTareaEnProgreso = (): boolean => {
+    return tareasDelDia.some(tarea => tarea.estado === "en progreso");
+  };
+
+  const puedeTerminarTarea = (startTime?: string | Date): boolean => {
+    if (!startTime) return false;
+    const inicio = new Date(startTime).getTime();
+    const ahora = Date.now();
+    const diffMinutos = (ahora - inicio) / (1000 * 60);
+    return diffMinutos >= MINUTOS_MINIMOS;
+  };
+
   const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
     if (!authToken) return;
+
+    if (nuevoEstado === "completada") {
+      const tarea = tareasDelDia.find(t => t.id === tareaId);
+      if (!tarea) {
+        Alert.alert("Error", "Tarea no encontrada.");
+        return;
+      }
+      if (!puedeTerminarTarea(tarea.startTime)) {
+        Alert.alert(
+          "Atención",
+          `No puedes finalizar esta tarea hasta que hayan pasado al menos ${MINUTOS_MINIMOS} minutos desde su inicio.`
+        );
+        return;
+      }
+    }
+
+    if (nuevoEstado === "en progreso") {
+      if (hayTareaEnProgreso()) {
+        Alert.alert("Atención", "Solo puedes tener una tarea en ejecución al mismo tiempo.");
+        return;
+      }
+    }
 
     try {
       setActualizandoId(tareaId);
@@ -125,15 +161,13 @@ export default function VerTareas() {
       const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
         method: 'PATCH',
         headers: {
-          "Authorization": `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ status: nuevoEstado }),
       });
 
       const resultado = await response.json();
-      console.log("Respuesta:", resultado);
-
       if (!response.ok) {
         throw new Error(resultado.message || 'Error al actualizar tarea.');
       }
@@ -166,7 +200,7 @@ export default function VerTareas() {
           </View>
         )}
 
-        {!error && tareasDelDia.length === 0 && !loading && (
+        {!error && tareasDelDia.filter(tarea => tarea.estado !== 'completada').length === 0 && !loading && (
           <Text style={globalStyles.emptyText}>No hay tareas asignadas para hoy.</Text>
         )}
 
@@ -177,39 +211,40 @@ export default function VerTareas() {
           </View>
         )}
 
-        {!loading && tareasDelDia.map(tarea => (
-          <View key={tarea.id} style={styles.tareaCard}>
-            <View style={styles.tareaHeader}>
-              <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-                {mostrarEstado(tarea.estado)}
-              </Text>
+        {!loading && tareasDelDia
+          .filter(tarea => tarea.estado !== 'completada') // filtro tareas completadas
+          .map(tarea => (
+            <View key={tarea.id} style={styles.tareaCard}>
+              <View style={styles.tareaHeader}>
+                <Text style={styles.tareaHora}>{tarea.hora}</Text>
+                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
+                  {mostrarEstado(tarea.estado)}
+                </Text>
+              </View>
+              <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+              <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+              {tarea.estado === 'pendiente' && (
+                <Button
+                  title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
+                  color="#1E90FF"
+                  disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
+                />
+              )}
+
+              {tarea.estado === 'en progreso' && (
+                <Button
+                  title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                  color="#28a745"
+                  disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
+                />
+              )}
             </View>
-            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-
-            {tarea.estado === 'pendiente' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
-                color="#1E90FF"
-                disabled={actualizandoId === tarea.id}
-              />
-            )}
-
-            {tarea.estado === 'en progreso' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                color="#28a745"
-                disabled={actualizandoId === tarea.id}
-              />
-            )}
-          </View>
-        ))}
+          ))}
       </ScrollView>
 
-      {/* Botón del calendario con la ruta corregida */}
       <TouchableOpacity
         style={styles.botonCalendario}
         onPress={() => router.push('/trabajador/calendario-semanal')}
