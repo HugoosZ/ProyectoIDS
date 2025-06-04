@@ -24,15 +24,15 @@ exports.getUserTaskStatus = async (req, res) => {
         .status(404)
         .json({ error: "Usuario solicitado no encontrado." });
     }
-    //const requestedUserEmpresaId = requestedUserDoc.data().empresaId; // EmpresaId del usuario solicitado
-    /*     console.log(
+    const requestedUserEmpresaId = requestedUserDoc.data().empresaId; // EmpresaId del usuario solicitado
+         console.log(
       "DEBUG: EmpresaId del usuario solicitado (desde Firestore):",
       requestedUserEmpresaId
-    ); */
+    ); 
 
     // 2. Lógica de permisos (combinando la tuya con la base de tu compañero)
     // Un usuario NO admin solo puede ver sus propias tareas y debe estar en la misma empresa.
-    /*     if (!requestingUserIsAdmin) {
+         if (!requestingUserIsAdmin) {
       if (userId !== requestingUserId) {
         console.log(
           "DEBUG: Acceso denegado - Usuario NO admin intentó ver tareas de OTRO usuario."
@@ -63,7 +63,7 @@ exports.getUserTaskStatus = async (req, res) => {
               "Acceso denegado: El administrador no puede ver tareas de otras empresas.",
           });
       }
-    } */
+    } 
 
     // 3. Construir la consulta a Firestore para obtener las tareas
     // La consulta siempre debe filtrar por el assignedTo (el uid de la URL)
