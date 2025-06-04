@@ -80,6 +80,35 @@ const globalStyles = StyleSheet.create({
     maxWidth: 400,
   },
 
+  ajustableCard: {
+  backgroundColor: 'rgba(233, 233, 233, 1)',
+  padding: 24,
+  borderRadius: 16,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowRadius: 8,
+  elevation: 4,
+  width: '90%',
+  maxWidth: 400,
+  height: 600, // 👈 altura fija (puedes ajustar este valor)
+  justifyContent: 'center', // centra el contenido verticalmente
+},
+
+backButton: {
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  zIndex: 1,
+  padding: 10,
+  backgroundColor: 'rgba(233, 233, 233, 1)',
+  borderRadius: 20,
+},
+
+backButtonText: {
+  color: '#000',
+},
+
+
   logo: {
   width: 150,
   height: 150,
