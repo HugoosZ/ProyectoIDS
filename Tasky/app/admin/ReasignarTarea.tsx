@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
@@ -36,6 +37,7 @@ export default function ReasignarTarea() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // --- Fetch de usuarios presentes
   const fetchUsuarios = async (token: string) => {
     try {
       const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
@@ -52,12 +54,11 @@ export default function ReasignarTarea() {
       if (!resAttendance.ok) throw new Error('Error al obtener asistencias');
       const attendanceDataRaw = await resAttendance.json();
 
-      // Convertir a array si viene como objeto
       const attendanceData = Array.isArray(attendanceDataRaw)
         ? attendanceDataRaw
         : Object.values(attendanceDataRaw);
 
-      // Solo usuarios con isPresent === true ya filtrado por la API
+      // Solo usuarios con isPresent === true ya filtrados por la API
       const presentUserIds = new Set(
         attendanceData.map((att: any) => att.userId)
       );
@@ -77,6 +78,7 @@ export default function ReasignarTarea() {
     }
   };
 
+  // --- Fetch tareas
   const fetchTareas = async (token: string) => {
     try {
       const res = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
@@ -86,7 +88,6 @@ export default function ReasignarTarea() {
       if (!res.ok) throw new Error('Error al obtener tareas');
       const data: Tarea[] = await res.json();
 
-      // Filtrar tareas pendientes, en progreso o sin asignar
       const tareasFiltradas = data.filter((tarea) => {
         let assigned = '';
         if (Array.isArray(tarea.assignedTo)) {
@@ -136,6 +137,7 @@ export default function ReasignarTarea() {
     init();
   }, []);
 
+  // --- Reasignar Tarea ---
   const handleReassign = async () => {
     if (!selectedTaskId || !selectedUserId) {
       Alert.alert('Error', 'Selecciona una tarea y un trabajador.');
@@ -175,76 +177,134 @@ export default function ReasignarTarea() {
 
   return (
     <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Reasignar Tarea</Text>
+      <View style={globalStyles.card}>
+        <Text style={[globalStyles.title, { marginBottom: 10 }]}>
+          Reasignar Tarea
+        </Text>
 
-      <Text style={globalStyles.subtitle}>Selecciona una tarea pendiente o en progreso:</Text>
-      {tareas.length === 0 && <Text>No hay tareas disponibles</Text>}
-      <ScrollView style={{ maxHeight: 250, marginBottom: 20 }}>
-        {tareas.map((tarea) => {
-          const isSelected = selectedTaskId === tarea.id;
-          return (
-            <TouchableOpacity
-              key={tarea.id}
-              style={{
-                padding: 12,
-                backgroundColor: isSelected ? '#cce5ff' : '#eee',
-                marginVertical: 4,
-                borderRadius: 5,
-              }}
-              onPress={() => setSelectedTaskId(tarea.id)}
-            >
-              <Text>{tarea.title || 'Sin título'}</Text>
-              <Text style={{ fontSize: 12, color: '#555' }}>
-                Asignado a: {typeof tarea.assignedTo === 'string' ? (usuariosMap[tarea.assignedTo] || tarea.assignedTo) : 'No asignado'}
-              </Text>
-              <Text style={{ fontSize: 12, color: '#555' }}>
-                Estado: {tarea.status || 'Desconocido'}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+        <Text style={globalStyles.subtitle}>
+          Selecciona una tarea pendiente o en progreso:
+        </Text>
+        {tareas.length === 0 && <Text>No hay tareas disponibles</Text>}
+        <ScrollView
+          style={{
+            maxHeight: 180,
+            marginBottom: 20,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
+          {tareas.map((tarea) => {
+            const isSelected = selectedTaskId === tarea.id;
+            return (
+              <TouchableOpacity
+                key={tarea.id}
+                style={[
+                  styles.cardItem,
+                  isSelected && styles.selectedCardItem,
+                ]}
+                onPress={() => setSelectedTaskId(tarea.id)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.cardTitle}>{tarea.title || 'Sin título'}</Text>
+                <Text style={styles.cardMeta}>
+                  Asignado a:{' '}
+                  {typeof tarea.assignedTo === 'string'
+                    ? usuariosMap[tarea.assignedTo] || tarea.assignedTo
+                    : 'No asignado'}
+                </Text>
+                <Text style={styles.cardMeta}>
+                  Estado: {tarea.status || 'Desconocido'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-      <Text style={globalStyles.subtitle}>Selecciona un trabajador presente hoy:</Text>
-      {usuariosList.length === 0 && <Text>No hay trabajadores disponibles</Text>}
-      <ScrollView style={{ maxHeight: 250, marginBottom: 20 }}>
-        {usuariosList.map((user) => {
-          const isSelected = selectedUserId === user.id;
-          return (
-            <TouchableOpacity
-              key={user.id}
-              style={{
-                padding: 12,
-                backgroundColor: isSelected ? '#cce5ff' : '#eee',
-                marginVertical: 4,
-                borderRadius: 5,
-              }}
-              onPress={() => setSelectedUserId(user.id)}
-            >
-              <Text>
-                {user.name} {user.lastName} ({user.rut})
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+        <Text style={globalStyles.subtitle}>
+          Selecciona un trabajador presente hoy:
+        </Text>
+        {usuariosList.length === 0 && <Text>No hay trabajadores disponibles</Text>}
+        <ScrollView
+          style={{
+            maxHeight: 120,
+            marginBottom: 20,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+        >
+          {usuariosList.map((user) => {
+            const isSelected = selectedUserId === user.id;
+            return (
+              <TouchableOpacity
+                key={user.id}
+                style={[
+                  styles.cardItem,
+                  isSelected && styles.selectedCardItem,
+                ]}
+                onPress={() => setSelectedUserId(user.id)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.cardTitle}>
+                  {user.name} {user.lastName} ({user.rut})
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
 
-      <TouchableOpacity
-        style={[globalStyles.button, loading ? { opacity: 0.6 } : {}]}
-        onPress={handleReassign}
-        disabled={loading}
-      >
-        <Text style={globalStyles.buttonText}>{loading ? 'Reasignando...' : 'Reasignar'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            globalStyles.button,
+            loading ? { opacity: 0.6 } : {},
+            { marginTop: 8 },
+          ]}
+          onPress={handleReassign}
+          disabled={loading}
+        >
+          <Text style={globalStyles.buttonText}>
+            {loading ? 'Reasignando...' : 'Reasignar'}
+          </Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]}
-        onPress={() => router.back()}
-      >
-        <Text style={globalStyles.buttonText}>Volver</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            globalStyles.button,
+            { backgroundColor: '#999', marginTop: 0 },
+          ]}
+          onPress={() => router.back()}
+        >
+          <Text style={globalStyles.buttonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  cardItem: {
+    backgroundColor: '#F5F5F5',
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    elevation: 2,
+  },
+  selectedCardItem: {
+    borderColor: 'rgba(137, 113, 187, 1)',
+    backgroundColor: '#e5ddfb',
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+    color: 'rgba(90,22,163,1)',
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  cardMeta: {
+    color: '#5b5b5b',
+    fontSize: 12,
+  },
+});
+
