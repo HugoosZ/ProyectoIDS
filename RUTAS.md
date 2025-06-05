@@ -388,7 +388,10 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
     "endTime": "2025-05-30T10:00:00.000Z",   // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
     "priority": "normal", // Opciones válidas: "alta", "media", "baja". Si no se especifica, el valor por defecto es "normal".
     "status": "pendiente", // Opciones válidas: "pendiente", "en progreso", "completada". Si no se especifica, el valor por defecto es "pendiente".
-    "title": "Título corto y descriptivo de la tarea."
+    "title": "Título corto y descriptivo de la tarea.",
+    "requiereRelevo": false, // **OBLIGATORIO**: booleano. `true` si la tarea implica relevo, `false` si es una tarea individual.
+    "trabajadorSaliente": "UID_trabajador_saliente", // **Opcional**: OBLIGATORIO si `requiereRelevo` es `true`.
+    "trabajadorEntrante": "UID_trabajador_entrante"  // **Opcional**: Solo si `requiereRelevo` es `true`.
 }
 
 

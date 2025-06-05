@@ -27,7 +27,7 @@ const usersRoutes = require('./routes/users');
 //Rutas publicas
 app.use('/api', taskRoutes);
 app.use('/api', usersRoutes);
-app.use('/api', mainRouter);       
+app.use('/api/test', mainRouter);       
 
  // Rutas admin!!!
 app.use('/api/', adminRouter); // Rutas admin empezarán con /api/admin

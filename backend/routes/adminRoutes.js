@@ -1,12 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const { db } = require("../firebase");
-
-const { verifyAndDecodeToken } = require("../middlewares/authentication"); //  Middleware de autenticación
+const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const userController = require("../controllers/userController");
-const { checkAdminPrivileges } = require("../middlewares/authorization"); // Middleware de autorización
-// Se usa llaves en la asignacion de nombres para poder renombrarlos, si no, hay que ponerle el nombre del codigo y como son parecidos es mejor renombrar
+const { checkAdminPrivileges } = require("../middlewares/authorization");
 const { getDateRange } = require("../utils/dateFilters");
+const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
 
 router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
     // Como ya se pasaron las auntenticaciones se puede postear el json
@@ -86,9 +85,7 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
     // Filtra asistencias por trabajadores presentes y sin tareas
-    const query = db.collection("asistencias")
-      //.where("isPresent", "==", true)
-      .where("currentTasks", "==", 0);
+    const query = db.collection("asistencias").where("currentTasks", "==", 0);
 
     const snapshot = await query.get();
 
@@ -104,12 +101,22 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
       const userDoc = await db.collection("users").doc(userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
 
+      let name = userData && userData.name;
+      let email = userData && userData.email;
+      let lastName = userData && userData.lastName;
+      let rut = userData && userData.rut;
+      try { name = decrypt(name); } catch (e) {}
+      try { lastName = decrypt(lastName); } catch (e) {}
+      try { rut = decrypt(rut); } catch (e) {}
+
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: userData.name || null,
-          email: userData.email || null
+          name: name || null,
+          lastName: lastName || null,
+          rut: rut || null,
+          email: email || null
         } : null
       };
     }));
@@ -148,12 +155,21 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
       const asistenciaData = doc.data();
       const userDoc = await db.collection("users").doc(asistenciaData.userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
+      let name = userData && userData.name;
+      let lastName = userData && userData.lastName;
+      let rut = userData && userData.rut;
+      let email = userData && userData.email;
+      try { name = decrypt(name); } catch (e) {}
+      try { lastName = decrypt(lastName); } catch (e) {}
+      try { rut = decrypt(rut); } catch (e) {}
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: userData.name || null,
-          email: userData.email || null
+          name: name || null,
+          lastName: lastName || null,
+          rut: rut || null,
+          email: email || null
         } : null
       };
     }));

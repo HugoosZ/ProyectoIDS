@@ -14,6 +14,9 @@ function doTimeRangesOverlap(fromTime1, toTime1, fromTime2, toTime2) {
     return start1 < end2 && start2 < end1;
 }
 
+// CONSTANTE: Tiempo mínimo de ejecución para tareas sin relevo
+const MIN_EXECUTION_TIME_MINUTES = 15;
+
 exports.createTask = async (req, res) => {
   try {
     const createdByUid = req.user.uid;
@@ -26,7 +29,39 @@ exports.createTask = async (req, res) => {
       priority,
       status,
       title,
-    } = req.body; // Validate required fields
+      requiereRelevo, // booleano
+      trabajadorSaliente, // UID
+      trabajadorEntrante // UID opcional
+    } = req.body;
+
+    // Validaciones obligatorias
+    if (!description || typeof requiereRelevo === 'undefined') {
+      return res.status(400).json({ message: "Faltan campos obligatorios: descripción o la opción de relevo." });
+    }
+    if (typeof requiereRelevo !== 'boolean') {
+      return res.status(400).json({ message: "El campo 'requiereRelevo' debe ser booleano (true/false)." });
+    }
+    // El tiempo estimado se define por startTime y endTime (obligatorios más abajo)
+
+    if (!requiereRelevo) {
+      // Tarea SIN relevo: solo un trabajador
+      if (!assignedTo || !Array.isArray(assignedTo) || assignedTo.length !== 1) {
+        return res.status(400).json({ message: "Las tareas sin relevo deben asignarse a un único trabajador." });
+      }
+    } else {
+      // Tarea CON relevo: trabajador saliente obligatorio
+      if (!trabajadorSaliente) {
+        return res.status(400).json({ message: "Las tareas con relevo requieren un trabajador saliente." });
+      }
+      // El assignedTo debe contener al menos el saliente
+      if (!assignedTo || !Array.isArray(assignedTo) || !assignedTo.includes(trabajadorSaliente)) {
+        return res.status(400).json({ message: "El trabajador saliente debe estar en la lista de asignados." });
+      }
+      // Si hay entrante, debe estar en assignedTo
+      if (trabajadorEntrante && !assignedTo.includes(trabajadorEntrante)) {
+        return res.status(400).json({ message: "El trabajador entrante debe estar en la lista de asignados si se especifica." });
+      }
+    }
 
     if (
     !description ||
@@ -115,8 +150,12 @@ exports.createTask = async (req, res) => {
       startTime: Timestamp.fromDate(new Date(startTime)),
       status: status || "pending",
       title,
-      realStartTime: null,
-      realEndTime: null,
+      requiereRelevo,
+      trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
+      trabajadorEntrante: requiereRelevo ? (trabajadorEntrante || null) : null,
+      codigoRelevo: null, // Se generará al finalizar por el saliente
+      relevoValidado: false, // Se marcará true cuando el entrante valide el código
+      relevoExpira: null, // Timestamp de expiración del código de relevo
       empresaId: createdByEmpresaId,
     };
 
@@ -277,8 +316,9 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         }
 
         // 2. Verificación de Permisos (User vs Admin)
-        if (!requestingUserIsAdmin && taskData.assignedTo.includes(requestingUserUid) !== requestingUserUid) {
-            // Si no es admin Y la tarea no le está asignada, denegar.
+        if (!requestingUserIsAdmin && (!taskData.assignedTo || !taskData.assignedTo.includes(requestingUserUid))) {
+        // Un usuario normal solo puede actualizar su tarea si está asignado a ella.
+        // Un administrador puede actualizar cualquier tarea de su empresa.
             console.log(`DEBUG: Acceso denegado - Usuario no admin intentó actualizar tarea no asignada. Tarea asignada a: ${taskData.assignedTo}, Usuario: ${requestingUserUid}`);
             return res.status(403).json({ message: "No autorizado: Solo puedes actualizar tareas asignadas a ti mismo o si eres administrador de la empresa." });
         }
@@ -288,11 +328,60 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         const updateData = { status };
 
         // Lógica de realStartTime y realEndTime (conservada de tu compañero)
-        if (status === "en progreso" && !taskData.realStartTime) {
-            updateData.realStartTime = Timestamp.now();
+        if (status === "en progreso") {
+            // Verificar si el usuario que solicita tiene otra tarea "en progreso"
+            const ongoingTasksSnapshot = await db.collection("tasks")
+                .where("assignedTo", "array-contains", requestingUserUid) // Buscar si está asignado a tareas
+                .where("status", "==", "en progreso")
+                .where("empresaId", "==", requestingUserEmpresaId) // Asegurar que sea de la misma empresa
+                .get();
+
+            // Si encuentra otra tarea en progreso que no sea la actual (en caso de que la actual ya estuviera en progreso)
+            const hasOtherOngoingTask = ongoingTasksSnapshot.docs.some(doc => doc.id !== taskId);
+
+            if (hasOtherOngoingTask) {
+                return res.status(400).json({ message: "No puedes iniciar esta tarea porque ya tienes otra tarea en progreso." });
+            }
+
+            // Si la tarea aún no tiene realStartTime, sellarlo
+            if (!taskData.realStartTime) {
+                updateData.realStartTime = Timestamp.now();
+            }
+            updateData.status = status; // Actualizar el estado
         }
-        if (status === "completada" && !taskData.realEndTime) {
-            updateData.realEndTime = Timestamp.now();
+
+        if (status === "completada") {
+            // Asegurarse de que la tarea haya sido iniciada
+            if (!taskData.realStartTime) {
+                return res.status(400).json({ message: "No puedes finalizar esta tarea porque no ha sido iniciada." });
+            }
+
+            const currentTime = Timestamp.now().toDate();
+            const startTime = taskData.realStartTime.toDate();
+            const durationMs = currentTime.getTime() - startTime.getTime();
+            const durationMinutes = durationMs / (1000 * 60);
+
+            // Validar tiempo mínimo de ejecución
+            if (durationMinutes < MIN_EXECUTION_TIME_MINUTES) {
+                return res.status(400).json({ message: `No puedes finalizar esta tarea hasta que hayan pasado al menos ${MIN_EXECUTION_TIME_MINUTES} minutos desde su inicio.` });
+            }
+
+            // Si cumple el tiempo mínimo y aún no tiene realEndTime, sellarlo
+            if (!taskData.realEndTime) {
+                updateData.realEndTime = Timestamp.now();
+            }
+            updateData.status = status; // Actualizar el estado
+        }
+
+        // Si el estado no es "en progreso" ni "completada" (ej. "pendiente"), solo actualiza el estado.
+        // O si ya tiene realStartTime/realEndTime y solo se cambia el estado (ej. de completada a pendiente)
+        if (Object.keys(updateData).length === 0 && taskData.status !== status) {
+            // Esto cubre casos donde solo se cambia el status sin afectar realStartTime/realEndTime
+            // por ejemplo, si ya tenía realStartTime y se intenta poner en progreso de nuevo.
+            updateData.status = status;
+        } else if (Object.keys(updateData).length === 0 && taskData.status === status) {
+            // Si el estado es el mismo y no hay cambios en realStartTime/realEndTime, no hay nada que hacer.
+            return res.status(200).json({ message: "El estado de la tarea ya es el solicitado. No se realizaron cambios." });
         }
 
         await taskRef.update(updateData);
@@ -300,6 +389,11 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         // Lógica para descontar currentTasks si pasa a "completada" (conservada de tu compañero)
         if (status === "completada" && taskData.status !== "completada") {
             const today = new Date().toISOString().split('T')[0];
+            // Determinar a quiénes se les debe decrementar el currentTasks
+            // Si el requestingUser es un admin, asumimos que está completando la tarea en nombre de los asignados.
+            // Si el requestingUser es uno de los asignados, solo se decrementa para él.
+            const usersToDecrement = requestingUserIsAdmin ? taskData.assignedTo : [requestingUserUid];
+            for (const userIdToDecrement of usersToDecrement) {
             const asistenciaQuery = await db.collection("asistencias")
                 .where("userId", "==", requestingUserUid) // Importante: Usar el userId asignado a la tarea, no el que hace la solicitud si el admin la completa
                 .where("date", "==", today)
@@ -317,6 +411,7 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
                 console.log(`DEBUG: No se encontró registro de asistencia para ${requestingUserUid} el día ${today}. No se actualizó currentTasks.`);
             }
         }
+    }
 
         res.status(200).json({ message: "Estado de la tarea actualizado exitosamente." });
 
