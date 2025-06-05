@@ -41,3 +41,4 @@ Thumbs.db
 # Producción
 *.bak
 *.tmp
+.vercel

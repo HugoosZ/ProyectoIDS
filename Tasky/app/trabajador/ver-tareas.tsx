@@ -39,8 +39,14 @@ type Tarea = {
   priority?: string;
   startTime?: string | Date;
   endTime?: string | Date;
+  requiereRelevo: boolean;
+  trabajadorSaliente: string;
+  trabajadorEntrante: string;
 };
 
+const MINUTOS_MINIMOS = 15; // minutos mínimos para poder terminar tarea
+
+// Función para obtener los datos de autenticación (userId y token)
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
     const userId = await AsyncStorage.getItem('userId');
@@ -75,35 +81,60 @@ export default function VerTareas() {
     loadAuthData();
   }, []);
 
+  useEffect(() => {
+    if (authUserId && authToken) {
+      fetchTareas();
+    }
+  }, [authUserId, authToken]);
+
   const fetchTareas = async () => {
     if (!authUserId || !authToken) return;
 
     setLoading(true);
     setError(null);
 
+    console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
+
     try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?today=true`, {
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
         headers: {
-          "Authorization": `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
       });
 
-      const data = await response.json();
-      const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
-        id: apiTask.id,
-        nombre: apiTask.title,
-        descripcion: apiTask.description,
-        estado: apiTask.status.toLowerCase(),
-        hora: apiTask.startTime
-          ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-          : 'N/A',
-        priority: apiTask.priority,
-        startTime: apiTask.startTime,
-        endTime: apiTask.endTime,
-      }));
+      if (!response.ok) {
+        throw new Error(`Error HTTP ${response.status}`);
+      }
 
-      setTareasDelDia(tareas);
+      const data = await response.json();
+
+      console.log('Respuesta de la API:', data);
+
+      if (data && data.tasks) {
+        const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
+          id: apiTask.id,
+          nombre: apiTask.title,
+          descripcion: apiTask.description,
+          estado: apiTask.status.toLowerCase(),
+          hora: apiTask.startTime
+            ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+            : 'N/A',
+          priority: apiTask.priority,
+          startTime: apiTask.startTime ? new Date(apiTask.startTime) : null,
+          endTime: apiTask.endTime ? new Date(apiTask.endTime) : null,
+          requiereRelevo: apiTask.requiereRelevo || false,
+          trabajadorSaliente: apiTask.trabajadorSaliente || '',
+          trabajadorEntrante: apiTask.trabajadorEntrante || ''
+        }));
+
+        const tareasFiltradas = tareas.filter(tarea => tarea.estado === 'pendiente' || tarea.estado === 'en progreso');
+
+        console.log('Tareas filtradas:', tareasFiltradas);
+        setTareasDelDia(tareasFiltradas);
+      } else {
+        throw new Error('No se encontraron tareas en la respuesta');
+      }
     } catch (err: any) {
       console.error("Error al obtener tareas:", err);
       setError("Error al cargar las tareas.");
@@ -112,12 +143,44 @@ export default function VerTareas() {
     }
   };
 
-  useEffect(() => {
-    if (authUserId && authToken) fetchTareas();
-  }, [authUserId, authToken]);
+  const hayTareaEnProgreso = (): boolean => {
+    return tareasDelDia.some(tarea => tarea.estado === "en progreso");
+  };
+
+  const puedeTerminarTarea = (startTime?: string | Date): boolean => {
+    if (!startTime) return false;
+    const inicio = new Date(startTime).getTime();
+    const ahora = Date.now();
+    const diffMinutos = (ahora - inicio) / (1000 * 60);
+    return diffMinutos >= MINUTOS_MINIMOS;
+  };
 
   const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
-    if (!authToken) return;
+    if (!authToken || !authUserId) return;
+
+    const empresaId = '9ccfbbf4-da1a-4ece-8145-f54dc1e8aa23';
+
+    if (nuevoEstado === "completada") {
+      const tarea = tareasDelDia.find(t => t.id === tareaId);
+      if (!tarea) {
+        Alert.alert("Error", "Tarea no encontrada.");
+        return;
+      }
+      if (!puedeTerminarTarea(tarea.startTime)) {
+        Alert.alert(
+          "Atención",
+          `No puedes finalizar esta tarea hasta que hayan pasado al menos ${MINUTOS_MINIMOS} minutos desde su inicio.`
+        );
+        return;
+      }
+    }
+
+    if (nuevoEstado === "en progreso") {
+      if (hayTareaEnProgreso()) {
+        Alert.alert("Atención", "Solo puedes tener una tarea en ejecución al mismo tiempo.");
+        return;
+      }
+    }
 
     try {
       setActualizandoId(tareaId);
@@ -125,15 +188,16 @@ export default function VerTareas() {
       const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
         method: 'PATCH',
         headers: {
-          "Authorization": `Bearer ${authToken}`,
+          Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: nuevoEstado }),
+        body: JSON.stringify({
+          status: nuevoEstado,
+          empresaId: empresaId
+        }),
       });
 
       const resultado = await response.json();
-      console.log("Respuesta:", resultado);
-
       if (!response.ok) {
         throw new Error(resultado.message || 'Error al actualizar tarea.');
       }
@@ -167,7 +231,7 @@ export default function VerTareas() {
         )}
 
         {!error && tareasDelDia.length === 0 && !loading && (
-          <Text style={globalStyles.emptyText}>No hay tareas asignadas para hoy.</Text>
+          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
         )}
 
         {loading && !error && (
@@ -181,9 +245,7 @@ export default function VerTareas() {
           <View key={tarea.id} style={styles.tareaCard}>
             <View style={styles.tareaHeader}>
               <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-                {mostrarEstado(tarea.estado)}
-              </Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
             </View>
             <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
             <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
@@ -193,7 +255,7 @@ export default function VerTareas() {
                 title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
                 onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
                 color="#1E90FF"
-                disabled={actualizandoId === tarea.id}
+                disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
               />
             )}
 
@@ -202,27 +264,33 @@ export default function VerTareas() {
                 title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
                 onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
                 color="#28a745"
-                disabled={actualizandoId === tarea.id}
+                disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
               />
             )}
           </View>
         ))}
       </ScrollView>
 
-      <View style={styles.barraInferior}>
-        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/turno')}>
-          <Ionicons name="time-outline" size={24} color="#007AFF" />
-          <Text style={styles.textoBotonBarra}>Turno</Text>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.botonCalendario}
+          onPress={() => router.push('/trabajador/turno')}
+        >
+          <Ionicons name="time" size={30} color="white" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/tareas_completadas')}>
-          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
-          <Text style={styles.textoBotonBarra}>Completadas</Text>
+        <TouchableOpacity
+          style={styles.botonCalendario}
+          onPress={() => router.push('/trabajador/tareas_completadas')}
+        >
+          <Ionicons name="checkmark-done-outline" size={30} color="white" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.botonBarra} onPress={() => router.push('/trabajador/calendario-semanal')}>
-          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-          <Text style={styles.textoBotonBarra}>Calendario</Text>
+        <TouchableOpacity
+          style={styles.botonCalendario}
+          onPress={() => router.push('/trabajador/calendario-semanal')}
+        >
+          <Ionicons name="calendar-outline" size={30} color="white" />
         </TouchableOpacity>
       </View>
     </View>
@@ -282,22 +350,18 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 5,
   },
-  barraInferior: {
+  botonCalendario: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 30,
+    elevation: 5,
+  },
+  buttonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    width: '100%',
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderColor: '#ccc',
-    backgroundColor: '#fff',
-  },
-  botonBarra: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textoBotonBarra: {
-    fontSize: 12,
-    color: '#007AFF',
-    marginTop: 2,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
 });

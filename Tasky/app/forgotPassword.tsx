@@ -1,165 +1,99 @@
-import { useState } from 'react'; 
-import {
-  Alert,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  SafeAreaView,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View, SafeAreaView, Platform, StatusBar,
+  KeyboardAvoidingView, ScrollView} from 'react-native';
 import globalStyles from './globalStyles';
-import { Ionicons } from '@expo/vector-icons';
+
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+
+import { useNavigation } from '@react-navigation/native'; // 👈 para volver atrás
+
+const db = getFirestore();
 
 export default function ForgotPassword() {
-  const [rut, setRut] = useState('');
-  const [passwordActual, setPasswordActual] = useState('');
-  const [nuevaPassword, setNuevaPassword] = useState('');
-  const [confirmarPassword, setConfirmarPassword] = useState('');
-  const [showPasswordActual, setShowPasswordActual] = useState(false);
-  const [showNuevaPassword, setShowNuevaPassword] = useState(false);
-  const [showConfirmarPassword, setShowConfirmarPassword] = useState(false);
-  const router = useRouter();
+  const [email, setEmail] = useState('');
+  const navigation = useNavigation();
 
-  const handleChangePassword = async () => {
-    if (!rut.trim() || !passwordActual.trim() || !nuevaPassword.trim() || !confirmarPassword.trim()) {
-      Alert.alert('Error', 'Todos los campos son requeridos');
-      return;
-    }
-
-    if (nuevaPassword !== confirmarPassword) {
-      Alert.alert('Error', 'Las nuevas contraseñas no coinciden');
-      return;
-    }
-
-    if (nuevaPassword.length < 6) {
-      Alert.alert('Error', 'La nueva contraseña debe tener al menos 6 caracteres');
+  const handleResetPassword = async () => {
+    if (email.trim() === '') {
+      alert('Por favor ingrese un correo electrónico.');
       return;
     }
 
     try {
-      const response = await fetch('https://proyecto-ids.vercel.app/api/auth/cambiar-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rut, passwordActual, nuevaPassword, confirmarPassword }),
-      });
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al cambiar la contraseña');
+      if (querySnapshot.empty) {
+        alert('Este correo no está registrado en el sistema.');
+        return;
       }
 
-      Alert.alert('Éxito', 'Tu contraseña ha sido actualizada correctamente', [
-        { text: 'OK', onPress: () => router.push('/') },
-      ]);
-    } catch (error: any) {
-      console.error('Error al cambiar contraseña:', error);
-      Alert.alert('Error', error.message || 'Ocurrió un error. Intenta más tarde.');
+      await sendPasswordResetEmail(auth, email);
+      alert('Correo de recuperación enviado. Revisa tu bandeja de entrada.');
+    } catch (error) {
+      console.error('Error al enviar correo de recuperación:', error);
+      alert('Ocurrió un error al intentar recuperar la contraseña.');
     }
   };
 
-  const renderPasswordInput = (
-    value: string,
-    onChange: (text: string) => void,
-    placeholder: string,
-    show: boolean,
-    toggle: () => void
-  ) => (
-    <View style={{ ...globalStyles.input, flexDirection: 'row', alignItems: 'center' }}>
-      <TextInput
-        style={{ flex: 1 }}
-        placeholder={placeholder}
-        placeholderTextColor="#999"
-        value={value}
-        onChangeText={onChange}
-        secureTextEntry={!show}
-        autoCapitalize="none"
-      />
-      <TouchableOpacity onPress={toggle}>
-        <Ionicons
-          name={show ? 'eye-off-outline' : 'eye-outline'}
-          size={24}
-          color="#666"
-          style={{ paddingHorizontal: 8 }}
-        />
-      </TouchableOpacity>
-    </View>
-  );
-
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#e9e9e9' }}>
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: 'rgba(137, 113, 187, 1)',
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+      }}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={[globalStyles.title, { textAlign: 'center' }]}>Cambiar Contraseña</Text>
-
-
-          <View style={globalStyles.formContainer}>
-            <Text style={globalStyles.subtitle}>
-              Ingresa tu información para cambiar tu contraseña
-            </Text>
-
-            <TextInput
-              style={globalStyles.input}
-              placeholder="RUT (Ej: 12345678-9)"
-              placeholderTextColor="#999"
-              value={rut}
-              onChangeText={setRut}
-              autoCapitalize="none"
-            />
-
-            {renderPasswordInput(
-              passwordActual,
-              setPasswordActual,
-              'Contraseña actual',
-              showPasswordActual,
-              () => setShowPasswordActual(!showPasswordActual)
-            )}
-
-            {renderPasswordInput(
-              nuevaPassword,
-              setNuevaPassword,
-              'Nueva contraseña',
-              showNuevaPassword,
-              () => setShowNuevaPassword(!showNuevaPassword)
-            )}
-
-            {renderPasswordInput(
-              confirmarPassword,
-              setConfirmarPassword,
-              'Confirmar nueva contraseña',
-              showConfirmarPassword,
-              () => setShowConfirmarPassword(!showConfirmarPassword)
-            )}
-
-            <View style={{ alignItems: 'center', marginVertical: 20 }}>
-              <TouchableOpacity style={globalStyles.button} onPress={handleChangePassword}>
-                <Text style={globalStyles.buttonText}>Cambiar contraseña</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity onPress={() => router.push('/')}>
-              <Text style={globalStyles.registerLink}>Volver al inicio</Text>
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={{ flex: 1 }}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={globalStyles.backButton}
+            >
+              <Text style={globalStyles.backButtonText}>← Volver</Text>
             </TouchableOpacity>
+
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+              <View style={globalStyles.card}>
+                <Text style={[globalStyles.title, globalStyles.titleCentered]}>
+                  Recuperar Contraseña
+                </Text>
+
+                <View style={globalStyles.formContainer}>
+                  <Text style={[globalStyles.subtitle, globalStyles.PurpleText]}>
+                    Ingresa tu correo
+                  </Text>
+
+                  <TextInput
+                    style={globalStyles.input}
+                    placeholder="example@mail.com"
+                    placeholderTextColor="#999"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+
+                  <TouchableOpacity style={globalStyles.button} onPress={handleResetPassword}>
+                    <Text style={globalStyles.buttonText}>Enviar correo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-});
