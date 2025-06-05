@@ -154,6 +154,9 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
       .where("status", "==", "completada")
       .where("realStartTime", ">=", startTimestamp)
       .where("realEndTime", "<=", endTimestamp)
+      .where("realStartTime", "<=", endTimestamp)
+      .where("realEndTime", ">=", startTimestamp)
+
       .get();
 
     const tasks = [];
