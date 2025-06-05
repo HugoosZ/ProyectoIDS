@@ -66,7 +66,7 @@ export default function TareasCompletadas(){
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando tareas...</Text>
+        <Text style={styles.loadingText}>Cargando tareas...</Text>
       </View>
     );
   }
@@ -78,7 +78,7 @@ export default function TareasCompletadas(){
         onPress={() => router.push('/trabajador/ver-tareas')}
         activeOpacity={0.8}
       >
-        <Ionicons name="chevron-back" size={20} color="#111827" />
+        <Ionicons name="chevron-back" size={22} color="#111827" />
         <Text style={styles.backText}>Volver</Text>
       </TouchableOpacity>
 
@@ -89,17 +89,18 @@ export default function TareasCompletadas(){
       <FlatList
         data={tareas}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.estadoRow}>
-              <Ionicons name="checkmark-circle-outline" size={20} color="green" style={{ marginRight: 6 }} />
+              <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
             </View>
             <Text style={styles.descripcion}>{item.description}</Text>
             <Text style={styles.hora}>Inicio: {new Date(item.realStartTime).toLocaleTimeString()}</Text>
             <Text style={styles.hora}>Término: {new Date(item.realEndTime).toLocaleTimeString()}</Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>No hay tareas completadas hoy.</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No has completado tareas hoy.</Text>}
       />
     </SafeAreaView>
   );
@@ -108,35 +109,43 @@ export default function TareasCompletadas(){
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   titulo: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
     color: '#111827',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
   descripcion: {
     fontSize: 16,
     color: '#374151',
     marginTop: 8,
+    fontWeight: '500',
   },
   estadoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+  },
+  estadoTexto: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
   },
   hora: {
     fontSize: 14,
@@ -147,36 +156,47 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#6B7280',
   },
   error: {
-    color: 'red',
+    backgroundColor: '#FEE2E2',
+    color: '#B91C1C',
     textAlign: 'center',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 10,
+    fontWeight: '500',
   },
   empty: {
     textAlign: 'center',
-    color: '#6B7280',
-    marginTop: 20,
+    color: '#9CA3AF',
+    marginTop: 30,
+    fontSize: 16,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#E5E7EB',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 50,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 2,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   backText: {
     fontSize: 15,
     fontWeight: '500',
     color: '#111827',
-    marginLeft: 4,
+    marginLeft: 6,
   },
 });
