@@ -21,6 +21,7 @@ const NuevaTarea = () => {
   const [endTime, setEndTime] = useState('');
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('');
+//  const [requiereRelevo, requiereRelevo] = useState('');
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [users, setUsers] = useState<any[]>([]);
 
@@ -103,6 +104,7 @@ const NuevaTarea = () => {
           status,
           assignedTo,
           createdBy,
+          requiereRelevo: false
         }),
       });
 
