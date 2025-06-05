@@ -4,7 +4,7 @@ const { db } = require("../firebase");
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const userController = require("../controllers/userController");
 const { checkAdminPrivileges } = require("../middlewares/authorization");
-const { getDateRange } = require("../utils/dateFilters");
+const { getDateRange, getDateRangeWithTimezone } = require("../utils/dateFilters");
 const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
 
 router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
@@ -32,7 +32,12 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
     console.log("Query parameters:", { status, userId, time });
     let dateFilter = null;
     if (time === "today" || time === "week") {
-      dateFilter = getDateRange(time);
+      // Usa la nueva función para obtener objetos Date en zona horaria de Chile
+      const { Timestamp } = require("firebase-admin/firestore");
+      const tzRange = getDateRangeWithTimezone(time);
+      const startTimestamp = Timestamp.fromDate(tzRange.startDate);
+      const endTimestamp = Timestamp.fromDate(tzRange.endDate);
+      dateFilter = { startTimestamp, endTimestamp };
     }
 
     if (status === "sin asignar") {
@@ -56,8 +61,8 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 
     if (dateFilter) {
       query = query
-        .where("startTime", ">=", dateFilter.startDate)
-        .where("startTime", "<=", dateFilter.endDate);
+        .where("startTime", ">=", dateFilter.startTimestamp)
+        .where("startTime", "<=", dateFilter.endTimestamp);
     }
 
     const snapshot = await query.get();

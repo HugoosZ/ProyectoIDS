@@ -22,4 +22,26 @@ function getDateRange(filter) {
   };
 }
 
-module.exports = { getDateRange };
+// NUEVA FUNCIÓN: Devuelve objetos Date en zona horaria de Chile para uso con Firestore Timestamp
+function getDateRangeWithTimezone(filter) {
+  const now = DateTime.now().setZone("America/Santiago");
+  let startDate, endDate;
+
+  if (filter === "today") {
+    startDate = now.startOf("day");
+    endDate = now.endOf("day");
+  }
+
+  if (filter === "week") {
+    const weekday = now.weekday;
+    startDate = now.minus({ days: weekday - 1 }).startOf("day");
+    endDate = startDate.plus({ days: 6 }).endOf("day");
+  }
+
+  return {
+    startDate: startDate.toJSDate(),
+    endDate: endDate.toJSDate(),
+  };
+}
+
+module.exports = { getDateRange, getDateRangeWithTimezone };
