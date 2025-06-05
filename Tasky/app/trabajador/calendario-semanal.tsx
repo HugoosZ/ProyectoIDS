@@ -59,7 +59,7 @@ export default function CalendarioSemanalTareas() {
     setError(null);
 
     try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?week=true`, {
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}`, {
         headers: {
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -84,15 +84,17 @@ export default function CalendarioSemanalTareas() {
         endTime: apiTask.endTime,
       }));
 
-      // Agrupar tareas por fecha (ISO yyyy-mm-dd)
-      const agrupadas: TareasPorDia = {};
-      tareas.forEach((tarea) => {
-        const fecha = tarea.startTime ? new Date(tarea.startTime).toISOString().split('T')[0] : 'Sin fecha';
-        if (!agrupadas[fecha]) agrupadas[fecha] = [];
-        agrupadas[fecha].push(tarea);
-      });
+      // Agrupar tareas completadas por fecha (ISO yyyy-mm-dd)
+      const tareasCompletadas: TareasPorDia = {};
+      tareas
+        .filter(tarea => tarea.estado === 'completada') // Filtro para solo mostrar tareas completadas
+        .forEach((tarea) => {
+          const fecha = tarea.startTime ? new Date(tarea.startTime).toISOString().split('T')[0] : 'Sin fecha';
+          if (!tareasCompletadas[fecha]) tareasCompletadas[fecha] = [];
+          tareasCompletadas[fecha].push(tarea);
+        });
 
-      setTareasPorDia(agrupadas);
+      setTareasPorDia(tareasCompletadas);
     } catch (err: any) {
       console.error("Error al obtener tareas:", err);
       setError(err.message || "Error al cargar las tareas.");
@@ -116,59 +118,6 @@ export default function CalendarioSemanalTareas() {
     return '#fff';
   };
 
-  const hayTareaEnProgreso = (): boolean => {
-    return Object.values(tareasPorDia).some(dia => dia.some(tarea => tarea.estado === "en progreso"));
-  };
-
-  const puedeTerminarTarea = (startTime?: string | Date): boolean => {
-    if (!startTime) return false;
-    const inicio = new Date(startTime).getTime();
-    const ahora = Date.now();
-    const diffMinutos = (ahora - inicio) / (1000 * 60);
-    return diffMinutos >= 15; // Mínimo 15 minutos para finalizar tarea
-  };
-
-  const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
-    if (!token) return;
-
-    try {
-      const tarea = Object.values(tareasPorDia).flat().find(t => t.id === tareaId);
-      if (!tarea) {
-        Alert.alert("Error", "Tarea no encontrada.");
-        return;
-      }
-
-      if (nuevoEstado === "completada" && !puedeTerminarTarea(tarea.startTime)) {
-        Alert.alert(
-          "Atención",
-          `No puedes finalizar esta tarea hasta que hayan pasado al menos 15 minutos desde su inicio.`
-        );
-        return;
-      }
-
-      if (nuevoEstado === "en progreso" && hayTareaEnProgreso()) {
-        Alert.alert("Atención", "Solo puedes tener una tarea en ejecución al mismo tiempo.");
-        return;
-      }
-
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
-        method: 'PATCH',
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: nuevoEstado }),
-      });
-
-      if (!response.ok) throw new Error('Error al actualizar tarea.');
-
-      await fetchTareas();
-    } catch (err: any) {
-      console.error("Error actualizando tarea:", err);
-      Alert.alert("Error", err.message || "No se pudo actualizar la tarea.");
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -182,12 +131,12 @@ export default function CalendarioSemanalTareas() {
     <ScrollView contentContainerStyle={styles.container}>
       <Button title="← Volver" onPress={() => router.push('/trabajador/ver-tareas')} />
 
-      <Text style={styles.title}>Tareas Semanales</Text>
+      <Text style={styles.title}>Tareas Semanales Completadas</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
       {Object.keys(tareasPorDia).length === 0 && !error && (
-        <Text style={styles.empty}>No hay tareas programadas.</Text>
+        <Text style={styles.empty}>No hay tareas completadas para mostrar.</Text>
       )}
 
       {Object.entries(tareasPorDia).map(([fecha, tareas]) => (
@@ -200,29 +149,9 @@ export default function CalendarioSemanalTareas() {
               <Text style={styles.titulo}>{tarea.nombre}</Text>
               <Text style={styles.descripcion}>{tarea.descripcion}</Text>
               <Text style={styles.estado}>
-                {tarea.estado === 'completada' ? '✅ Completada' 
-                  : tarea.estado === 'en progreso' ? '🔄 En progreso' 
-                    : '🕒 Pendiente'}
+                {tarea.estado === 'completada' ? '✅ Completada' : '🔄 En progreso'}
               </Text>
               <Text style={styles.hora}>Hora: {tarea.hora}</Text>
-
-              {tarea.estado === 'pendiente' && (
-                <Button
-                  title="Empezar"
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
-                  color="#1E90FF"
-                  disabled={hayTareaEnProgreso()}
-                />
-              )}
-
-              {tarea.estado === 'en progreso' && (
-                <Button
-                  title="Completar"
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                  color="#28a745"
-                  disabled={!puedeTerminarTarea(tarea.startTime)}
-                />
-              )}
             </View>
           ))}
         </View>
