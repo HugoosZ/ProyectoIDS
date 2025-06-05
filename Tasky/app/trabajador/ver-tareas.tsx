@@ -39,6 +39,9 @@ type Tarea = {
   priority?: string;
   startTime?: string | Date;
   endTime?: string | Date;
+  requiereRelevo: boolean;
+  trabajadorSaliente: string;
+  trabajadorEntrante: string;
 };
 
 const MINUTOS_MINIMOS = 15; // minutos mínimos para poder terminar tarea
@@ -92,6 +95,8 @@ export default function VerTareas() {
       });
 
       const data = await response.json();
+      console.log("Datos obtenidos de la API:", data);  // Log para ver qué datos obtenemos
+
       const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
         id: apiTask.id,
         nombre: apiTask.title,
@@ -101,10 +106,14 @@ export default function VerTareas() {
           ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
           : 'N/A',
         priority: apiTask.priority,
-        startTime: apiTask.startTime,
-        endTime: apiTask.endTime,
+        startTime: apiTask.startTime ? new Date(apiTask.startTime) : null, // Convertir a Date
+        endTime: apiTask.endTime ? new Date(apiTask.endTime) : null, // Convertir a Date
+        requiereRelevo: apiTask.requiereRelevo || false,  // Asumiendo que el valor es booleano
+        trabajadorSaliente: apiTask.trabajadorSaliente || '',  // Si aplica, se debe llenar con el UID del trabajador saliente
+        trabajadorEntrante: apiTask.trabajadorEntrante || ''  // Si aplica, se debe llenar con el UID del trabajador entrante
       }));
 
+      console.log("Tareas mapeadas:", tareas);  // Verifica cómo se están mapeando las tareas
       setTareasDelDia(tareas);
     } catch (err: any) {
       console.error("Error al obtener tareas:", err);
@@ -217,9 +226,7 @@ export default function VerTareas() {
             <View key={tarea.id} style={styles.tareaCard}>
               <View style={styles.tareaHeader}>
                 <Text style={styles.tareaHora}>{tarea.hora}</Text>
-                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-                  {mostrarEstado(tarea.estado)}
-                </Text>
+                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
               </View>
               <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
               <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>

@@ -116,6 +116,59 @@ export default function CalendarioSemanalTareas() {
     return '#fff';
   };
 
+  const hayTareaEnProgreso = (): boolean => {
+    return Object.values(tareasPorDia).some(dia => dia.some(tarea => tarea.estado === "en progreso"));
+  };
+
+  const puedeTerminarTarea = (startTime?: string | Date): boolean => {
+    if (!startTime) return false;
+    const inicio = new Date(startTime).getTime();
+    const ahora = Date.now();
+    const diffMinutos = (ahora - inicio) / (1000 * 60);
+    return diffMinutos >= 15; // Mínimo 15 minutos para finalizar tarea
+  };
+
+  const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
+    if (!token) return;
+
+    try {
+      const tarea = Object.values(tareasPorDia).flat().find(t => t.id === tareaId);
+      if (!tarea) {
+        Alert.alert("Error", "Tarea no encontrada.");
+        return;
+      }
+
+      if (nuevoEstado === "completada" && !puedeTerminarTarea(tarea.startTime)) {
+        Alert.alert(
+          "Atención",
+          `No puedes finalizar esta tarea hasta que hayan pasado al menos 15 minutos desde su inicio.`
+        );
+        return;
+      }
+
+      if (nuevoEstado === "en progreso" && hayTareaEnProgreso()) {
+        Alert.alert("Atención", "Solo puedes tener una tarea en ejecución al mismo tiempo.");
+        return;
+      }
+
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${tareaId}/status`, {
+        method: 'PATCH',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nuevoEstado }),
+      });
+
+      if (!response.ok) throw new Error('Error al actualizar tarea.');
+
+      await fetchTareas();
+    } catch (err: any) {
+      console.error("Error actualizando tarea:", err);
+      Alert.alert("Error", err.message || "No se pudo actualizar la tarea.");
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -143,16 +196,33 @@ export default function CalendarioSemanalTareas() {
           {tareas.map((tarea) => (
             <View
               key={tarea.id}
-              style={[styles.tareaCard, { backgroundColor: getColorDeFondo(fecha, tarea.estado) }]}
-            >
+              style={[styles.tareaCard, { backgroundColor: getColorDeFondo(fecha, tarea.estado) }]}>
               <Text style={styles.titulo}>{tarea.nombre}</Text>
               <Text style={styles.descripcion}>{tarea.descripcion}</Text>
-             <Text style={styles.estado}>
-               {tarea.estado === 'completada' ? '✅ Completada' 
-               : tarea.estado === 'en progreso' ? '🔄 En progreso' 
-                 : '🕒 Pendiente'}
-                </Text>
+              <Text style={styles.estado}>
+                {tarea.estado === 'completada' ? '✅ Completada' 
+                  : tarea.estado === 'en progreso' ? '🔄 En progreso' 
+                    : '🕒 Pendiente'}
+              </Text>
               <Text style={styles.hora}>Hora: {tarea.hora}</Text>
+
+              {tarea.estado === 'pendiente' && (
+                <Button
+                  title="Empezar"
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
+                  color="#1E90FF"
+                  disabled={hayTareaEnProgreso()}
+                />
+              )}
+
+              {tarea.estado === 'en progreso' && (
+                <Button
+                  title="Completar"
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                  color="#28a745"
+                  disabled={!puedeTerminarTarea(tarea.startTime)}
+                />
+              )}
             </View>
           ))}
         </View>
