@@ -375,237 +375,109 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 
 **Descripción**: Permite a un administrador crear una nueva tarea y asignarla a uno o **múltiples usuarios**. La tarea creada heredará automáticamente el `empresaId` del administrador que la está creando, asegurando que la tarea pertenezca a la misma empresa del creador. Se realizan validaciones estrictas para asegurar la correcta asignación, incluyendo la verificación de la existencia del usuario, pertenencia a la misma empresa, estado de actividad laboral (check-in), y solapamiento de horarios con tareas existentes.
 
+### Lógica y validaciones para tareas con y sin relevo
+- **Campos obligatorios**: `assignedTo`, `description`, `startTime`, `endTime`, `title`, `requiereRelevo` (booleano).
+- **NO se debe enviar**: `createdBy`, `empresaId`, `createdAt`, `realStartTime`, `realEndTime` (los gestiona el backend).
+- **El campo `tiempoEstimado` no ha sido considerado**. La duración de la tarea se define por `startTime` y `endTime`.
+
+#### Tarea SIN relevo (`requiereRelevo: false`)
+- Solo puede tener **un** usuario asignado (`assignedTo` debe ser un array de un solo UID).
+- No se deben enviar `trabajadorSaliente` ni `trabajadorEntrante`.
+
+#### Tarea CON relevo (`requiereRelevo: true`)
+- Debe tener al menos un usuario asignado (`assignedTo` debe incluir al menos el UID del trabajador saliente).
+- `trabajadorSaliente` (UID) es obligatorio y debe estar en `assignedTo`.
+- Si se especifica `trabajadorEntrante`, también debe estar en `assignedTo`.
+- El backend inicializa los campos de relevo: `codigoRelevo` (null), `relevoValidado` (false), `relevoExpira` (null).
+
+#### Validaciones generales
+- Todos los usuarios asignados deben existir, pertenecer a la misma empresa y estar presentes laboralmente (check-in del día).
+- No puede haber solapamiento de horarios con otras tareas activas del usuario.
+- `startTime` y `endTime` deben ser fechas válidas y `endTime` > `startTime`.
+
 **Headers**:
 - `Authorization`: "Bearer <token_admin>"
 - `Content-Type`: `application/json`
 
-**Cuerpo del Request**:
+**Cuerpo del Request** (ejemplo tarea SIN relevo):
 ```json
 {
-    "assignedTo": ["UID_del_usuario_1", "UID_del_usuario_2", "UID_del_usuario_N"],
-    "description": "Detalles completos y claros de la tarea a realizar, incluyendo cualquier información relevante para su ejecución.",
-    "startTime": "2025-05-30T09:00:00.000Z", // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
-    "endTime": "2025-05-30T10:00:00.000Z",   // Formato ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ)
-    "priority": "normal", // Opciones válidas: "alta", "media", "baja". Si no se especifica, el valor por defecto es "normal".
-    "status": "pendiente", // Opciones válidas: "pendiente", "en progreso", "completada". Si no se especifica, el valor por defecto es "pendiente".
-    "title": "Título corto y descriptivo de la tarea.",
-    "requiereRelevo": false, // **OBLIGATORIO**: booleano. `true` si la tarea implica relevo, `false` si es una tarea individual.
-    "trabajadorSaliente": "UID_trabajador_saliente", // **Opcional**: OBLIGATORIO si `requiereRelevo` es `true`.
-    "trabajadorEntrante": "UID_trabajador_entrante"  // **Opcional**: Solo si `requiereRelevo` es `true`.
+  "assignedTo": ["UID_trabajador"],
+  "description": "Limpieza de área común.",
+  "startTime": "2025-05-30T09:00:00.000Z",
+  "endTime": "2025-05-30T10:00:00.000Z",
+  "priority": "alta",
+  "status": "pendiente",
+  "title": "Limpieza matutina",
+  "requiereRelevo": false
 }
-
-
-
-## `GET /admin/tasks`
-**Descripción**:
-Devuelve todas las tareas del sistema filtradas por estado, usuario asignado y/o rango de tiempo (día o semana).
-Solo administradores pueden acceder a esta ruta.
-
-**Headers requeridos**:
-    Authorization: "Bearer <token>"
-
-### Filtros disponibles (opcionales vía query params)
-
-| Parámetro | Tipo                  | Descripción |
-|-----------|-----------------------|-------------|
-| `status`  | string                | Filtra por estado de la tarea. Valores válidos: "sin asignar", "pendiente", "en curso", "completada".|
-| `userId`| string                | Filtra por ID del usuario asignado (assignedTo). No se aplica si status = "sin asignar".|
-| `time`   | string | Filtra tareas según la fecha de inicio (startTime). Valores válidos: "today" o "week". |
-
-
-> 🔸 **Nota**:El filtro time se aplica si está presente, y limita el rango entre el inicio y fin del día o semana actuales (usando Luxon internamente).
-
-**Respuesta**:
-  Devuelve una lista de tareas que cumplen los filtros aplicados.
-  donde cada tarea contiene:
-  - id, 
-  - title, 
-  - description, 
-  - status, 
-  - etc ..
-
-
-**Ejemplo de fetch**:
-
-```js
-const queryParams = new URLSearchParams({
-  status: "completada",
-  userId: "1234567-8", // Opcional
-  time: "today" //Opcional
-});
-
-fetch(`https://proyecto-ids.vercel.app/api/admin/tasks?${queryParams.toString()}`, {
-  method: "GET",
-  headers: {
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-  }
-})
 ```
 
-## `GET /admin/workers/isPresent/NoTasks`
-**Descripción**:
-Devuelve una lista de trabajadores presentes(De momento desactivado) que no tienen tareas asignadas actualmente (currentTasks === 0).
-Esta ruta solo puede ser accedida por administradores.
-
-**Headers requeridos**:
-    Authorization: "Bearer <token>"
-
-**Respuesta**:
-Una lista de objetos que contienen información de la tabla asistencia y los datos básicos del usuario asociado (nombre y correo electrónico).
-
-```
-  {
-    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
-    "isPresent": true,
-    "currentTasks": 0,
-    "userId": "UID_DEL_USUARIO",
-    "user": {
-      "name": "Nombre del Usuario",
-      "email": "correo@example.com"
-  }
-```
-
-
-
-
-**Ejemplo de fetch**:
-
-```js
-fetch("https://proyecto-ids.vercel.app/api/admin/workers/isPresent/NoTasks", {
-  method: "GET",
-  headers: {
-    "Authorization": "Bearer <token_del_admin>"
-  }
-})
-.then(res => res.json())
-.then(data => console.log(data));
-```
-
-## `GET /admin/attendance`
-**Descripción**:
-Permite a un administrador obtener los registros de asistencia de todos los usuarios, de un usuario específico, o filtrar por presencia/ausencia. Devuelve información de la asistencia junto con los datos básicos del usuario asociado (nombre y correo electrónico).
-
-**Roles requeridos:** Administrador (token JWT válido y privilegios de admin).
-
-**Headers requeridos:**
-    Authorization: "Bearer <token_admin>"
-    Content-Type: "application/json" (opcional para GET)
-
-**Parámetros de consulta (query params) opcionales:**
-| Parámetro  | Tipo    | Descripción                                                                 |
-|------------|---------|-----------------------------------------------------------------------------|
-| userId     | string  | Filtra por el UID del usuario.                                               |
-| isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
-| time      | string | "today" para filtrar por el día actual, "week" para la semana actual |
-
-> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
-
-**Respuesta**:
-- 200 OK: Devuelve un array de objetos de asistencia, cada uno con los datos de asistencia y los datos básicos del usuario asociado.
-- 404: Si no se encuentra asistencia con los filtros dados.
-- 401/403: Si el token es inválido o el usuario no es admin.
-- 500: Error interno del servidor.
-
-**Ejemplo de respuesta:**
+**Cuerpo del Request** (ejemplo tarea CON relevo):
 ```json
-[
-  {
-    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
-    "userId": "UID_DEL_USUARIO",
-    "isPresent": true,
-    "currentTasks": 0,
-    "horaEntrada": "2025-05-29T08:00:00.000Z",
-    "horaSalida": null,
-    "user": {
-      "name": "Nombre del Usuario",
-      "email": "correo@example.com"
-    }
-  }
-]
+{
+<<<<<<< Updated upstream
+  "id": "ID_TAREA_GENERADA",
+  "assignedTo": ["UID_saliente", "UID_entrante"],
+  "createdAt": "2025-05-29T12:00:00.000Z",
+  "createdBy": "UID_ADMIN",
+  "description": "Supervisión de portería con relevo.",
+  "endTime": "2025-05-30T18:00:00.000Z",
+  "priority": "media",
+  "startTime": "2025-05-30T10:00:00.000Z",
+=======
+  "assignedTo": ["UID_saliente", "UID_entrante"],
+  "description": "Supervisión de portería con relevo.",
+  "startTime": "2025-05-30T10:00:00.000Z",
+  "endTime": "2025-05-30T18:00:00.000Z",
+  "priority": "media",
+>>>>>>> Stashed changes
+  "status": "pendiente",
+  "title": "Guardia portería turno día",
+  "requiereRelevo": true,
+  "trabajadorSaliente": "UID_saliente",
+<<<<<<< Updated upstream
+  "trabajadorEntrante": "UID_entrante",
+  "codigoRelevo": null,
+  "relevoValidado": false,
+  "relevoExpira": null,
+  "empresaId": "ID_EMPRESA"
+}
 ```
 
-**Ejemplo de fetch:**
-```js
-const queryParams = new URLSearchParams({
-  userId: "UID_DEL_USUARIO", // Opcional
-  isPresent: "true" // Opcional: "true" o "false"
-});
-
-fetch(`https://proyecto-ids.vercel.app/api/admin/attendance?${queryParams.toString()}`, {
-  method: "GET",
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-})
-  .then(res => res.json())
-  .then(data => console.log(data));
+=======
+  "trabajadorEntrante": "UID_entrante"
+}
 ```
 
-## `GET /User/attendance/:userId`
-**Descripción**:
-Permite a un usuario autenticado consultar su propio historial de asistencia, con opción de filtrar por presencia (`isPresent`) y por rango de tiempo (`today` o `week`).
-
-**Roles requeridos:** Usuario autenticado (solo puede consultar su propio UID).
-
-**Headers requeridos:**
-    Authorization: "Bearer <token_usuario>"
-    Content-Type: "application/json" (opcional para GET)
-
-**Parámetros de ruta:**
-- `userId` (string): UID del usuario autenticado (debe coincidir con el del token).
-
-**Parámetros de consulta (query params) opcionales:**
-| Parámetro  | Tipo    | Descripción                                                                 |
-|------------|---------|-----------------------------------------------------------------------------|
-| isPresent  | string  | "true" para solo presentes, "false" para solo ausentes.                      |
-| time       | string  | "today" para solo hoy, "week" para la semana actual.                         |
-
-> 🔸 **Nota**: Si no se especifica el filtro `time` (`today` o `week`), la ruta retorna **todos los registros de asistencia** que cumplan con los demás filtros aplicados (por ejemplo, `userId` o `isPresent`).
-
-
-**Respuesta:**
-- 200 OK: Devuelve un array de objetos de asistencia del usuario.
-- 404: Si no se encuentra asistencia con los filtros dados.
-- 403: Si el usuario intenta consultar la asistencia de otro usuario.
-- 401: Si el token es inválido.
-- 500: Error interno del servidor.
-
-**Ejemplo de respuesta:**
+**Respuesta exitosa**:
 ```json
-[
-  {
-    "asistenciaId": "ID_DEL_DOCUMENTO_ASISTENCIA",
-    "userId": "UID_DEL_USUARIO",
-    "isPresent": true,
-    "currentTasks": 0,
-    "startTime": "2025-05-29T08:00:00.000Z",
-    "endTime": null,
-    "user": {
-      "name": "Nombre del Usuario",
-      "email": "correo@example.com"
-    }
-  }
-]
+{
+  "id": "ID_TAREA_GENERADA",
+  "assignedTo": ["UID_saliente", "UID_entrante"],
+  "createdAt": "2025-05-29T12:00:00.000Z",
+  "createdBy": "UID_ADMIN",
+  "description": "Supervisión de portería con relevo.",
+  "endTime": "2025-05-30T18:00:00.000Z",
+  "priority": "media",
+  "startTime": "2025-05-30T10:00:00.000Z",
+  "status": "pendiente",
+  "title": "Guardia portería turno día",
+  "requiereRelevo": true,
+  "trabajadorSaliente": "UID_saliente",
+  "trabajadorEntrante": "UID_entrante",
+  "codigoRelevo": null,
+  "relevoValidado": false,
+  "relevoExpira": null,
+  "empresaId": "ID_EMPRESA"
+}
 ```
 
-**Ejemplo de fetch:**
-```js
-const token = '<TOKEN_USUARIO>'; // JWT del usuario autenticado
-const userId = '<UID_DEL_USUARIO>'; // Debe coincidir con el del token
-const queryParams = new URLSearchParams({
-  isPresent: "true", // Opcional
-  time: "today" // Opcional
-});
-
-fetch(`https://proyecto-ids.vercel.app/api/User/attendance/${userId}?${queryParams.toString()}`, {
-  method: "GET",
-  headers: {
-    "Authorization": `Bearer ${token}`
-  }
-})
-  .then(res => res.json())
-  .then(data => console.log(data));
-```
+>>>>>>> Stashed changes
+**Errores posibles**:
+- 400: Faltan campos obligatorios, tipos incorrectos, solapamiento de tareas, usuario no presente, reglas de relevo incumplidas.
+- 403: Intento de asignar tarea a usuario de otra empresa.
+- 404: Usuario asignado no encontrado.
+- 500: Error interno del servidor.
 
 ---
