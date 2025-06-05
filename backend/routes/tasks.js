@@ -3,7 +3,7 @@ const { db } = require("../firebase");
 const { createTask, getAllCompanyTasks, getTasksByUserId, updateTaskStatus } = require("../controllers/taskController");
 const { checkAdminPrivileges, checkEmpresaId } = require("../middlewares/authorization");
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
-const { getDateRange } = require("../utils/dateFilters");
+const { getDateRange, getDateRangeWithTimezone } = require("../utils/dateFilters");
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
 const { Timestamp } = require("firebase-admin/firestore");
 const taskController = require("../controllers/taskController");
@@ -141,9 +141,12 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
       return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
     }
 
-    const { startDate, endDate } = getDateRange("today");
-    const startTimestamp = Timestamp.fromDate(new Date(startDate));
-    const endTimestamp = Timestamp.fromDate(new Date(endDate));
+    // Usa la función con zona horaria para obtener el rango correcto
+    const { Timestamp } = require("firebase-admin/firestore");
+    const { startDate, endDate } = getDateRangeWithTimezone("today");
+    const startTimestamp = Timestamp.fromDate(startDate);
+    // endDate es fin de día, así que debe incluir todo el día
+    const endTimestamp = Timestamp.fromDate(endDate);
 
     const snapshot = await db
       .collection("tasks")
