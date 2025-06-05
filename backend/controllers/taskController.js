@@ -420,3 +420,140 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         res.status(500).json({ message: "Error interno del servidor al actualizar el estado.", details: error.message });
     }
 };
+
+// Genera un código numérico aleatorio de 6 dígitos
+function generate6DigitCode() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+exports.generarCodigoRelevo = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { uid: requestingUserUid, empresaId: requestingUserEmpresaId, isAdmin } = req.user;
+    const { minutosValidez } = req.body; // El tiempo de validez en minutos lo envía el frontend
+
+    if (!taskId) {
+      return res.status(400).json({ message: "Task ID is required." });
+    }
+    if (!minutosValidez || isNaN(minutosValidez) || minutosValidez <= 0) {
+      return res.status(400).json({ message: "El tiempo de validez (minutosValidez) debe ser un número mayor a 0." });
+    }
+
+    const taskRef = db.collection("tasks").doc(taskId);
+    const taskDoc = await taskRef.get();
+    if (!taskDoc.exists) {
+      return res.status(404).json({ message: "Tarea no encontrada." });
+    }
+    const taskData = taskDoc.data();
+
+    // Verificar que la tarea pertenezca a la empresa del usuario
+    if (taskData.empresaId !== requestingUserEmpresaId) {
+      return res.status(403).json({ message: "No autorizado: No puedes generar código para tareas de otra empresa." });
+    }
+    // Verificar que el usuario sea uno de los asignados a la tarea o admin
+    if (!isAdmin && !taskData.assignedTo.includes(requestingUserUid)) {
+      return res.status(403).json({ message: "No autorizado: Solo los trabajadores asignados o un administrador pueden generar el código de relevo." });
+    }
+
+    // Generar código y expiración
+    const code = generate6DigitCode();
+    const expiresAt = new Date(Date.now() + parseInt(minutosValidez) * 60000);
+
+    await taskRef.update({
+      reliefCode: code,
+      reliefCodeExpiresAt: expiresAt,
+    });
+
+    return res.status(200).json({ code, expiresAt });
+  } catch (error) {
+    console.error("Error generando código de relevo:", error);
+    return res.status(500).json({ message: "Error interno al generar código de relevo." });
+  }
+};
+
+exports.realizarRelevo = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { codigoIngresado } = req.body;
+    const { uid: nuevoUsuarioUid, name: nuevoNombre, lastName: nuevoApellido, empresaId: empresaDelNuevo } = req.user;
+
+    if (!codigoIngresado || !taskId) {
+      return res.status(400).json({ message: "Se requiere el código de relevo y el ID de la tarea." });
+    }
+
+    const taskRef = db.collection("tasks").doc(taskId);
+    const taskDoc = await taskRef.get();
+
+    if (!taskDoc.exists) {
+      return res.status(404).json({ message: "Tarea no encontrada." });
+    }
+
+    const taskData = taskDoc.data();
+
+    // Validación de empresa
+    if (taskData.empresaId !== empresaDelNuevo) {
+      return res.status(403).json({ message: "No autorizado: tarea pertenece a otra empresa." });
+    }
+
+    // Validación de código
+    const now = new Date();
+    if (!taskData.reliefCode || taskData.reliefCode !== codigoIngresado) {
+      return res.status(400).json({ message: "Código incorrecto." });
+    }
+
+    if (!taskData.reliefCodeExpiresAt || taskData.reliefCodeExpiresAt.toDate() < now) {
+      return res.status(400).json({ message: "El código ha expirado." });
+    }
+
+    const usuarioSalienteUid = taskData.assignedTo?.[0]; // Asumimos que assignedTo es un array
+    if (!usuarioSalienteUid) {
+      return res.status(400).json({ message: "No hay un trabajador asignado actualmente a la tarea." });
+    }
+
+    // Opcional: Obtener datos del usuario saliente para log
+    const usuarioSalienteDoc = await db.collection("users").doc(usuarioSalienteUid).get();
+    const usuarioSalienteData = usuarioSalienteDoc.exists ? usuarioSalienteDoc.data() : {};
+
+    // Registrar log de relevo (opcional)
+    await taskRef.collection("relevos").add({
+      relievedBy: {
+        uid: usuarioSalienteUid,
+        name: usuarioSalienteData?.name || '',
+        lastName: usuarioSalienteData?.lastName || ''
+      },
+      takenBy: {
+        uid: nuevoUsuarioUid,
+        name: nuevoNombre,
+        lastName: nuevoApellido
+      },
+      relievedAt: now,
+      codeUsed: codigoIngresado
+    });
+
+    // Actualizar la tarea
+    await taskRef.update({
+      assignedTo: [nuevoUsuarioUid],
+      reliefCode: admin.firestore.FieldValue.delete(),
+      reliefCodeExpiresAt: admin.firestore.FieldValue.delete(),
+      lastRelief: {
+        from: {
+          uid: usuarioSalienteUid,
+          name: usuarioSalienteData?.name || '',
+          lastName: usuarioSalienteData?.lastName || ''
+        },
+        to: {
+          uid: nuevoUsuarioUid,
+          name: nuevoNombre,
+          lastName: nuevoApellido
+        },
+        at: now
+      }
+    });
+
+    return res.status(200).json({ message: "Relevo realizado correctamente." });
+
+  } catch (error) {
+    console.error("Error al realizar el relevo:", error);
+    return res.status(500).json({ message: "Error interno al procesar el relevo." });
+  }
+};
