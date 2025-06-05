@@ -142,7 +142,6 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
     }
 
     const { startDate, endDate } = getDateRange("today");
-    // Convierte los strings a objetos Date
     const startTimestamp = Timestamp.fromDate(new Date(startDate));
     const endTimestamp = Timestamp.fromDate(new Date(endDate));
 
@@ -151,8 +150,6 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
       .where("assignedTo", "==", tokenUserId)
       .where("status", "==", "completada")
       .where("realStartTime", ">=", startTimestamp)
-      .where("realStartTime", "<=", endTimestamp)
-      .where("realEndTime", ">=", startTimestamp)
       .where("realEndTime", "<=", endTimestamp)
       .get();
 
