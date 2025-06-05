@@ -171,6 +171,7 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
       }
     });
 
+    console.log("[tasks/done/:userId/today] tasks result:", tasks);
     return res.status(200).json(tasks);
   } catch (error) {
     console.error("Error al obtener tareas completadas del día:", error);
