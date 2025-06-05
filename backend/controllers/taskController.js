@@ -310,10 +310,10 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
         const taskData = taskDoc.data();
 
         // 1. Verificación de EmpresaId (Obligatorio para cualquier operación)
-        if (taskData.empresaId !== requestingUserEmpresaId) {
+/*         if (taskData.empresaId !== requestingUserEmpresaId) {
             console.log(`DEBUG: Acceso denegado - Tarea de otra empresa. Tarea empresaId: ${taskData.empresaId}, Usuario empresaId: ${requestingUserEmpresaId}`);
             return res.status(403).json({ message: "No autorizado: No puedes actualizar tareas de otra empresa." });
-        }
+        } */
 
         // 2. Verificación de Permisos (User vs Admin)
         if (!requestingUserIsAdmin && (!taskData.assignedTo || !taskData.assignedTo.includes(requestingUserUid))) {
