@@ -557,3 +557,100 @@ exports.realizarRelevo = async (req, res) => {
     return res.status(500).json({ message: "Error interno al procesar el relevo." });
   }
 };
+
+exports.getDailyTaskStatus = async (req, res) => {
+  try {
+    const { empresaId } = req.user; // Se asume que el middleware de autenticación agrega esta información
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Establecer la hora al inicio del día
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // Consultar tareas cuya fecha de inicio sea hoy
+    const tasksSnapshot = await db.collection('tasks')
+      .where('empresaId', '==', empresaId)
+      .where('startTime', '>=', admin.firestore.Timestamp.fromDate(today))
+      .where('startTime', '<', admin.firestore.Timestamp.fromDate(tomorrow))
+      .get();
+
+    const tasks = [];
+
+    for (const doc of tasksSnapshot.docs) {
+      const task = doc.data();
+      task.id = doc.id;
+
+      // Obtener información de los trabajadores asignados
+      const assignedWorkers = [];
+      if (Array.isArray(task.assignedTo)) {
+        for (const uid of task.assignedTo) {
+          const userDoc = await db.collection('users').doc(uid).get();
+          if (userDoc.exists) {
+            const userData = userDoc.data();
+            assignedWorkers.push({
+              uid,
+              name: userData.name,
+              lastName: userData.lastName,
+            });
+          }
+        }
+      } else if (typeof task.assignedTo === 'string') {
+        const userDoc = await db.collection('users').doc(task.assignedTo).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          assignedWorkers.push({
+            uid: task.assignedTo,
+            name: userData.name,
+            lastName: userData.lastName,
+          });
+        }
+      }
+
+      // Agregar información de relevo si aplica
+      let relevoInfo = null;
+      if (task.requiereRelevo) {
+        const trabajadorSalienteDoc = task.trabajadorSaliente
+          ? await db.collection('users').doc(task.trabajadorSaliente).get()
+          : null;
+        const trabajadorEntranteDoc = task.trabajadorEntrante
+          ? await db.collection('users').doc(task.trabajadorEntrante).get()
+          : null;
+
+        relevoInfo = {
+          trabajadorSaliente: trabajadorSalienteDoc?.exists
+            ? {
+                uid: task.trabajadorSaliente,
+                name: trabajadorSalienteDoc.data().name,
+                lastName: trabajadorSalienteDoc.data().lastName,
+              }
+            : null,
+          trabajadorEntrante: trabajadorEntranteDoc?.exists
+            ? {
+                uid: task.trabajadorEntrante,
+                name: trabajadorEntranteDoc.data().name,
+                lastName: trabajadorEntranteDoc.data().lastName,
+              }
+            : null,
+          relevoValidado: task.relevoValidado || false,
+        };
+      }
+
+      tasks.push({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: task.status,
+        priority: task.priority,
+        startTime: task.startTime.toDate(),
+        endTime: task.endTime?.toDate() || null,
+        assignedWorkers,
+        relevoInfo,
+        isGroupTask: Array.isArray(task.assignedTo) && task.assignedTo.length > 1,
+      });
+    }
+
+    res.status(200).json({ tasks });
+  } catch (error) {
+    console.error('Error al obtener el estado diario de las tareas:', error);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+};

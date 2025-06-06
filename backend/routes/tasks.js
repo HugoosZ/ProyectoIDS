@@ -31,6 +31,8 @@ router.post('/tasks/:taskID/relief', verifyAndDecodeToken, taskController.realiz
 // Ruta para generar código de 6 digitos para relevo
 router.post('/tasks/:taskId/generarCodigoRelevo', verifyAndDecodeToken, taskController.generarCodigoRelevo);
 
+router.get('/getDailyTasks/', verifyAndDecodeToken, taskController.getDailyTaskStatus);
+
 // Reasignar tarea a usuario usando uid en lugar de rut
 router.put("/reassign-task/:taskId", async (req, res) => {
   const { taskId } = req.params;
