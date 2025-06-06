@@ -1,4 +1,5 @@
 const { db } = require("../firebase");
+const admin = require('firebase-admin');
 const { Timestamp } = require("firebase-admin/firestore");
 const { getDateRange } = require("../utils/dateFilters"); // OK
 
@@ -560,17 +561,15 @@ exports.realizarRelevo = async (req, res) => {
 
 exports.getDailyTaskStatus = async (req, res) => {
   try {
-    const { empresaId } = req.user; // Se asume que el middleware de autenticación agrega esta información
+    const { empresaId } = req.user;
+
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Establecer la hora al inicio del día
+    today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    // Consultar tareas cuya fecha de inicio sea hoy
     const tasksSnapshot = await db.collection('tasks')
       .where('empresaId', '==', empresaId)
-      .where('startTime', '>=', admin.firestore.Timestamp.fromDate(today))
-      .where('startTime', '<', admin.firestore.Timestamp.fromDate(tomorrow))
       .get();
 
     const tasks = [];
@@ -578,6 +577,12 @@ exports.getDailyTaskStatus = async (req, res) => {
     for (const doc of tasksSnapshot.docs) {
       const task = doc.data();
       task.id = doc.id;
+
+      //Filtrar en memoria solo tareas que inician hoy
+      if (!task.startTime || !(task.startTime.toDate instanceof Function)) continue;
+
+      const taskStartTime = task.startTime.toDate();
+      if (taskStartTime < today || taskStartTime >= tomorrow) continue;
 
       // Obtener información de los trabajadores asignados
       const assignedWorkers = [];
