@@ -128,7 +128,17 @@ export default function VerTareas() {
           trabajadorEntrante: apiTask.trabajadorEntrante || ''
         }));
 
-        const tareasFiltradas = tareas.filter(tarea => tarea.estado === 'pendiente' || tarea.estado === 'en progreso');
+        const tareasFiltradas = tareas.filter(tarea => {
+          const esAsignadoPendiente = tarea.estado === 'pendiente' && tarea.trabajadorSaliente === authUserId;
+
+          const esEntranteRelevo = 
+            tarea.estado === 'en progreso' &&
+            tarea.requiereRelevo &&
+            tarea.trabajadorEntrante === authUserId;
+
+          return esAsignadoPendiente || esEntranteRelevo;
+});
+
 
         console.log('Tareas filtradas:', tareasFiltradas);
         setTareasDelDia(tareasFiltradas);
@@ -260,12 +270,22 @@ export default function VerTareas() {
             )}
 
             {tarea.estado === 'en progreso' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                color="#28a745"
-                disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
+              <>
+                {tarea.requiereRelevo && tarea.trabajadorEntrante === authUserId ? (
+                  <Button
+                    title="Relevar tarea"
+                    onPress={() => router.push({ pathname: '/trabajador/ingreso_relevo', params: { taskId: tarea.id } })}
+                    color="#FFA500"
+                    />
+                ) : (
+                  <Button
+                    title={actualizandoId === tarea.id ? "Cambiando..." : "Terminar"}
+                    onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                    color="#32CD32"
+                    disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
               />
+            )}
+            </>
             )}
           </View>
         ))}
