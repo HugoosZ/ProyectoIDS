@@ -86,5 +86,19 @@ router.get("/structure", async (req, res) => {
   }
 });
 
+// Ruta temporal para desencriptar un string encriptado (solo admin)
+router.post("/decrypt", async (req, res) => {
+  const { encrypted } = req.body;
+  if (!encrypted) {
+    return res.status(400).json({ error: "Debes enviar el campo 'encrypted' en el body." });
+  }
+  try {
+    const { decrypt } = require('../utils/crypto');
+    const decrypted = decrypt(encrypted);
+    res.status(200).json({ decrypted });
+  } catch (error) {
+    res.status(500).json({ error: "No se pudo desencriptar.", details: error.message });
+  }
+});
 
 module.exports = router;

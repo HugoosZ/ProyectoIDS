@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const { db } = require("../firebase");
-const { verifyAndDecodeToken } = require("../middlewares/authentication");
+
+const { verifyAndDecodeToken } = require("../middlewares/authentication"); //  Middleware de autenticación
 const userController = require("../controllers/userController");
-const { checkAdminPrivileges } = require("../middlewares/authorization");
-const { getDateRange, getDateRangeWithTimezone } = require("../utils/dateFilters");
-const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
+const { checkAdminPrivileges } = require("../middlewares/authorization"); // Middleware de autorización
+// Se usa llaves en la asignacion de nombres para poder renombrarlos, si no, hay que ponerle el nombre del codigo y como son parecidos es mejor renombrar
+const { getDateRange } = require("../utils/dateFilters");
 
 router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
     // Como ya se pasaron las auntenticaciones se puede postear el json
@@ -32,12 +33,7 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
     console.log("Query parameters:", { status, userId, time });
     let dateFilter = null;
     if (time === "today" || time === "week") {
-      // Usa la nueva función para obtener objetos Date en zona horaria de Chile
-      const { Timestamp } = require("firebase-admin/firestore");
-      const tzRange = getDateRangeWithTimezone(time);
-      const startTimestamp = Timestamp.fromDate(tzRange.startDate);
-      const endTimestamp = Timestamp.fromDate(tzRange.endDate);
-      dateFilter = { startTimestamp, endTimestamp };
+      dateFilter = getDateRange(time);
     }
 
     if (status === "sin asignar") {
@@ -61,8 +57,8 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 
     if (dateFilter) {
       query = query
-        .where("startTime", ">=", dateFilter.startTimestamp)
-        .where("startTime", "<=", dateFilter.endTimestamp);
+        .where("startTime", ">=", dateFilter.startDate)
+        .where("startTime", "<=", dateFilter.endDate);
     }
 
     const snapshot = await query.get();
@@ -86,10 +82,13 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 
 
 // Ruta para obtener informacion de trabajadores que esten presentes y que no tengan tareas asignadas en el bloque de tiempo en el que se tienen asignadas las tareas
+
 router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
     // Filtra asistencias por trabajadores presentes y sin tareas
-    const query = db.collection("asistencias").where("currentTasks", "==", 0);
+    const query = db.collection("asistencias")
+     //.where("isPresent", "==", true)
+      .where("currentTasks", "==", 0);
 
     const snapshot = await query.get();
 
@@ -105,22 +104,12 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
       const userDoc = await db.collection("users").doc(userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
 
-      let name = userData && userData.name;
-      let email = userData && userData.email;
-      let lastName = userData && userData.lastName;
-      let rut = userData && userData.rut;
-      try { name = decrypt(name); } catch (e) {}
-      try { lastName = decrypt(lastName); } catch (e) {}
-      try { rut = decrypt(rut); } catch (e) {}
-
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: name || null,
-          lastName: lastName || null,
-          rut: rut || null,
-          email: email || null
+          name: userData.name || null,
+          email: userData.email || null
         } : null
       };
     }));
@@ -159,21 +148,12 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
       const asistenciaData = doc.data();
       const userDoc = await db.collection("users").doc(asistenciaData.userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
-      let name = userData && userData.name;
-      let lastName = userData && userData.lastName;
-      let rut = userData && userData.rut;
-      let email = userData && userData.email;
-      try { name = decrypt(name); } catch (e) {}
-      try { lastName = decrypt(lastName); } catch (e) {}
-      try { rut = decrypt(rut); } catch (e) {}
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: name || null,
-          lastName: lastName || null,
-          rut: rut || null,
-          email: email || null
+          name: userData.name || null,
+          email: userData.email || null
         } : null
       };
     }));

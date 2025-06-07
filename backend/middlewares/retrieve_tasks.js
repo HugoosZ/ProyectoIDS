@@ -68,7 +68,7 @@ exports.getUserTaskStatus = async (req, res) => {
     // 3. Construir la consulta a Firestore para obtener las tareas
     // La consulta siempre debe filtrar por el assignedTo (el uid de la URL)
     // y por el empresaId del usuario solicitado
-    let tasksQuery = db.collection("tasks").where("assignedTo", "==", userId);
+    let tasksQuery = db.collection("tasks").where("assignedTo", "array-contains", userId);
     //.where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId DESACTIVADO TEMPORALMENTE
 
     // 4. Aplicar filtros opcionales (status, priority, today, week, requiereRelevo)
@@ -166,7 +166,7 @@ exports.getUserTasks = async (req, res) => {
   try {
     const snapshot = await db
       .collection("tasks")
-      .where("assignedTo", "==", userId)
+      .where("assignedTo", "array-contains", userId)
       .get();
     const tasks = snapshot.docs.map((doc) => ({
       id: doc.id,
