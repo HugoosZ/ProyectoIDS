@@ -87,21 +87,22 @@ export default function TareasCompletadas(){
       {error && <Text style={styles.error}>{error}</Text>}
 
       <FlatList
-        data={tareas}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.estadoRow}>
-              <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
+          data={tareas}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.flatListContent}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.estadoRow}>
+                <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
+              </View>
+              <Text style={styles.descripcion}>{item.description}</Text>
+              <Text style={styles.hora}>Inicio: {new Date(item.realStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+              <Text style={styles.hora}>Término: {new Date(item.realEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </View>
-            <Text style={styles.descripcion}>{item.description}</Text>
-            <Text style={styles.hora}>Inicio: {new Date(item.realStartTime).toLocaleTimeString()}</Text>
-            <Text style={styles.hora}>Término: {new Date(item.realEndTime).toLocaleTimeString()}</Text>
-          </View>
-        )}
-        ListEmptyComponent={<Text style={styles.empty}>No has completado tareas hoy.</Text>}
-      />
+  )}
+  ListEmptyComponent={<Text style={styles.empty}>No has completado tareas hoy.</Text>}
+/>
+
     </SafeAreaView>
   );
 }
@@ -110,8 +111,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F3F4F6',
-    paddingHorizontal: 20,
     paddingTop: 20,
+    paddingHorizontal: 16,
+  },
+  flatListContent: {
+    paddingBottom: 40,
+    paddingHorizontal: 4,
   },
   titulo: {
     fontSize: 24,
@@ -125,11 +130,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
+    marginHorizontal: 8, // margen lateral para no pegarse al borde
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 3,
   },
   descripcion: {
     fontSize: 16,
@@ -146,6 +152,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#10B981',
     fontWeight: '600',
+    marginLeft: 6,
   },
   hora: {
     fontSize: 14,
