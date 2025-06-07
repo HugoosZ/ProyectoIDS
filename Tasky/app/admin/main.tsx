@@ -6,8 +6,6 @@ import {
   StyleSheet,
   SafeAreaView,
   FlatList,
-  ScrollView,
-  Switch,
   Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -28,7 +26,6 @@ type Tarea = {
 export default function AdminMain() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [estadoFiltro, setEstadoFiltro] = useState('todas');
-  const [verPorUsuarios, setVerPorUsuarios] = useState(false);
   const [usuarios, setUsuarios] = useState<Record<string, string>>({});
 
   const screenWidth = Dimensions.get('window').width;
@@ -36,12 +33,11 @@ export default function AdminMain() {
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
-      console.log("token",token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
       }
-      
+
       const res = await fetch('https://proyecto-ids.vercel.app/api/users', {
         method: 'GET',
         headers: {
@@ -50,7 +46,6 @@ export default function AdminMain() {
       });
 
       const data = await res.json();
-
       const usuariosMap: Record<string, string> = {};
       data.forEach((usuario: any) => {
         usuariosMap[usuario.id] = `${usuario.name} ${usuario.lastName}`;
@@ -112,20 +107,15 @@ export default function AdminMain() {
     return true;
   });
 
-  const tareasPorUsuario = tareasFiltradas.reduce<Record<string, Tarea[]>>((acc, tarea) => {
-    const nombreUsuario = usuarios[tarea.assignedTo || ''] || 'Sin asignar';
-    if (!acc[nombreUsuario]) acc[nombreUsuario] = [];
-    acc[nombreUsuario].push(tarea);
-    return acc;
-  }, {});
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <TopBar />
-      <View style={globalStyles.container}>
+      <View style={globalStyles.adminContainer}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
-          <View style={styles.filaFiltro}>
+
+          <View style={styles.tituloYFiltro}>
+            <Text style={globalStyles.adminSubtitle}>Lista de tareas</Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={estadoFiltro}
@@ -139,36 +129,12 @@ export default function AdminMain() {
                 <Picker.Item label="Finalizadas" value="finalizadas" />
               </Picker>
             </View>
-
-            <View style={styles.switchWrapper}>
-              <Switch value={verPorUsuarios} onValueChange={() => setVerPorUsuarios(!verPorUsuarios)} />
-            </View>
           </View>
-        </View>
 
-        {!verPorUsuarios && <Text style={globalStyles.subtitle}>Lista de tareas</Text>}
+        </View>
 
         {tareasFiltradas.length === 0 ? (
           <Text>No hay tareas para mostrar</Text>
-        ) : verPorUsuarios ? (
-          <>
-            <Text style={globalStyles.subtitle}>Lista de usuarios</Text>
-            <ScrollView>
-              {Object.keys(tareasPorUsuario).map((usuario) => (
-                <View key={usuario} style={{ marginBottom: 20 }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>{usuario}</Text>
-                  {tareasPorUsuario[usuario].map((tarea) => (
-                    <View key={tarea.id || Math.random().toString()} style={styles.tareaContainer}>
-                      <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                      <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
-                      <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
-                      <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </ScrollView>
-          </>
         ) : (
           <FlatList
             data={tareasFiltradas}
@@ -176,10 +142,19 @@ export default function AdminMain() {
             renderItem={({ item: tarea }) => (
               <View style={styles.tareaContainer}>
                 <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                <Text><Text style={styles.labelBold}>Asignado a:</Text> {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}</Text>
-                <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
-                <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
-                <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
+                <Text>
+                  <Text style={styles.labelBold}>Asignado a:</Text>{' '}
+                  {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Estado:</Text> {tarea.status}
+                </Text>
               </View>
             )}
           />
@@ -191,10 +166,6 @@ export default function AdminMain() {
 }
 
 const styles = StyleSheet.create({
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   filtroContainer: {
     marginBottom: 20,
   },
@@ -209,10 +180,6 @@ const styles = StyleSheet.create({
     color: 'rgb(132, 106, 180)',
     fontWeight: 'bold',
   },
-  label: {
-    fontSize: 12,
-    marginBottom: 5,
-  },
   labelBold: {
     fontWeight: 'bold',
   },
@@ -221,23 +188,28 @@ const styles = StyleSheet.create({
   },
   filaFiltro: {
     flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 4,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    overflow: 'hidden',
+    width: 120,
+  },
+  picker: {
+    height: 30,
+    width: '100%',
+  },
+  tituloYFiltro: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
     paddingHorizontal: 4,
   },
-  switchWrapper: {
-    marginLeft: 10,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    overflow: 'hidden',
-    width: 180,
-  },
-  picker: {
-    height: 40,
-    width: '100%',
-  },
+  
 });

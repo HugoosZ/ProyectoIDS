@@ -239,12 +239,19 @@ backButtonText: {
     alignItems: 'center',
   },
   adminContainer: {
-    flexGrow: 1, // Necesario para ScrollView
-    justifyContent: 'center', // o 'flex-start', según tu diseño
+    paddingTop: 40,
+    flex: 1,
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgb(255, 255, 255)',
-  },  
+    backgroundColor: '#f2f2f2',
+  },
+  adminSubtitle: {
+    fontSize: 23,
+    fontWeight: 'bold',
+    color: 'rgb(75, 41, 150)', 
+    marginBottom: 10,
+  },
 
 });
 
