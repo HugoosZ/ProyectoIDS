@@ -1,15 +1,26 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, TextInput, TouchableOpacity, SafeAreaView, 
-  View, KeyboardAvoidingView, Platform, ScrollView} from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Animated,
+  Easing,
+} from 'react-native';
 import globalStyles from './globalStyles';
-import { auth } from '../firebase'; // ajusta si está en otra carpeta
+import { auth } from '../firebase';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { Ionicons } from '@expo/vector-icons'; // Para el ícono de ver/ocultar
+import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import type { UserCredential } from 'firebase/auth';
-import { fetchUsers } from '../lib/api/users';
-import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
+import { useAuth } from '../lib/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const db = getFirestore();
@@ -17,32 +28,51 @@ const db = getFirestore();
 export default function Index() {
   const [rut, setRut] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // Estado para mostrar/ocultar la contraseña
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
   const { setJwt } = useAuth();
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const handleLogin = async () => {
     if (!rut || !password) {
       Alert.alert('Error', 'Debe rellenar los campos');
       return;
     }
-  
+
     try {
       const userDoc = await getDoc(doc(db, 'users', rut));
       if (!userDoc.exists()) {
         Alert.alert('Error', 'Usuario no encontrado');
         return;
       }
-  
+
       const userData = userDoc.data();
       const email = userData.email;
-  
+
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const token = await user.getIdToken();
-        
-        setJwt(token); 
+
+        setJwt(token);
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userId', user.uid);
 
@@ -50,8 +80,9 @@ export default function Index() {
         router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
       } catch (error) {
         console.error(error);
+        Alert.alert('Error', 'Contraseña incorrecta');
       }
-  
+
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
@@ -63,15 +94,23 @@ export default function Index() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0} // Ajusta si tienes header
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.centerContainer}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={globalStyles.card}>
+          <Animated.View
+            style={[
+              globalStyles.card,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
             <Image
-              source={require('../assets/images/logotasky.jpg')}
+              source={require('../assets/images/logotasky.png')}
               style={globalStyles.logo}
             />
 
@@ -89,7 +128,19 @@ export default function Index() {
                 placeholder="RUT (Ej: 12345678-9)"
                 placeholderTextColor="#999"
                 value={rut}
-                onChangeText={setRut}
+                onChangeText={(text) => {
+                  const cleaned = text.replace(/[^0-9kK]/g, '');
+                  let formatted = cleaned;
+                  if (cleaned.length > 1) {
+                    const body = cleaned.slice(0, -1);
+                    const dv = cleaned.slice(-1);
+                    formatted = `${body}-${dv}`;
+                  }
+                  if (formatted.length <= 10) {
+                    setRut(formatted);
+                  }
+                }}
+                maxLength={10}
               />
 
               <View style={styles.passwordContainer}>
@@ -123,7 +174,7 @@ export default function Index() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -133,7 +184,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: 'rgba(137, 113, 187, 1)', // morado solo para esta pantalla
+    backgroundColor: 'rgba(137, 113, 187, 1)',
   },
   centerContainer: {
     flexGrow: 1,
@@ -148,6 +199,7 @@ const styles = StyleSheet.create({
   eyeIcon: {
     position: 'absolute',
     right: 10,
-    top: 12,
+    top: '50%',
+    transform: [{ translateY: -20 }],
   },
 });
