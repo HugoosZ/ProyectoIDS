@@ -73,6 +73,8 @@ exports.getUserTaskStatus = async (req, res) => {
 
     // 4. Aplicar filtros opcionales (status, priority, today, week, requiereRelevo)
     const { status, priority, today, week, requiereRelevo } = req.query;
+    const { getDateRangeWithTimezone } = require("../utils/dateFilters");
+    const { Timestamp } = require("firebase-admin/firestore");
 
     if (status) {
       tasksQuery = tasksQuery.where("status", "==", status);
@@ -82,21 +84,30 @@ exports.getUserTaskStatus = async (req, res) => {
     }
     // Filtro por requiereRelevo (solo si viene en el query param)
     if (typeof requiereRelevo !== 'undefined') {
-      // Si el front lo manda como booleano, usarlo directamente
-      tasksQuery = tasksQuery.where("requiereRelevo", "==", requiereRelevo);
+      // Acepta 'true'/'false' como string o booleano real
+      let boolRelevo = requiereRelevo;
+      if (typeof requiereRelevo === 'string') {
+        if (requiereRelevo.toLowerCase() === 'true') boolRelevo = true;
+        else if (requiereRelevo.toLowerCase() === 'false') boolRelevo = false;
+      }
+      tasksQuery = tasksQuery.where("requiereRelevo", "==", boolRelevo);
     }
 
     // Considerar "today" y "week" mutuamente excluyentes (se usa else if)
     if (today === "true") {
-      const { startDate, endDate } = getDateRange("today");
+      const { startDate, endDate } = getDateRangeWithTimezone("today");
+      const startTimestamp = Timestamp.fromDate(startDate);
+      const endTimestamp = Timestamp.fromDate(endDate);
       tasksQuery = tasksQuery
-        .where("startTime", ">=", startDate)
-        .where("startTime", "<=", endDate);
+        .where("startTime", ">=", startTimestamp)
+        .where("startTime", "<=", endTimestamp);
     } else if (week === "true") {
-      const { startDate, endDate } = getDateRange("week");
+      const { startDate, endDate } = getDateRangeWithTimezone("week");
+      const startTimestamp = Timestamp.fromDate(startDate);
+      const endTimestamp = Timestamp.fromDate(endDate);
       tasksQuery = tasksQuery
-        .where("startTime", ">=", startDate)
-        .where("startTime", "<", endDate); // Usar < para semana completa
+        .where("startTime", ">=", startTimestamp)
+        .where("startTime", "<=", endTimestamp);
     }
 
     // 5. Ordenar los resultados
