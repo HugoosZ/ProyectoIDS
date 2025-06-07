@@ -14,9 +14,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-
-const router = useRouter();
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { text } from 'stream/consumers';
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
@@ -37,11 +36,15 @@ const Relevo = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
+  const router = useRouter();
+  const { taskId } = useLocalSearchParams<{ taskId: string }>();
+
   useEffect(() => {
     const fetchUserData = async () => {
       const { userId, token } = await getStoredAuthData();
       if (!userId || !token) {
         Alert.alert('Error', 'Usuario no autenticado');
+        router.push('/trabajador/ver-tareas');
       } else {
         setUserId(userId);
         setToken(token);
@@ -52,14 +55,21 @@ const Relevo = () => {
   }, []);
 
   const handleValidateCode = async () => {
+    if (code.length !== 6) {
+      setErrorMsg('El código debe tener 6 dígitos.');
+      return;
+    }
+    if(!userId || !token || !taskId) {
+      setErrorMsg('Datos de usuario o tarea no disponibles.');
+      return;
+    }
+
     setLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!userId || !token) return;
-
     try {
-      const response = await fetch('https://proyecto-ids.vercel.app/api/', {
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${taskId}/relief`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,11 +83,14 @@ const Relevo = () => {
 
       if (response.ok && data.success) {
         setSuccessMsg('Relevo exitoso.');
-        setCode('');
-      } else {
-        setErrorMsg('Código inválido.');
+        setTimeout(() => {
+          router.push('/trabajador/ver-tareas');
+        }, 2000);
+      }else{
+        setErrorMsg(data.message || 'Error al realizar el relevo.');
       }
     } catch (error) {
+      console.error('Error al validar el código:', error);
       setLoading(false);
       setErrorMsg('No se pudo conectar con el servidor.');
     }
@@ -95,7 +108,7 @@ const Relevo = () => {
           onPress={() => router.push('/trabajador/ver-tareas')}
           activeOpacity={0.8}
         >
-          <Icon name="chevron-back" size={20} color="#111827" />
+          <Icon name="chevron-back" size={24} color="#111827" />
           <Text style={styles.backText}>Volver</Text>
         </TouchableOpacity>
 
@@ -104,13 +117,13 @@ const Relevo = () => {
           <Text style={styles.subtitle}>Ingresa el código de 6 dígitos.</Text>
 
           <View style={styles.inputWrapper}>
-            <Icon name="key-outline" size={20} color="#999" style={styles.inputIcon} />
+            <Icon name="key-outline" size={20} color="#999" style={styles.icon} />
             <TextInput
-              style={styles.codeInput}
+              style={styles.input}
               placeholder="******"
               value={code}
-              onChangeText={text => {
-                if (/^\d{0,6}$/.test(text)) setCode(text);
+              onChangeText={(text) => {
+                if(/^\d{0,6}$/.test(text)) setCode(text); 
               }}
               keyboardType="number-pad"
               maxLength={6}
@@ -122,7 +135,7 @@ const Relevo = () => {
           {successMsg !== '' && <Text style={styles.successText}>{successMsg}</Text>}
 
           <TouchableOpacity
-            style={[styles.button, styles.buttonPrimary ,loading && { opacity: 0.7 }]}
+            style={[styles.button, styles.buttonPrimary, loading && { opacity: 0.7 }]}
             onPress={handleValidateCode}
             disabled={loading}
           >
@@ -191,9 +204,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  buttonPrimary: {
-  backgroundColor: 'rgba(137, 113, 187, 1)',
-  },
   subtitle: {
     fontSize: 16,
     color: '#6b7280',
@@ -223,11 +233,13 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   button: {
-    backgroundColor: '#7C3AED',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 16,
+  },
+  buttonPrimary: {
+    backgroundColor: 'rgba(137, 113, 187, 1)',
   },
   buttonText: {
     color: '#fff',
@@ -245,5 +257,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 4,
+  },
+  icon: {
+  marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    fontSize: 20,
+    color: '#111827',
+    textAlign: 'center',
+    letterSpacing: 5,
   },
 });
