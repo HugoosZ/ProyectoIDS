@@ -271,9 +271,8 @@ Para crear el primer administrador de una nueva empresa (cuando no hay un admini
 
 ## `GET /statustasks/:uid`
 **Descripción**:
-Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana.
-Tanto el usuario como un administrador pueden consultar esta ruta(el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera).
-
+Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana, también por si la tarea requiere relevo o no.
+Tanto el usuario como un administrador pueden consultar esta ruta (el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera).
 
 **Parámetro en URL**:
     uid – UID del usuario cuyas tareas se desean consultar.
@@ -283,13 +282,13 @@ Tanto el usuario como un administrador pueden consultar esta ruta(el usuario sol
 
 ### Filtros disponibles (opcionales vía query params)
 
-| Parámetro | Tipo                  | Descripción |
-|-----------|-----------------------|-------------|
-| `status`  | string                | Filtra por estado de la tarea (por ejemplo: `"pendiente"`, `"completada"`). |
-| `priority`| string                | Filtra por prioridad (por ejemplo: `"alta"`, `"media"`, `"baja"`). |
-| `today`   | boolean (como string) | Si es `"true"`, filtra las tareas que tienen `startTime` en el día actual. |
-| `week`    | boolean (como string) | Si es `"true"`, filtra las tareas programadas en la semana actual (lunes a domingo). |
-
+| Parámetro         | Tipo                  | Descripción |
+|-------------------|-----------------------|-------------|
+| `status`          | string                | Filtra por estado de la tarea (por ejemplo: `"pendiente"`, `"completada"`). |
+| `priority`        | string                | Filtra por prioridad (por ejemplo: `"alta"`, `"media"`, `"baja"`). |
+| `today`           | boolean (como string) | Si es `"true"`, filtra las tareas que tienen `startTime` en el día actual. |
+| `week`            | boolean (como string) | Si es `"true"`, filtra las tareas programadas en la semana actual (lunes a domingo). |
+| `requiereRelevo`  | boolean (como string) | Si es `"true"`, solo retorna tareas que requieren relevo; si es `"false"`, solo tareas que no requieren relevo. Si no se incluye, retorna todas. |
 
 > 🔸 **Nota**: Los filtros `today` y `week` son **excluyentes** entre sí. Si ambos están presentes, se evalúan en el orden del backend.
 
@@ -297,13 +296,9 @@ Tanto el usuario como un administrador pueden consultar esta ruta(el usuario sol
   Devuelve un objeto con:
 
   - Información del usuario (id, name, lastName)
-
   - Conteo de tareas (count)
-
   - Lista de tareas (tasks), cada una con:
-
     - id, title, description, status, priority
-
     - startTime, endTime, createdAt (como fechas JS)
 
 **Ejemplo de fetch**:
@@ -312,7 +307,8 @@ Tanto el usuario como un administrador pueden consultar esta ruta(el usuario sol
 const queryParams = new URLSearchParams({
   status: "pendiente",
   priority: "alta",
-  today: "true"
+  today: "true",
+  requiereRelevo: "true" // Nuevo filtro: solo tareas que requieren relevo
 });
 
 fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.toString()}`, {
