@@ -82,9 +82,8 @@ exports.getUserTaskStatus = async (req, res) => {
     }
     // Filtro por requiereRelevo (solo si viene en el query param)
     if (typeof requiereRelevo !== 'undefined') {
-      // Acepta 'true' o 'false' como string y lo convierte a booleano
-      const boolRelevo = requiereRelevo === 'true';
-      tasksQuery = tasksQuery.where("requiereRelevo", "==", boolRelevo);
+      // Si el front lo manda como booleano, usarlo directamente
+      tasksQuery = tasksQuery.where("requiereRelevo", "==", requiereRelevo);
     }
 
     // Considerar "today" y "week" mutuamente excluyentes (se usa else if)
