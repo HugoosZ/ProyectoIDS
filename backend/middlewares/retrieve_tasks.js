@@ -71,14 +71,20 @@ exports.getUserTaskStatus = async (req, res) => {
     let tasksQuery = db.collection("tasks").where("assignedTo", "==", userId);
     //.where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId DESACTIVADO TEMPORALMENTE
 
-    // 4. Aplicar filtros opcionales (status, priority, today, week)
-    const { status, priority, today, week } = req.query;
+    // 4. Aplicar filtros opcionales (status, priority, today, week, requiereRelevo)
+    const { status, priority, today, week, requiereRelevo } = req.query;
 
     if (status) {
       tasksQuery = tasksQuery.where("status", "==", status);
     }
     if (priority) {
       tasksQuery = tasksQuery.where("priority", "==", priority);
+    }
+    // Filtro por requiereRelevo (solo si viene en el query param)
+    if (typeof requiereRelevo !== 'undefined') {
+      // Acepta 'true' o 'false' como string y lo convierte a booleano
+      const boolRelevo = requiereRelevo === 'true';
+      tasksQuery = tasksQuery.where("requiereRelevo", "==", boolRelevo);
     }
 
     // Considerar "today" y "week" mutuamente excluyentes (se usa else if)

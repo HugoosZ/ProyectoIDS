@@ -416,36 +416,15 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 **Cuerpo del Request** (ejemplo tarea CON relevo):
 ```json
 {
-<<<<<<< Updated upstream
-  "id": "ID_TAREA_GENERADA",
-  "assignedTo": ["UID_saliente", "UID_entrante"],
-  "createdAt": "2025-05-29T12:00:00.000Z",
-  "createdBy": "UID_ADMIN",
-  "description": "Supervisión de portería con relevo.",
-  "endTime": "2025-05-30T18:00:00.000Z",
-  "priority": "media",
-  "startTime": "2025-05-30T10:00:00.000Z",
-=======
   "assignedTo": ["UID_saliente", "UID_entrante"],
   "description": "Supervisión de portería con relevo.",
   "startTime": "2025-05-30T10:00:00.000Z",
   "endTime": "2025-05-30T18:00:00.000Z",
   "priority": "media",
->>>>>>> Stashed changes
   "status": "pendiente",
   "title": "Guardia portería turno día",
   "requiereRelevo": true,
   "trabajadorSaliente": "UID_saliente",
-<<<<<<< Updated upstream
-  "trabajadorEntrante": "UID_entrante",
-  "codigoRelevo": null,
-  "relevoValidado": false,
-  "relevoExpira": null,
-  "empresaId": "ID_EMPRESA"
-}
-```
-
-=======
   "trabajadorEntrante": "UID_entrante"
 }
 ```
@@ -473,7 +452,6 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 }
 ```
 
->>>>>>> Stashed changes
 **Errores posibles**:
 - 400: Faltan campos obligatorios, tipos incorrectos, solapamiento de tareas, usuario no presente, reglas de relevo incumplidas.
 - 403: Intento de asignar tarea a usuario de otra empresa.

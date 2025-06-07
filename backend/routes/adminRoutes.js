@@ -86,7 +86,6 @@ router.get("/admin/tasks", verifyAndDecodeToken, checkAdminPrivileges, async (re
 
 
 // Ruta para obtener informacion de trabajadores que esten presentes y que no tengan tareas asignadas en el bloque de tiempo en el que se tienen asignadas las tareas
-
 router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
     // Filtra asistencias por trabajadores presentes y sin tareas
