@@ -36,11 +36,12 @@ export default function AdminMain() {
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      console.log("token",token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
       }
-
+      
       const res = await fetch('https://proyecto-ids.vercel.app/api/users', {
         method: 'GET',
         headers: {
