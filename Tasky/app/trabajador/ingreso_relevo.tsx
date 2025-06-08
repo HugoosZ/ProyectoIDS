@@ -37,7 +37,8 @@ const Relevo = () => {
   const [token, setToken] = useState<string | null>(null);
 
   const router = useRouter();
-  const { taskId } = useLocalSearchParams<{ taskId: string }>();
+  //const { taskId } = useLocalSearchParams<{ taskId: string }>();
+  const taskId = 'B4Yk24VB1CF1sFDjU5kz';
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -55,8 +56,8 @@ const Relevo = () => {
   }, []);
 
   const handleValidateCode = async () => {
-    if (code.length !== 6) {
-      setErrorMsg('El código debe tener 6 dígitos.');
+    if (!code || code.length !== 6) {
+      setErrorMsg('Error en el codigo');
       return;
     }
     if(!userId || !token || !taskId) {
@@ -68,6 +69,12 @@ const Relevo = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
+    console.log('Enviando datos:', {
+    taskId,
+    token,
+    codigoIngresado: code,
+  });
+
     try {
       const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${taskId}/relief`, {
         method: 'POST',
@@ -75,14 +82,15 @@ const Relevo = () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ code, userId }),
+        body: JSON.stringify({
+          codigoIngresado: code }),
       });
 
       const data = await response.json();
       setLoading(false);
 
-      if (response.ok && data.success) {
-        setSuccessMsg('Relevo exitoso.');
+      if (response.ok) {
+        setSuccessMsg(data.message || 'Relevo exitoso.');
         setTimeout(() => {
           router.push('/trabajador/ver-tareas');
         }, 2000);

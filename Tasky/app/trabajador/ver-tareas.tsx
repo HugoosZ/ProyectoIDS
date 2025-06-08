@@ -28,6 +28,7 @@ const globalStyles = StyleSheet.create({
     color: '#555',
     marginTop: 20,
   },
+  
 });
 
 type Tarea = {
@@ -95,8 +96,20 @@ export default function VerTareas() {
 
     console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
 
+    const filtros={
+        //today: "true",
+        //week: "true",
+       //status: "en proceso",
+      //priority: "alta",
+      //requiereRelevo: "true",
+      }
+
+      const queryParams = new URLSearchParams(filtros).toString();
+
     try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
+
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?${queryParams}`, {
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
@@ -129,14 +142,14 @@ export default function VerTareas() {
         }));
 
         const tareasFiltradas = tareas.filter(tarea => {
-          const esAsignadoPendiente = tarea.estado === 'pendiente' && tarea.trabajadorSaliente === authUserId;
+          const esHoy=tarea.startTime && new Date(tarea.startTime).toDateString() === new Date().toDateString();
+          const esEstadoValido=tarea.estado === 'pendiente' || tarea.estado === 'en progreso';
 
-          const esEntranteRelevo = 
-            tarea.estado === 'en progreso' &&
-            tarea.requiereRelevo &&
-            tarea.trabajadorEntrante === authUserId;
+          const esAsignado = 
+            (!tarea.requiereRelevo && tarea.trabajadorSaliente === authUserId) || // tareas normales
+            (tarea.requiereRelevo && (tarea.trabajadorSaliente === authUserId || tarea.trabajadorEntrante === authUserId)); // con relevo
 
-          return esAsignadoPendiente || esEntranteRelevo;
+          return esHoy && esEstadoValido && esAsignado;
 });
 
 
@@ -255,10 +268,18 @@ export default function VerTareas() {
           <View key={tarea.id} style={styles.tareaCard}>
             <View style={styles.tareaHeader}>
               <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
+                {mostrarEstado(tarea.estado)}
+                </Text>
             </View>
             <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
             <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+            
+            {tarea.requiereRelevo && (
+              <text style={styles.requiereRelevoTexto}>
+                Tarea con relevo
+              </text>
+              )}
 
             {tarea.estado === 'pendiente' && (
               <Button
@@ -383,5 +404,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
+  },
+  requiereRelevoTexto: {
+    color: '#FF4500',
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
 });
