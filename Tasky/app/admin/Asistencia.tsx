@@ -95,7 +95,6 @@ export default function Asistencia() {
                 <Text style={styles.nombre}>
                   {asistencia.user?.name} {asistencia.user?.lastName}
                 </Text>
-                <Text><Text style={styles.bold}>RUT:</Text> {asistencia.user?.rut}</Text>
                 <Text><Text style={styles.bold}>Correo:</Text> {asistencia.user?.email}</Text>
                 <Text><Text style={styles.bold}>Estado:</Text> {asistencia.isPresent ? 'Presente' : 'Ausente'}</Text>
               </View>
@@ -118,7 +117,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 16,
-    color: 'rgb(132, 106, 180)',
+    color: 'rgb(0, 0, 0)',
     textAlign: 'center',
   },
   card: {
