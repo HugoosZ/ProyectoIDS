@@ -117,7 +117,7 @@ exports.getUserTaskStatus = async (req, res) => {
     const snapshot = await tasksQuery.get();
 
     // 7. Formatear la respuesta
-    const tasks = snapshot.docs.map((doc) => {
+    let tasks = snapshot.docs.map((doc) => {
       const taskData = doc.data();
       return {
         id: doc.id,
@@ -128,11 +128,20 @@ exports.getUserTaskStatus = async (req, res) => {
         startTime: taskData.startTime?.toDate() || null,
         endTime: taskData.endTime?.toDate() || null,
         createdAt: taskData.createdAt.toDate(),
-        haTenidoRelevo: typeof taskData.haTenidoRelevo === 'boolean' ? taskData.haTenidoRelevo : false, // Nuevo campo
-        requiereRelevo: typeof taskData.requiereRelevo === 'boolean' ? taskData.requiereRelevo : null, // Nuevo campo
-        //empresaId: taskData.empresaId, // Incluir para depuración si es necesario
+        haTenidoRelevo: typeof taskData.haTenidoRelevo === 'boolean' ? taskData.haTenidoRelevo : false,
+        requiereRelevo: typeof taskData.requiereRelevo === 'boolean' ? taskData.requiereRelevo : null,
       };
     });
+
+    // Filtro extra en memoria para requiereRelevo, por si hay datos legacy o inconsistentes
+    if (typeof requiereRelevo !== 'undefined') {
+      let boolRelevo = requiereRelevo;
+      if (typeof requiereRelevo === 'string') {
+        if (requiereRelevo.toLowerCase() === 'true') boolRelevo = true;
+        else if (requiereRelevo.toLowerCase() === 'false') boolRelevo = false;
+      }
+      tasks = tasks.filter(t => t.requiereRelevo === boolRelevo);
+    }
 
     // Desencriptar nombre y apellido
     let name = requestedUserDoc.data().name;
