@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   View,
   Dimensions,
   StyleSheet,
-  SafeAreaView,
   FlatList,
   Alert,
 } from 'react-native';
@@ -108,9 +108,9 @@ export default function AdminMain() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <TopBar />
-      <View style={globalStyles.adminContainer}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+    <TopBar />
+    <View style={globalStyles.adminContainer}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
 

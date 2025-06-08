@@ -1,4 +1,3 @@
-
 import React, { useRef, useState } from 'react';
 import {
   View,
@@ -8,6 +7,7 @@ import {
   Dimensions,
   TouchableWithoutFeedback,
   Text,
+  SafeAreaView,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import globalStyles from '../app/globalStyles';
@@ -96,27 +96,47 @@ const TopBar: React.FC = () => {
                   { transform: [{ translateX: slideAnim }] },
                 ]}
               >
-                <TouchableOpacity style={globalStyles.closeButton} onPress={closeMenu}>
-                  <Ionicons name="close" size={32} color="#6508c8" />
-                </TouchableOpacity>
+                <SafeAreaView style={{ flex: 1 }}>
+                  <TouchableOpacity
+                    style={globalStyles.closeButton}
+                    onPress={closeMenu}
+                  >
+                    <Ionicons name="close" size={32} color="#6508c8" />
+                  </TouchableOpacity>
 
-                <View style={globalStyles.menuOptions}>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/main')}>
-                    <Text style={globalStyles.menuText}>Vista diaria</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/NuevaTarea')}>
-                    <Text style={globalStyles.menuText}>Nueva tarea</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/AddUsers')}>
-                    <Text style={globalStyles.menuText}>Añadir usuarios</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/ReasignarTarea')}>
-                    <Text style={globalStyles.menuText}>Reasignar tareas</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={globalStyles.menuOption} onPress={() => handleRoute('/admin/Asistencia')}>
-                    <Text style={globalStyles.menuText}>Asistencia</Text>
-                  </TouchableOpacity>
-                </View>
+                  <View style={globalStyles.menuOptions}>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/main')}
+                    >
+                      <Text style={globalStyles.menuText}>Vista diaria</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/NuevaTarea')}
+                    >
+                      <Text style={globalStyles.menuText}>Nueva tarea</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/AddUsers')}
+                    >
+                      <Text style={globalStyles.menuText}>Añadir usuarios</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/ReasignarTarea')}
+                    >
+                      <Text style={globalStyles.menuText}>Reasignar tareas</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/Asistencia')}
+                    >
+                      <Text style={globalStyles.menuText}>Asistencia</Text>
+                    </TouchableOpacity>
+                  </View>
+                </SafeAreaView>
               </Animated.View>
             </TouchableWithoutFeedback>
           </Animated.View>

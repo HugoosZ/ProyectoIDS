@@ -103,7 +103,7 @@ export default function Index() {
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
+                  style={globalStyles.eyeIcon}
                 >
                   <Ionicons
                     name={showPassword ? 'eye-off' : 'eye'}
