@@ -361,6 +361,7 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
                 updateData.realStartTime = Timestamp.now();
             }
             updateData.status = status; // Actualizar el estado
+
         }
 
         if (status === "completada") {
