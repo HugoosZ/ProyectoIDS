@@ -141,6 +141,7 @@ exports.createTask = async (req, res) => {
 
 
 
+    // Construcción del objeto de nueva tarea
     const newTask = {
       assignedTo: usersToAssign,
       createdAt: Timestamp.now(),
@@ -152,13 +153,24 @@ exports.createTask = async (req, res) => {
       status: status || "pending",
       title,
       requiereRelevo,
-      trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
-      trabajadorEntrante: requiereRelevo ? (trabajadorEntrante || null) : null,
-      codigoRelevo: null, // Se generará al finalizar por el saliente
-      relevoValidado: false, // Se marcará true cuando el entrante valide el código
-      relevoExpira: null, // Timestamp de expiración del código de relevo
       empresaId: createdByEmpresaId,
+      haTenidoRelevo: false, // Nuevo campo: indica si la tarea ya tuvo un relevo
     };
+
+    // Solo agregar campos de relevo si requiereRelevo es true
+    if (requiereRelevo) {
+      newTask.trabajadorSaliente = trabajadorSaliente;
+      newTask.trabajadorEntrante = trabajadorEntrante || null;
+      newTask.codigoRelevo = null;
+      newTask.relevoValidado = false;
+      newTask.relevoExpira = null;
+    } else {
+      newTask.trabajadorSaliente = null;
+      newTask.trabajadorEntrante = null;
+      newTask.codigoRelevo = null;
+      newTask.relevoValidado = false;
+      newTask.relevoExpira = null;
+    }
 
     const docRef = await db.collection("tasks").add(newTask);
 
@@ -548,7 +560,8 @@ exports.realizarRelevo = async (req, res) => {
           lastName: nuevoApellido
         },
         at: now
-      }
+      },
+      haTenidoRelevo: true // Marca que la tarea ya tuvo al menos un relevo
     });
 
     return res.status(200).json({ message: "Relevo realizado correctamente." });
