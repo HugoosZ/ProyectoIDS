@@ -6,10 +6,12 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
 const router = useRouter();
@@ -53,7 +55,7 @@ const Turno=() =>{
 
       if (Array.isArray(data) && data.length > 0){
         const today = new Date().toISOString().split('T')[0];
-      const asistenciaHoy = data.find((d) => d.date === today);
+        const asistenciaHoy = data.find((d) => d.date === today);
 
         if(asistenciaHoy && asistenciaHoy.isPresent===true){
           setTurno(true);
@@ -98,8 +100,7 @@ const Turno=() =>{
         setTurno(true);
         Alert.alert('Éxito', data.message||'Turno iniciado correctamente');
       }else{
-        const errorMsg=data?.error||'No se pudo iniciar el turno';
-        Alert.alert('Aviso', errorMsg);
+        Alert.alert('Aviso', data?.error || 'No se pudo iniciar el turno');
       }
     } catch (err){
       console.error(err);
@@ -137,65 +138,73 @@ const Turno=() =>{
   if(loading){
     return (
       <SafeAreaView style={styles.container}>
-        <Text>Cargando turno...</Text>
+         <Text style={{ textAlign: 'center', marginTop: 40 }}>Cargando turno...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.push('/trabajador/ver-tareas')}
-        activeOpacity={0.8}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
       >
-        <Ionicons name="chevron-back" size={20} color="#111827" />
-        <Text style={styles.backText}>Volver</Text>
-      </TouchableOpacity>
-
-      <View style={styles.card}>
-        <Ionicons
-          name={turno ? 'time-outline' : 'play-outline'}
-          size={64}
-          color="#4e4e4e"
-          style={styles.icon}
-        />
-        <Text style={styles.title}>
-          {turno ? 'Turno en curso' : 'Inicia tu jornada laboral'}
-        </Text>
-
-        <Text style={styles.subtitle}>
-          {turno
-            ? 'Finaliza tu turno cuando termines tu jornada.'
-            : 'Presiona el botón para iniciar tu turno.'}
-        </Text>
-
         <TouchableOpacity
-          disabled={loading}
-          style={[
-            styles.button,
-            turno ? styles.buttonSecondary : styles.buttonPrimary,
-            loading && {opacity: 0.6},
-          ]}
-          onPress={turno ? terminar_turno : iniciar_turno}
+          style={styles.backButton}
+          onPress={() => router.push('/trabajador/ver-tareas')}
+          activeOpacity={0.8}
         >
-          <Text style={styles.buttonText}>
-            {turno ? 'Finalizar' : 'Iniciar'}
-          </Text>
+          <Ionicons name="chevron-back" size={20} color="#111827" />
+          <Text style={styles.backText}>Volver</Text>
         </TouchableOpacity>
-      </View>
+
+        <View style={styles.card}>
+          <Ionicons
+            name={turno ? 'time-outline' : 'play-outline'}
+            size={64}
+            color="#4e4e4e"
+            style={styles.icon}
+          />
+          <Text style={styles.title}>
+            {turno ? 'Turno en curso' : 'Inicia tu jornada laboral'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {turno
+              ? 'Finaliza tu turno cuando termines tu jornada.'
+              : 'Presiona el botón para iniciar tu turno.'}
+          </Text>
+
+          <TouchableOpacity
+            disabled={loading}
+            style={[
+              styles.button,
+              turno ? styles.buttonSecondary : styles.buttonPrimary,
+              loading && { opacity: 0.6 },
+            ]}
+            onPress={turno ? terminar_turno : iniciar_turno}
+          >
+            <Text style={styles.buttonText}>
+              {turno ? 'Finalizar' : 'Iniciar'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 export default Turno;
 
-const styles=StyleSheet.create({
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f9fafb',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   backButton: {
     flexDirection: 'row',
@@ -210,7 +219,9 @@ const styles=StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
-    marginBottom: 16,
+    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight! + 16 : 16,
+    marginLeft: 0,
+    zIndex: 1,
   },
   backText: {
     fontSize: 15,
@@ -219,25 +230,23 @@ const styles=StyleSheet.create({
     marginLeft: 4,
   },
   card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
+    marginTop: 100,
+    backgroundColor: '#fff',
+    borderRadius: 24,
     padding: 30,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 400,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.04,
     shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 6,
-    alignSelf: 'center',
+    shadowRadius: 8,
+    elevation: 4,
+    alignItems: 'center',
   },
   icon: {
     marginBottom: 20,
   },
   title: {
     fontSize: 22,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#111827',
     textAlign: 'center',
     marginBottom: 10,
@@ -255,7 +264,7 @@ const styles=StyleSheet.create({
     width: '100%',
   },
   buttonPrimary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: 'rgba(137, 113, 187, 1)',
   },
   buttonSecondary: {
     backgroundColor: '#ef4444',
