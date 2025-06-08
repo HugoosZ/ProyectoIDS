@@ -1,16 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Alert, TextInput, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../lib/context/AuthContext';
-import { fetchUsers } from '../../lib/api/users';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
 
-export default function NuevaTarea() {
-  const { jwt } = useAuth();
+const NuevaTarea = () => {
   const router = useRouter();
-
-  const [userData, setUserData] = useState<any>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -18,96 +23,295 @@ export default function NuevaTarea() {
   const [endTime, setEndTime] = useState('');
   const [priority, setPriority] = useState('');
   const [status, setStatus] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [createdBy, setCreatedBy] = useState('');
+
+  const [isStartPickerVisible, setStartPickerVisible] = useState(false);
+  const [isEndPickerVisible, setEndPickerVisible] = useState(false);
+
+  const [requiereRelevo, setRequiereRelevo] = useState(false);
+  const [trabajadorSaliente, setTrabajadorSaliente] = useState('');
+  const [trabajadorEntrante, setTrabajadorEntrante] = useState('');
 
   useEffect(() => {
-    const validateUser = async () => {
-      if (!jwt) {
-        Alert.alert("Sesión expirada", "Por favor inicia sesión de nuevo.");
-        router.push('/');
-        return;
-      }
+    const fetchUsers = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
 
       try {
-        const user = await fetchUsers(jwt);
-        setUserData(user);
-
-        const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${jwt}`,
-          },
+        const response = await fetch('https://proyecto-ids.vercel.app/api/users', {
+          headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!res.ok) throw new Error("No autorizado");
-
-        const data = await res.json();
-        setIsAdmin(data.isAdmin);
+        const data = await response.json();
+        setUsers(data);
       } catch (error) {
-        Alert.alert("Error", "No tienes permisos para crear tareas.");
-        router.back();
+        console.error('Error al obtener usuarios:', error);
       }
     };
+    fetchUsers();
+  }, []);
 
-    validateUser();
-  }, [jwt]);
+  useEffect(() => {
+    const getUserId = async () => {
+      const storedUserId = await AsyncStorage.getItem('userId');
+      if (storedUserId) setCreatedBy(storedUserId);
+    };
+    getUserId();
+  }, []);
+
+  const handleConfirmStart = (date: Date) => {
+    setStartTime(date.toISOString());
+    setStartPickerVisible(false);
+  };
+
+  const handleConfirmEnd = (date: Date) => {
+    setEndTime(date.toISOString());
+    setEndPickerVisible(false);
+  };
 
   const handleCreateTask = async () => {
-    if (!isAdmin) {
-      Alert.alert("Error", "No tienes permisos para crear tareas.");
+    if (!title || !startTime || !endTime || !status || !priority || !description) {
+      Alert.alert('Error', 'Por favor completa todos los campos');
+      return;
+    }
+
+    if (requiereRelevo && (!trabajadorSaliente || !trabajadorEntrante)) {
+      Alert.alert('Error', 'Debes seleccionar trabajador saliente y entrante');
       return;
     }
 
     try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
+        return;
+      }
+
+      const commonFields = {
+        title,
+        description,
+        startTime,
+        endTime,
+        priority,
+        status,
+        createdBy,
+      };
+
+      const body = requiereRelevo
+        ? {
+            ...commonFields,
+            requiereRelevo: true,
+            assignedTo: [trabajadorSaliente, trabajadorEntrante],
+            trabajadorSaliente,
+            trabajadorEntrante,
+            codigoRelevo: null,
+            relevoValidado: false,
+            relevoExpira: null,
+            empresaId: 'ID_EMPRESA',
+          }
+        : {
+            ...commonFields,
+            requiereRelevo: false,
+            assignedTo,
+          };
+
       const response = await fetch('https://proyecto-ids.vercel.app/api/createTask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${jwt}`,
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title,
-          description,
-          startTime,
-          endTime,
-          priority,
-          status,
-          assignedTo,
-          createdBy: userData?.uid,
-        }),
+        body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error('Error al crear la tarea');
       const data = await response.json();
 
-      Alert.alert("Tarea creada", `ID: ${data.id}`);
-      router.back();
-    } catch (err) {
-      Alert.alert("Error", "No se pudo crear la tarea");
-      console.error(err);
+      if (response.ok) {
+        Alert.alert('Éxito', 'Tarea creada correctamente');
+        setTitle('');
+        setDescription('');
+        setStartTime('');
+        setEndTime('');
+        setPriority('');
+        setStatus('');
+        setAssignedTo([]);
+        setRequiereRelevo(false);
+        setTrabajadorSaliente('');
+        setTrabajadorEntrante('');
+      } else {
+        console.error('Error en la respuesta del servidor:', data);
+        Alert.alert('Error', data.message || 'No se pudo crear la tarea');
+      }
+    } catch (error) {
+      console.error('Error al crear tarea:', error);
+      Alert.alert('Error', 'Ocurrió un error al crear la tarea');
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Crear Nueva Tarea</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Crear Nueva Tarea</Text>
 
-      <TextInput placeholder="Título" style={globalStyles.input} value={title} onChangeText={setTitle} />
-      <TextInput placeholder="Descripción" style={globalStyles.input} value={description} onChangeText={setDescription} />
-      <TextInput placeholder="Inicio (ISO)" style={globalStyles.input} value={startTime} onChangeText={setStartTime} />
-      <TextInput placeholder="Fin (ISO)" style={globalStyles.input} value={endTime} onChangeText={setEndTime} />
-      <TextInput placeholder="Prioridad (alta, media, baja)" style={globalStyles.input} value={priority} onChangeText={setPriority} />
-      <TextInput placeholder="Estado (pendiente, completada, etc.)" style={globalStyles.input} value={status} onChangeText={setStatus} />
-      <TextInput placeholder="Rut del trabajador" style={globalStyles.input} value={assignedTo} onChangeText={setAssignedTo} />
+      <TextInput placeholder="Título" style={styles.input} value={title} onChangeText={setTitle} />
+      <TextInput placeholder="Descripción" style={styles.input} value={description} onChangeText={setDescription} />
 
-      <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
-        <Text style={globalStyles.buttonText}>Crear Tarea</Text>
+      <TouchableOpacity style={styles.input} onPress={() => setStartPickerVisible(true)}>
+        <Text style={styles.pickerText}>
+          {startTime ? new Date(startTime).toLocaleString() : 'Selecciona fecha y hora inicio'}
+        </Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isStartPickerVisible}
+        mode="datetime"
+        onConfirm={handleConfirmStart}
+        onCancel={() => setStartPickerVisible(false)}
+      />
+
+      <TouchableOpacity style={styles.input} onPress={() => setEndPickerVisible(true)}>
+        <Text style={styles.pickerText}>
+          {endTime ? new Date(endTime).toLocaleString() : 'Selecciona fecha y hora fin'}
+        </Text>
+      </TouchableOpacity>
+      <DateTimePickerModal
+        isVisible={isEndPickerVisible}
+        mode="datetime"
+        onConfirm={handleConfirmEnd}
+        onCancel={() => setEndPickerVisible(false)}
+      />
+
+      <TextInput placeholder="Prioridad (alta, media, baja)" style={styles.input} value={priority} onChangeText={setPriority} />
+      <TextInput placeholder="Estado (pendiente, completada, etc.)" style={styles.input} value={status} onChangeText={setStatus} />
+
+            {!requiereRelevo && (
+        <>
+          <Text style={styles.label}>Selecciona trabajador:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={assignedTo[0] || ''}
+              onValueChange={(value) => setAssignedTo([value])}
+            >
+              <Picker.Item label="Seleccione..." value="" />
+              {users.map((user) => (
+                <Picker.Item
+                  key={user.id}
+                  label={`${user.name} ${user.lastName}`}
+                  value={user.id}
+                />
+              ))}
+            </Picker>
+          </View>
+        </>
+      )}
+
+
+      <Text style={styles.label}>¿Requiere relevo?</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={requiereRelevo ? 'sí' : 'no'}
+          onValueChange={(value) => setRequiereRelevo(value === 'sí')}
+        >
+          <Picker.Item label="No" value="no" />
+          <Picker.Item label="Sí" value="sí" />
+        </Picker>
+      </View>
+
+      {requiereRelevo && (
+        <>
+          <Text style={styles.label}>Trabajador saliente:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={trabajadorSaliente}
+              onValueChange={setTrabajadorSaliente}
+            >
+              <Picker.Item label="Seleccione..." value="" />
+              {users.map((user) => (
+                <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
+              ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Trabajador entrante:</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={trabajadorEntrante}
+              onValueChange={setTrabajadorEntrante}
+            >
+              <Picker.Item label="Seleccione..." value="" />
+              {users.map((user) => (
+                <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
+              ))}
+            </Picker>
+          </View>
+        </>
+      )}
+
+      <TouchableOpacity style={globalStyles.button}  onPress={handleCreateTask}>
+        <Text style={styles.buttonText}>Crear Tarea</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
-        <Text style={globalStyles.buttonText}>Volver</Text>
+      <TouchableOpacity style={globalStyles.button}  onPress={() => router.back()}>
+        <Text style={styles.buttonText}>Volver</Text>
       </TouchableOpacity>
     </ScrollView>
   );
-}
-// Está en formato ISO pq no se ve el calendario en formato web 
+};
+
+const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    backgroundColor: '#f2f2f2',
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: 'bold',
+    alignSelf: 'center',
+  },
+  input: {
+    backgroundColor: '#fff',
+    padding: 12,
+    marginBottom: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  pickerText: {
+    color: '#333',
+  },
+  label: {
+    marginTop: 10,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  userOption: {
+    padding: 10,
+    backgroundColor: '#eee',
+    borderRadius: 5,
+    marginBottom: 6,
+  },
+  userOptionSelected: {
+    backgroundColor: '#cce5ff',
+  },
+  pickerContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 14,
+    borderRadius: 8,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+});
+
+export default NuevaTarea;
