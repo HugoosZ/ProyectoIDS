@@ -129,6 +129,7 @@ exports.getUserTaskStatus = async (req, res) => {
         endTime: taskData.endTime?.toDate() || null,
         createdAt: taskData.createdAt.toDate(),
         haTenidoRelevo: typeof taskData.haTenidoRelevo === 'boolean' ? taskData.haTenidoRelevo : false, // Nuevo campo
+        requiereRelevo: typeof taskData.requiereRelevo === 'boolean' ? taskData.requiereRelevo : null, // Nuevo campo
         //empresaId: taskData.empresaId, // Incluir para depuración si es necesario
       };
     });
