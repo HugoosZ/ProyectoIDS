@@ -47,7 +47,7 @@ export default function ReasignarTarea() {
       if (!resUsers.ok) throw new Error('Error al obtener usuarios');
       const dataUsers: Usuario[] = await resUsers.json();
 
-      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true', {
+      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true&time=today', {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
