@@ -30,7 +30,6 @@ const TopBar: React.FC = () => {
     try {
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('userId');
-      setJwt(null);
       router.replace('/'); // vuelve a la pantalla de login
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
