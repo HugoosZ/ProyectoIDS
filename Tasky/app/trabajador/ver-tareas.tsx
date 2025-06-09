@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button, Alert, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const globalStyles = StyleSheet.create({
   container: {
@@ -81,6 +83,15 @@ export default function VerTareas() {
     loadAuthData();
   }, []);
 
+  const logout = async () => {
+  try {
+    await AsyncStorage.removeItem('userId');
+    await AsyncStorage.removeItem('userToken');
+    router.replace('/'); // Redirige a login
+  } catch (e) {
+    console.error('Error al cerrar sesión:', e);
+  }
+};
   useEffect(() => {
     if (authUserId && authToken) {
       fetchTareas();
@@ -220,6 +231,10 @@ export default function VerTareas() {
 
   return (
     <View style={{ flex: 1 }}>
+      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+        <Ionicons name="log-out-outline" size={26} color="#007AFF" />
+      </TouchableOpacity>
+
       <ScrollView contentContainerStyle={globalStyles.container}>
         <Text style={globalStyles.title}>Tareas del Día</Text>
 
@@ -364,4 +379,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
+
+  logoutButton: {
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  zIndex: 10,
+  padding: 10,
+},
 });
