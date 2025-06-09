@@ -12,6 +12,10 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import globalStyles from '../app/globalStyles';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../lib/context/AuthContext'; // Asegúrate de tener este hook de contexto
+
+
 
 const TopBar: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -19,6 +23,19 @@ const TopBar: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(-screenWidth)).current;
   const backgroundOpacity = useRef(new Animated.Value(0)).current;
   const router = useRouter();
+
+  const { setJwt } = useAuth(); // REVISAR ESTO!!!! Segun yo esta logica no deberia estar aqui:)
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userId');
+      setJwt(null);
+      router.replace('/'); // vuelve a la pantalla de login
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
 
   const openMenu = () => {
     setModalVisible(true);
@@ -67,6 +84,9 @@ const TopBar: React.FC = () => {
         </TouchableOpacity>
         <TouchableOpacity onPress={() => console.log('Notificaciones')}>
           <Ionicons name="notifications-outline" size={32} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={32} color="#fff" /> 
         </TouchableOpacity>
       </View>
 
