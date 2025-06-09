@@ -60,7 +60,14 @@ export default function Asistencia() {
         }
       });
 
-      setAsistencias(Array.from(asistenciaMap.values()));
+      //setAsistencias(Array.from(asistenciaMap.values()));
+
+      const asistenciaOrdenada = Array.from(asistenciaMap.values()).sort((a, b) => {
+        if(a.isPresent && b.isPresent) return 0;
+        return a.isPresent ? -1 : 1;
+      });
+
+      setAsistencias(asistenciaOrdenada);
 
     } catch (err: any) {
       Alert.alert('Error', err.message);
@@ -91,8 +98,17 @@ export default function Asistencia() {
         ) : (
           <ScrollView>
             {asistencias.map((asistencia) => (
-              <View key={asistencia.asistenciaId} style={styles.card}>
-                <Text style={styles.nombre}>
+              <View
+                key={asistencia.asistenciaId}
+                style={[
+                  styles.card,
+                  !asistencia.isPresent && styles.cardAusente, // es
+                ]}>
+
+                <Text style={[styles.nombre,
+                !asistencia.isPresent && { color: '#888'},
+                ]}>
+
                   {asistencia.user?.name} {asistencia.user?.lastName}
                 </Text>
                 <Text><Text style={styles.bold}>Correo:</Text> {asistencia.user?.email}</Text>
@@ -139,5 +155,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
+  },
+  cardAusente: {
+    backgroundColor: '#d3d3d3',
+    opacity: 0.6,
   },
 });
