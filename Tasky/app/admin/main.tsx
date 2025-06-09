@@ -33,6 +33,7 @@ export default function AdminMain() {
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      console.log(token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;

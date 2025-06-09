@@ -42,15 +42,34 @@ const NuevaTarea = () => {
       if (!token) return;
 
       try {
-        const response = await fetch('https://proyecto-ids.vercel.app/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await response.json();
-        setUsers(data);
+        const [resUsers, resAttendance] = await Promise.all([
+          fetch('https://proyecto-ids.vercel.app/api/users', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true&time=today', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (!resUsers.ok || !resAttendance.ok) throw new Error('Error en alguna petición');
+
+        const dataUsers = await resUsers.json();
+        const attendanceDataRaw = await resAttendance.json();
+
+        const attendanceData = Array.isArray(attendanceDataRaw)
+          ? attendanceDataRaw
+          : Object.values(attendanceDataRaw);
+
+        const presentUserIds = new Set(attendanceData.map((att: any) => att.userId));
+        const filteredUsers = dataUsers.filter((user: any) => presentUserIds.has(user.id));
+
+        setUsers(filteredUsers);
       } catch (error) {
-        console.error('Error al obtener usuarios:', error);
+        console.error('Error al obtener usuarios presentes:', error);
+        Alert.alert('Error', 'No se pudieron cargar los usuarios presentes.');
       }
     };
+
     fetchUsers();
   }, []);
 
