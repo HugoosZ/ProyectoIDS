@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
+  View,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+  KeyboardAvoidingView,
   ScrollView,
   Alert,
-  StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+
 import globalStyles from '../globalStyles';
 
+import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+
 const AddUsers = () => {
-  const router = useRouter();
+
 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -77,81 +82,72 @@ const AddUsers = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Agregar Nuevo Trabajador</Text>
-
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre"
-        value={nombre}
-        onChangeText={setNombre}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Apellido"
-        value={apellido}
-        onChangeText={setApellido}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="RUT"
-        value={rut}
-        onChangeText={setRUT}
-      />
-
-      <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
-        <Text style={styles.buttonText}>Guardar Trabajador</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]}
-        onPress={() => router.back()}
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: '#f3f3f3', // Fondo sin el contenedor sombreado
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+      }}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-        <Text style={styles.buttonText}>Volver</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <View style={{ flex: 1 }}>
+            {/* Aquí se reemplaza el botón de "Volver" por el TopBar que abre el Drawer */}
+            <TopBar />
+
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: -250}}>
+              <Text style={[globalStyles.title, globalStyles.titleCentered]}>
+                Agregar Nuevo Trabajador
+              </Text>
+
+              <View style={globalStyles.formContainer}>
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChangeText={setNombre}
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Apellido"
+                  value={apellido}
+                  onChangeText={setApellido}
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Contraseña"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="RUT (Ej: 12345678-9)"
+                  value={rut}
+                  onChangeText={setRUT}
+                />
+
+                <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
+                  <Text style={globalStyles.buttonText}>Guardar Trabajador</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-    backgroundColor: '#f2f2f2',
-  },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    fontWeight: 'bold',
-    alignSelf: 'center',
-  },
-  input: {
-    backgroundColor: '#fff',
-    padding: 12,
-    marginBottom: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  buttonText: {
-    color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-});
 
 export default AddUsers;

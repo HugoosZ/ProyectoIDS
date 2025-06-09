@@ -5,17 +5,19 @@ import {
   TextInput,
   Alert,
   ScrollView,
+  SafeAreaView,
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
 
+import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+
 const NuevaTarea = () => {
-  const router = useRouter();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -150,110 +152,128 @@ const NuevaTarea = () => {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Crear Nueva Tarea</Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>Crear Nueva Tarea</Text>
 
-      <TextInput placeholder="Título" style={styles.input} value={title} onChangeText={setTitle} />
-      <TextInput placeholder="Descripción" style={styles.input} value={description} onChangeText={setDescription} />
+        <TextInput
+          placeholder="Título"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={title}
+          onChangeText={setTitle}
+        />
+        <TextInput
+          placeholder="Descripción"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={description}
+          onChangeText={setDescription}
+        />
 
-      <TouchableOpacity style={styles.input} onPress={() => setStartPickerVisible(true)}>
-        <Text style={styles.pickerText}>
-          {startTime ? new Date(startTime).toLocaleString() : 'Selecciona fecha y hora inicio'}
-        </Text>
-      </TouchableOpacity>
-      <DateTimePickerModal
-        isVisible={isStartPickerVisible}
-        mode="datetime"
-        onConfirm={handleConfirmStart}
-        onCancel={() => setStartPickerVisible(false)}
-      />
+        <TouchableOpacity style={styles.input} onPress={() => setStartPickerVisible(true)}>
+          <Text style={[styles.pickerText, { color: '#999' }]}>
+            {startTime ? new Date(startTime).toLocaleString() : 'Selecciona fecha y hora inicio'}
+          </Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isStartPickerVisible}
+          mode="datetime"
+          onConfirm={handleConfirmStart}
+          onCancel={() => setStartPickerVisible(false)}
+        />
 
-      <TouchableOpacity style={styles.input} onPress={() => setEndPickerVisible(true)}>
-        <Text style={styles.pickerText}>
-          {endTime ? new Date(endTime).toLocaleString() : 'Selecciona fecha y hora fin'}
-        </Text>
-      </TouchableOpacity>
-      <DateTimePickerModal
-        isVisible={isEndPickerVisible}
-        mode="datetime"
-        onConfirm={handleConfirmEnd}
-        onCancel={() => setEndPickerVisible(false)}
-      />
+        <TouchableOpacity style={styles.input} onPress={() => setEndPickerVisible(true)}>
+          <Text style={[styles.pickerText, { color: '#999' }]}>
+            {endTime ? new Date(endTime).toLocaleString() : 'Selecciona fecha y hora fin'}
+          </Text>
+        </TouchableOpacity>
+        <DateTimePickerModal
+          isVisible={isEndPickerVisible}
+          mode="datetime"
+          onConfirm={handleConfirmEnd}
+          onCancel={() => setEndPickerVisible(false)}
+        />
 
-      <TextInput placeholder="Prioridad (alta, media, baja)" style={styles.input} value={priority} onChangeText={setPriority} />
-      <TextInput placeholder="Estado (pendiente, completada, etc.)" style={styles.input} value={status} onChangeText={setStatus} />
+        <TextInput
+          placeholder="Prioridad (alta, media, baja)"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={priority}
+          onChangeText={setPriority}
+        />
+        <TextInput
+          placeholder="Estado (pendiente, completada, etc.)"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={status}
+          onChangeText={setStatus}
+        />
 
-            {!requiereRelevo && (
-        <>
-          <Text style={styles.label}>Selecciona trabajador:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={assignedTo[0] || ''}
-              onValueChange={(value) => setAssignedTo([value])}
-            >
-              <Picker.Item label="Seleccione..." value="" />
-              {users.map((user) => (
-                <Picker.Item
-                  key={user.id}
-                  label={`${user.name} ${user.lastName}`}
-                  value={user.id}
-                />
-              ))}
-            </Picker>
-          </View>
-        </>
-      )}
+        {!requiereRelevo && (
+          <>
+            <Text style={styles.label}>Selecciona trabajador:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={assignedTo[0] || ''}
+                onValueChange={(value) => setAssignedTo([value])}
+              >
+                <Picker.Item label="Seleccione..." value="" />
+                {users.map((user) => (
+                  <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
+                ))}
+              </Picker>
+            </View>
+          </>
+        )}
 
+        <Text style={styles.label}>¿Requiere relevo?</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={requiereRelevo ? 'sí' : 'no'}
+            onValueChange={(value) => setRequiereRelevo(value === 'sí')}
+          >
+            <Picker.Item label="No" value="no" />
+            <Picker.Item label="Sí" value="sí" />
+          </Picker>
+        </View>
 
-      <Text style={styles.label}>¿Requiere relevo?</Text>
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={requiereRelevo ? 'sí' : 'no'}
-          onValueChange={(value) => setRequiereRelevo(value === 'sí')}
-        >
-          <Picker.Item label="No" value="no" />
-          <Picker.Item label="Sí" value="sí" />
-        </Picker>
-      </View>
+        {requiereRelevo && (
+          <>
+            <Text style={styles.label}>Trabajador saliente:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={trabajadorSaliente}
+                onValueChange={setTrabajadorSaliente}
+              >
+                <Picker.Item label="Seleccione..." value="" />
+                {users.map((user) => (
+                  <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
+                ))}
+              </Picker>
+            </View>
 
-      {requiereRelevo && (
-        <>
-          <Text style={styles.label}>Trabajador saliente:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={trabajadorSaliente}
-              onValueChange={setTrabajadorSaliente}
-            >
-              <Picker.Item label="Seleccione..." value="" />
-              {users.map((user) => (
-                <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
-              ))}
-            </Picker>
-          </View>
+            <Text style={styles.label}>Trabajador entrante:</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={trabajadorEntrante}
+                onValueChange={setTrabajadorEntrante}
+              >
+                <Picker.Item label="Seleccione..." value="" />
+                {users.map((user) => (
+                  <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
+                ))}
+              </Picker>
+            </View>
+          </>
+        )}
 
-          <Text style={styles.label}>Trabajador entrante:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={trabajadorEntrante}
-              onValueChange={setTrabajadorEntrante}
-            >
-              <Picker.Item label="Seleccione..." value="" />
-              {users.map((user) => (
-                <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
-              ))}
-            </Picker>
-          </View>
-        </>
-      )}
-
-      <TouchableOpacity style={globalStyles.button}  onPress={handleCreateTask}>
-        <Text style={styles.buttonText}>Crear Tarea</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={globalStyles.button}  onPress={() => router.back()}>
-        <Text style={styles.buttonText}>Volver</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
+          <Text style={styles.buttonText}>Crear Tarea</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -275,7 +295,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'rgba(137, 113, 187, 1)',
+    color: '#999',
   },
   pickerText: {
     color: '#333',
@@ -285,20 +306,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: '600',
   },
-  userOption: {
-    padding: 10,
-    backgroundColor: '#eee',
-    borderRadius: 5,
-    marginBottom: 6,
-  },
-  userOptionSelected: {
-    backgroundColor: '#cce5ff',
-  },
   pickerContainer: {
     backgroundColor: '#fff',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'rgba(137, 113, 187, 1)',
     marginBottom: 12,
   },
   button: {
