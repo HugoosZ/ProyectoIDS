@@ -2,24 +2,21 @@
 //Creacion de usuarios por parte del admin:)
 
 const admin = require('firebase-admin');
-const { v4: uuidv4 } = require('uuid');
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
     const { email, password, rut, name, lastName, role, isAdmin, empresaId } = userData;
 
 try {
-    const uniqueFirebaseUid = uuidv4(); // Genera un UID único para el usuario
     // 1. Crear en Firebase Auth
     const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
-        uid: uniqueFirebaseUid, // Asigna el UID único generado
+        uid: rut, // Asigna el UID único generado
         email: email, // Requerido por Firebase
         password: password // Requerido por Firebase
     });
 
     // 2. Guardar en Firestore 
     // iii) Esto se ejecuta SOLO cuando createUser() termine
-    await admin.firestore().collection('users').doc(uniqueFirebaseUid).set({   
-
+    await admin.firestore().collection('users').doc(rut).set({
       isAdmin: isAdmin, //  Fijo en false
       name: name,
       lastName: lastName,
@@ -33,7 +30,7 @@ try {
      return {
             message: "Usuario creado exitosamente",
             user: {
-                uid: uniqueFirebaseUid, 
+                uid: rut, 
                 email: email,
                 rut: rut,
                 name: name,
