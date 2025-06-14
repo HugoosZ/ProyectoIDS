@@ -10,9 +10,7 @@ exports.createUser = async (req, res) => {
 
     let finalEmpresaId;
 
-    // Si la petición viene de un usuario autenticado (req.user existe)
-    // Y ese usuario es un admin (req.user.isAdmin es true)
-    // Y ese admin ya tiene un empresaId asignado
+
     if (req.user && req.user.isAdmin && req.user.empresaId) {
       finalEmpresaId = req.user.empresaId; // Hereda el empresaId del admin que crea el usuario
       console.log(
@@ -20,22 +18,13 @@ exports.createUser = async (req, res) => {
         finalEmpresaId
       );
     } else if (isAdmin) {
-      // Si el usuario que se está CREANDO es un admin, y no se hereda un ID (porque no hay admin padre o no tiene ID)
-      // Esto es para el SCENARIO A: crear el PRIMER admin de una nueva empresa.
+      
       finalEmpresaId = uuidv4(); // Genera un nuevo empresaId para este nuevo admin
       console.log(
         "DEBUG: Generando nuevo empresaId para el primer admin:",
         finalEmpresaId
       );
     } else {
-      // Si el usuario que se está creando NO es un admin, y NO hay un admin padre para heredar el ID,
-      // esto indica un flujo no esperado para un usuario regular sin empresaId, o un error.
-      // Para mantener la consistencia, podríamos forzar un error o requerir el empresaId.
-      // Por simplicidad, si no es un admin y no viene de un admin padre, podríamos lanzas un error
-      // o generar uno nuevo si es un flujo de registro diferente.
-      // Por ahora, asumimos que todos los usuarios deben tener un empresaId.
-      // Si llega aquí, significa que un usuario regular (no admin) está siendo creado sin un admin padre que le asigne empresaId
-      // ni se especificó uno en el body. Esto podría ser un error o un escenario de registro específico.
       console.warn(
         "ADVERTENCIA: Creando usuario sin empresaId heredado ni especificado. Generando uno nuevo."
       );

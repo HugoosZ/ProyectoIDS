@@ -16,7 +16,7 @@ router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req
 
 router.post("/createUser", verifyAndDecodeToken, checkAdminPrivileges, userController.createUser);
 
-router.post("/createUserAUX", userController.createUser); //Ruta sin autenticacion
+router.post("/createUserAUX", userController.createUser); //Ruta sin autenticacion de prueba
 
 router.get("/", async (req, res) => {
   res.send("¡Ruta /api/admin funciona correctamente!");

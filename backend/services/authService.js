@@ -1,4 +1,3 @@
-
 //Creacion de usuarios por parte del admin:)
 
 const admin = require('firebase-admin');
@@ -7,6 +6,12 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
     const { email, password, rut, name, lastName, role, isAdmin, empresaId } = userData;
 
 try {
+        // 0. Verificar si el RUT ya existe en Firestore
+        const rutDoc = await admin.firestore().collection('users').doc(rut).get();
+        if (rutDoc.exists) {
+            throw new Error('El RUT ya está registrado.');
+        }
+
     // 1. Crear en Firebase Auth
     const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
         uid: rut, // Asigna el UID único generado
@@ -43,7 +48,9 @@ try {
     }
     catch (error) { // <-- Asegúrate de que el 'catch' esté aquí
         console.error("Error en authService.createUserWithRole:", error);
-        if (error.code === 'auth/email-already-exists') {
+        if (error.message === 'El RUT ya está registrado.') {
+            throw new Error(error.message);
+        } else if (error.code === 'auth/email-already-exists') {
             throw new Error('El email ya está registrado.');
         } else if (error.code === 'auth/invalid-password') {
             throw new Error('La contraseña debe tener al menos 6 caracteres.');
@@ -52,4 +59,3 @@ try {
         }
     }
 }
-  
