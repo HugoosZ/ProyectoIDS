@@ -36,6 +36,12 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Correo electrónico inválido" });
+    }
+
     // Validar formato del RUT (ej: 12345678-9)
     if (!/^[\d]{7,8}-[\dkK]$/.test(rut)) {
       return res.status(400).json({ error: "RUT inválido" });
