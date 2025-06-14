@@ -4,9 +4,36 @@ const { verifyAndDecodeToken } = require('../middlewares/authentication');
 const { checkIn, checkOut } = require('../controllers/attendanceController');
 const { checkAdminPrivileges } = require('../middlewares/authorization');
 const { getDateRange } = require("../utils/dateFilters");
-const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
+const { decrypt, encrypt } = require('../utils/crypto'); 
 
 const router = Router();
+
+
+// Ruta para buscar usuario por RUT desencriptado y retornar UID y email
+router.post('/findByRut', async (req, res) => {
+  try {
+    const { rut } = req.body;
+    if (!rut) {
+      return res.status(400).json({ error: 'El RUT es necesario.' });
+    }
+    const snapshot = await db.collection('users').get();
+    let foundUser = null;
+    snapshot.forEach(doc => {
+      const userData = doc.data();
+      let decryptedRut = null;
+      try { decryptedRut = decrypt(userData.rut); } catch (e) {}
+      if (decryptedRut === rut) {
+        foundUser = { uid: doc.id, email: userData.email };
+      }
+    });
+    if (!foundUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado con ese RUT.' });
+    }
+    res.status(200).json(foundUser);
+  } catch (error) {
+    res.status(500).json({ error: 'Error interno al buscar usuario por RUT.' });
+  }
+});
 
 // Ruta para CheckIn de asistencia del usuario
 router.post('/checkIn/:userId', verifyAndDecodeToken, checkIn);
@@ -76,25 +103,21 @@ router.get("/User/attendance/:userId", verifyAndDecodeToken, async (req, res) =>
   try {
     const { userId } = req.params;
     const { isPresent, time } = req.query;
-
     if (userId !== req.user.uid) {
       return res.status(403).json({ error: "No tienes permiso para acceder a la asistencia de este usuario." });
     }
     let query = db.collection("asistencias").where("userId", "==", userId);
-
     if (isPresent === "true") {
       query = query.where("isPresent", "==", true);
     } else if (isPresent === "false") {
       query = query.where("isPresent", "==", false);
     }
-
     if (time === "today" || time === "week") {
       const dateFilter = getDateRange(time);
       query = query
         .where("date", ">=", dateFilter.startDate)
         .where("date", "<=", dateFilter.endDate);
     }
-
     const snapshot = await query.get();
     if (snapshot.empty) {
       return res.status(404).json({ message: "No se encontró asistencia para el/los usuario(s) con los filtros dados" });
@@ -103,11 +126,19 @@ router.get("/User/attendance/:userId", verifyAndDecodeToken, async (req, res) =>
       const asistenciaData = doc.data();
       const userDoc = await db.collection("users").doc(asistenciaData.userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
+      let name = userData?.name || null;
+      let lastName = userData?.lastName || null;
+      let rut = userData?.rut || null;
+      try { name = decrypt(name); } catch (e) {}
+      try { lastName = decrypt(lastName); } catch (e) {}
+      try { rut = decrypt(rut); } catch (e) {}
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: userData.name || null,
+          name,
+          lastName,
+          rut,
           email: userData.email || null
         } : null
       };
@@ -118,6 +149,8 @@ router.get("/User/attendance/:userId", verifyAndDecodeToken, async (req, res) =>
     res.status(500).json({ error: "Error al obtener asistencia" });
   }
 });
+
+
 
 
 
