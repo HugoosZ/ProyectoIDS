@@ -26,7 +26,7 @@ router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
 
 // Codigo para relevo y verificacion de codigo
-router.post('/tasks/:taskID/relief', verifyAndDecodeToken, taskController.realizarRelevo);
+router.post('/tasks/:taskId/relief', verifyAndDecodeToken, taskController.realizarRelevo);
 
 // Ruta para generar código de 6 digitos para relevo
 router.post('/tasks/:taskId/generarCodigoRelevo', verifyAndDecodeToken, taskController.generarCodigoRelevo);
