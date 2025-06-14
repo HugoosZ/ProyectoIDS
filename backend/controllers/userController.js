@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const { validarDigitoVerificador } = require('../utils/validadorRUT');
 const { v4: uuidv4 } = require('uuid');
-const { encrypt } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado
+const { encrypt, decrypt } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado y desencriptado
 
 exports.createUser = async (req, res) => {
   // console.log("DEBUG: Contenido de req.body al inicio de createUser:", req.body);
@@ -50,6 +50,17 @@ exports.createUser = async (req, res) => {
       return res
         .status(400)
         .json({ error: "RUT inválido: dígito verificador incorrecto" });
+    }
+
+    // Validar si el RUT ya existe (comparando desencriptado)
+    const usersSnapshot = await authService.getAllUsersRaw(); // Debes implementar este método para obtener todos los usuarios sin desencriptar
+    for (const doc of usersSnapshot.docs) {
+      const userData = doc.data();
+      let decryptedRut = null;
+      try { decryptedRut = decrypt(userData.rut); } catch (e) {}
+      if (decryptedRut === rut) {
+        return res.status(409).json({ error: "El RUT ya está registrado." });
+      }
     }
 
     // Cifrar datos sensibles antes de crear el usuario
