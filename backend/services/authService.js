@@ -5,48 +5,41 @@ const admin = require('firebase-admin');
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
     const { email, password, rut, name, lastName, role, isAdmin, empresaId } = userData;
 
-try {
-        // 0. Verificar si el RUT ya existe en Firestore
-        const rutDoc = await admin.firestore().collection('users').doc(rut).get();
-        if (rutDoc.exists) {
-            throw new Error('El RUT ya está registrado.');
-        }
-
-    // 1. Crear en Firebase Auth
-    const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
-        uid: rut, // Asigna el UID único generado
-        email: email, // Requerido por Firebase
-        password: password // Requerido por Firebase
-    });
-
-    // 2. Guardar en Firestore 
-    // iii) Esto se ejecuta SOLO cuando createUser() termine
-    await admin.firestore().collection('users').doc(rut).set({
-      isAdmin: isAdmin, //  Fijo en false
-      name: name,
-      lastName: lastName,
-      email: email,
-      rut: rut,
-      role: role,
-      empresaId: empresaId,
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
-    });
-  
-     return {
-            message: "Usuario creado exitosamente",
-            user: {
-                uid: rut, 
-                email: email,
-                rut: rut,
-                name: name,
-                lastName: lastName,
-                role: role,
-                isAdmin: isAdmin,
-                empresaId: empresaId 
-            }
-        };
+    try {
+        // 1. Crear en Firebase Auth
+        const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
+            uid: rut, // Asigna el UID único generado
+            email: email, // Requerido por Firebase
+            password: password // Requerido por Firebase
+        });
+        // 2. Guardar en Firestore 
+        // iii) Esto se ejecuta SOLO cuando createUser() termine
+        await admin.firestore().collection('users').doc(rut).set({
+        isAdmin: isAdmin, //  Fijo en false
+        name: name,
+        lastName: lastName,
+        email: email,
+        rut: rut,
+        role: role,
+        empresaId: empresaId,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+    
+        return {
+                message: "Usuario creado exitosamente",
+                user: {
+                    uid: rut, 
+                    email: email,
+                    rut: rut,
+                    name: name,
+                    lastName: lastName,
+                    role: role,
+                    isAdmin: isAdmin,
+                    empresaId: empresaId 
+                }
+            };
     }
-    catch (error) { // <-- Asegúrate de que el 'catch' esté aquí
+    catch (error) { 
         console.error("Error en authService.createUserWithRole:", error);
         if (error.message === 'El RUT ya está registrado.') {
             throw new Error(error.message);
