@@ -1,6 +1,7 @@
 //Creacion de usuarios por parte del admin:)
 
 const admin = require('firebase-admin');
+const db = admin.firestore();
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
     const { email, password, rut, name, lastName, role, isAdmin, empresaId } = userData;
@@ -8,13 +9,14 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
     try {
         // 1. Crear en Firebase Auth
         const userRecord = await admin.auth().createUser({ // ii) Espera esta promesa
-            uid: rut, // Asigna el UID único generado
             email: email, // Requerido por Firebase
             password: password // Requerido por Firebase
         });
+        const firebaseAuthUid = userRecord.uid;
+
         // 2. Guardar en Firestore 
         // iii) Esto se ejecuta SOLO cuando createUser() termine
-        await admin.firestore().collection('users').doc(rut).set({
+        await db.collection('users').doc(firebaseAuthUid).set({
         isAdmin: isAdmin, //  Fijo en false
         name: name,
         lastName: lastName,
@@ -28,7 +30,7 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
         return {
                 message: "Usuario creado exitosamente",
                 user: {
-                    uid: rut, 
+                    uid: firebaseAuthUid, 
                     email: email,
                     rut: rut,
                     name: name,
@@ -39,6 +41,7 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
                 }
             };
     }
+    
     catch (error) { 
         console.error("Error en authService.createUserWithRole:", error);
         if (error.message === 'El RUT ya está registrado.') {
@@ -52,3 +55,13 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
         }
     }
 }
+
+exports.getAllUsersRaw = async () => {
+    try {
+        const usersSnapshot = await db.collection('users').get();
+        return usersSnapshot; // Devuelve el QuerySnapshot directamente
+    } catch (error) {
+        console.error("Error al obtener todos los usuarios (raw):", error);
+        throw new Error("No se pudieron obtener los usuarios para validación.");
+    }
+};

@@ -57,7 +57,9 @@ exports.createUser = async (req, res) => {
     for (const doc of usersSnapshot.docs) {
       const userData = doc.data();
       let decryptedRut = null;
-      try { decryptedRut = decrypt(userData.rut); } catch (e) {}
+      try { decryptedRut = decrypt(userData.rut); } catch (e) {
+        console.warn("Error al desencriptar RUT:", e);
+      }
       if (decryptedRut === rut) {
         return res.status(409).json({ error: "El RUT ya está registrado." });
       }
@@ -68,7 +70,7 @@ exports.createUser = async (req, res) => {
     const encryptedName = encrypt(name);
     const encryptedLastName = encrypt(lastName);
 
-    const newUser = await authService.createUserWithRole({
+    const result = await authService.createUserWithRole({
       email,
       password,
       rut: encryptedRut, // Guardar cifrado
@@ -79,7 +81,22 @@ exports.createUser = async (req, res) => {
       empresaId: finalEmpresaId,
     });
 
-    res.status(201).json(newUser);
+    const responseUser = {
+        uid: result.user.uid, // Asumiendo que newUserRecord tiene el UID
+        email: email,
+        rut: rut, // <-- Ya está desencriptado (es el 'rut' original del req.body)
+        name: name, // <-- Ya está desencriptado (es el 'name' original del req.body)
+        lastName: lastName, // <-- Ya está desencriptado (es el 'lastName' original del req.body)
+        role: role,
+        isAdmin: isAdmin,
+        empresaId: finalEmpresaId,
+    };
+
+        try { responseUser.rut = decrypt(responseUser.rut); } catch (e) { console.error("Error desencriptando RUT para respuesta:", e.message); }
+        try { responseUser.name = decrypt(responseUser.name); } catch (e) { console.error("Error desencriptando nombre para respuesta:", e.message); }
+        try { responseUser.lastName = decrypt(responseUser.lastName); } catch (e) { console.error("Error desencriptando apellido para respuesta:", e.message); }
+
+    res.status(201).json(responseUser);
   } catch (error) {
     console.error("Error en userController.createUser:", error); // Cambiado para claridad
     if (error.message.includes("email ya está registrado")) {
