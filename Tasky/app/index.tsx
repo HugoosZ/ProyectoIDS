@@ -30,7 +30,7 @@ export default function Index() {
     try {
       const userDoc = await getDoc(doc(db, 'users', rut));
       if (!userDoc.exists()) {
-        Alert.alert('Error', 'Usuario no encontrado');
+        Alert.alert('Error', 'Este usuario no existe');
         return;
       }
   

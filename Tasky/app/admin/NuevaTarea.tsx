@@ -16,8 +16,10 @@ import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
 
 import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+import { useRouter } from 'expo-router'; // Importa useRouter desde expo-router
 
 const NuevaTarea = () => {
+  const router = useRouter(); // Inicializa el hook useRouter para la navegación
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -291,6 +293,11 @@ const NuevaTarea = () => {
         <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
           <Text style={styles.buttonText}>Crear Tarea</Text>
         </TouchableOpacity>
+
+        {/* Botón "Volver al inicio" */}
+        <TouchableOpacity style={globalStyles.button} onPress={() => router.push('/admin/main')}>
+          <Text style={styles.buttonText}>Volver al inicio</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -332,16 +339,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(137, 113, 187, 1)',
     marginBottom: 12,
   },
-  button: {
-    backgroundColor: '#007bff',
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  goBackButton: {
+    backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
     padding: 14,
     borderRadius: 8,
     marginTop: 20,
     alignItems: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
 });
 
