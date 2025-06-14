@@ -44,18 +44,12 @@ exports.createTask = async (req, res) => {
       description,
       startTime:   admin.firestore.Timestamp.fromDate(new Date(startTime)),
       endTime:     admin.firestore.Timestamp.fromDate(new Date(endTime)),
-      priority:    priority   || 'normal',
-      status:      status     || 'pending',
+      priority:    priority   || 'baja',
+      status:      status     || 'pendiente',
       title,
       empresaId:   createdByEmpresaId,
       requiereRelevo,
       haTenidoRelevo: false,
-      // campos de relevo iniciales
-      trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
-      trabajadorEntrante: requiereRelevo ? trabajadorEntrante  : null,
-      codigoRelevo:       null,
-      relevoExpira:       null,
-      relevoValidado:     false
     };
 
     const taskRef = await db.collection('tasks').add(newTask);
@@ -63,21 +57,19 @@ exports.createTask = async (req, res) => {
 
     // 2) Crear asignaciones en la colección intermedia
     const batch = db.batch();
-    for (const uid of assignedTo) {
-      const isSaliente = requiereRelevo && uid === trabajadorSaliente;
-      const isEntrante = requiereRelevo && uid === trabajadorEntrante;
       const assignmentRef = db.collection('taskAssignments').doc();
 
       batch.set(assignmentRef, {
         taskId,
-        userId: uid,
-        isSaliente,
-        isEntrante,
+        userId: assignedTo,
         validadoRelevo: false,
-        activo: isSaliente ? true : !requiereRelevo, 
-        timestampAsignado: admin.firestore.Timestamp.now()
+        timestampAsignado: admin.firestore.Timestamp.now(),
+        trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
+        trabajadorEntrante: requiereRelevo ? trabajadorEntrante  : null,
+        codigoRelevo:       null,
+        relevoExpira:       null,
+        relevoValidado:     false
       });
-    }
     await batch.commit();
 
     return res.status(201).json({ id: taskId, ...newTask });
@@ -349,106 +341,121 @@ function generate6DigitCode() {
 
 exports.generarCodigoRelevo = async (req, res) => {
   try {
-    const { taskId }                             = req.params;
-    const { uid: requestingUserUid, empresaId, isAdmin } = req.user;
-    const { minutosValidez }                     = req.body;
+    const { taskId }                        = req.params;
+    const { uid: userUid, empresaId, isAdmin } = req.user;
+    const { minutosValidez }                = req.body;
 
     if (!minutosValidez || isNaN(minutosValidez) || minutosValidez <= 0) {
-      return res.status(400).json({ message: 'minutosValidez debe ser > 0.' });
+      return res.status(400).json({ message: 'minutosValidez debe ser un número > 0.' });
     }
 
+    // 1.1) Verifico tarea y permisos
     const taskRef = db.collection('tasks').doc(taskId);
-    const taskDoc = await taskRef.get();
-    if (!taskDoc.exists) return res.status(404).json({ message: 'Tarea no encontrada.' });
+    const taskSnap= await taskRef.get();
+    if (!taskSnap.exists) 
+      return res.status(404).json({ message: 'Tarea no encontrada.' });
 
-    const data = taskDoc.data();
-    if (data.empresaId !== empresaId) {
+    const task = taskSnap.data();
+    if (task.empresaId !== empresaId) 
       return res.status(403).json({ message: 'No autorizado sobre esta tarea.' });
-    }
-    if (!isAdmin && !data.assignedTo.includes(requestingUserUid)) {
-      return res.status(403).json({ message: 'No asignado a ti.' });
-    }
 
-    // Generar y guardar
+    if (!isAdmin && task.createdBy !== userUid) 
+      return res.status(403).json({ message: 'Sólo admin o creador pueden generar código.' });
+
+    if (!task.requiereRelevo) 
+      return res.status(400).json({ message: 'La tarea no está marcada como relevo.' });
+
+
+    // 1.2) Recupero el único assignment para esta tarea
+    const asgSnap = await db.collection('taskAssignments')
+      .where('taskId', '==', taskId)
+      .limit(1)
+      .get();
+    if (asgSnap.empty) 
+      return res.status(404).json({ message: 'Asignación no encontrada.' });
+
+    const asgDoc = asgSnap.docs[0];
+    const asgRef = asgDoc.ref;
+
+    // 1.3) Generar y guardar el código + expiración
     const code      = generate6DigitCode();
     const expiresAt = admin.firestore.Timestamp.fromDate(
       new Date(Date.now() + minutosValidez * 60000)
     );
 
-    await taskRef.update({
-      codigoRelevo:       code,
-      relevoExpira:       expiresAt,
-      relevoValidado:     false
+    await asgRef.update({
+      codigoRelevo:   code,
+      relevoExpira:   expiresAt,
+      validadoRelevo: false
     });
 
     return res.status(200).json({ code, expiresAt });
   } catch (error) {
     console.error('Error generando código de relevo:', error);
-    return res.status(500).json({ message: 'Error interno.' });
+    return res.status(500).json({ message: 'Error interno al generar código.' });
   }
 };
 
 exports.realizarRelevo = async (req, res) => {
   try {
-    const { taskId }                = req.params;
-    const { codigoIngresado }       = req.body;
-    const { uid: nuevoUid, empresaId, name, lastName } = req.user;
-    const now                       = admin.firestore.Timestamp.now();
+    const { taskId }                  = req.params;
+    const { codigoIngresado }         = req.body;
+    const { uid: nuevoUid, empresaId } = req.user;
+    const now = admin.firestore.Timestamp.now();
 
     if (!codigoIngresado) {
-      return res.status(400).json({ message: 'Código requerido.' });
+      return res.status(400).json({ message: 'Código de relevo requerido.' });
     }
 
+    // 2.1) Verifico tarea
     const taskRef = db.collection('tasks').doc(taskId);
-    const taskDoc = await taskRef.get();
-    if (!taskDoc.exists) return res.status(404).json({ message: 'Tarea no encontrada.' });
+    const taskSnap= await taskRef.get();
+    if (!taskSnap.exists) 
+      return res.status(404).json({ message: 'Tarea no encontrada.' });
 
-    const data = taskDoc.data();
-    if (data.empresaId !== empresaId) {
+    const task = taskSnap.data();
+    if (task.empresaId !== empresaId) 
       return res.status(403).json({ message: 'Tarea de otra empresa.' });
-    }
-    if (!data.requiereRelevo || data.relevoValidado) {
-      return res.status(400).json({ message: 'No requiere relevo o ya validado.' });
-    }
-    if (data.codigoRelevo !== codigoIngresado) {
+    if (!task.requiereRelevo) 
+      return res.status(400).json({ message: 'La tarea no requiere relevo.' });
+
+
+    // 2.2) Recupero el assignment
+    const asgSnap = await db.collection('taskAssignments')
+      .where('taskId', '==', taskId)
+      .limit(1)
+      .get();
+    if (asgSnap.empty) 
+      return res.status(404).json({ message: 'Asignación no encontrada.' });
+
+    const asgDoc = asgSnap.docs[0];
+    const asg   = asgDoc.data();
+    const asgRef= asgDoc.ref;
+
+    // 2.3) Valido código y expiración
+    if (!asg.codigoRelevo || asg.codigoRelevo !== codigoIngresado) {
       return res.status(400).json({ message: 'Código incorrecto.' });
     }
-    if (data.relevoExpira.toDate() < new Date()) {
-      return res.status(400).json({ message: 'Código expirado.' });
+    if (!asg.relevoExpira || asg.relevoExpira.toDate() < new Date()) {
+      return res.status(400).json({ message: 'El código ha expirado.' });
     }
 
-    // 1) Actualizar task: marcar relevoValidado y último relevo
+    // 2.4) Actualizo el assignment: marco entrante y valido relevo
+    await asgRef.update({
+      userId:          nuevoUid,
+      trabajadorEntrante: nuevoUid,
+      validadoRelevo:  true,
+      timestampAsignado: now
+    });
+
+    // 2.5) Actualizo la tarea para reflejar que el relevo se completó
     await taskRef.update({
       relevoValidado: true,
       haTenidoRelevo: true,
-      lastRelief: {
-        from: { uid: data.trabajadorSaliente },
-        to:   { uid: nuevoUid },
-        at:   now
-      }
+      // Opcional: podrías borrar el código y la expiración
+      codigoRelevo:   admin.firestore.FieldValue.delete(),
+      relevoExpira:   admin.firestore.FieldValue.delete()
     });
-
-    // 2) Actualizar asignaciones intermedias
-    const snap = await db.collection('taskAssignments')
-      .where('taskId', '==', taskId)
-      .get();
-
-    const batch = db.batch();
-    snap.forEach(doc => {
-      const a = doc.data();
-      const ref = doc.ref;
-      if (a.esSaliente) {
-        batch.update(ref, { activo: false });
-      }
-      if (a.userId === nuevoUid) {
-        batch.update(ref, { 
-          activo: true,
-          validadoRelevo: true,
-          esEntrante: true
-        });
-      }
-    });
-    await batch.commit();
 
     return res.status(200).json({ message: 'Relevo validado correctamente.' });
   } catch (error) {
@@ -456,6 +463,8 @@ exports.realizarRelevo = async (req, res) => {
     return res.status(500).json({ message: 'Error interno al procesar el relevo.' });
   }
 };
+
+
 
 
 exports.getDailyTaskStatus = async (req, res) => {
