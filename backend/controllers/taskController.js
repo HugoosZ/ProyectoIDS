@@ -18,64 +18,30 @@ function doTimeRangesOverlap(fromTime1, toTime1, fromTime2, toTime2) {
 // CONSTANTE: Tiempo mínimo de ejecución para tareas sin relevo
 const MIN_EXECUTION_TIME_MINUTES = 15;
 
+// Crear tarea (solo campos base)
 exports.createTask = async (req, res) => {
   try {
-    const createdByUid        = req.user.uid;
-    const createdByEmpresaId  = req.user.empresaId;
-    const {
-      assignedTo,
-      description,
-      startTime,
-      endTime,
-      priority,
-      status,
-      title,
-      requiereRelevo,
-      trabajadorSaliente,
-      trabajadorEntrante
-    } = req.body;
+    const { uid: createdByUid, empresaId: createdByEmpresaId } = req.user;
+    const { title, description } = req.body;
 
-    // — aquí tus validaciones anteriores de campos, fechas, solapamientos, etc. —
+    if (!title || !description) {
+      return res.status(400).json({ message: 'Título y descripción son requeridos.' });
+    }
 
-    // 1) Crear el documento de task
     const newTask = {
-      createdAt:   admin.firestore.Timestamp.now(),
-      createdBy:   createdByUid,
-      description,
-      startTime:   admin.firestore.Timestamp.fromDate(new Date(startTime)),
-      endTime:     admin.firestore.Timestamp.fromDate(new Date(endTime)),
-      priority:    priority   || 'baja',
-      status:      status     || 'pendiente',
       title,
-      empresaId:   createdByEmpresaId,
-      requiereRelevo,
-      haTenidoRelevo: false,
+      description,
+      createdAt:  admin.firestore.Timestamp.now(),
+      createdBy:  createdByUid,
+      empresaId:  createdByEmpresaId,
     };
 
     const taskRef = await db.collection('tasks').add(newTask);
-    const taskId  = taskRef.id;
 
-    // 2) Crear asignaciones en la colección intermedia
-    const batch = db.batch();
-      const assignmentRef = db.collection('taskAssignments').doc();
-
-      batch.set(assignmentRef, {
-        taskId,
-        userId: assignedTo,
-        validadoRelevo: false,
-        timestampAsignado: admin.firestore.Timestamp.now(),
-        trabajadorSaliente: requiereRelevo ? trabajadorSaliente : null,
-        trabajadorEntrante: requiereRelevo ? trabajadorEntrante  : null,
-        codigoRelevo:       null,
-        relevoExpira:       null,
-        relevoValidado:     false
-      });
-    await batch.commit();
-
-    return res.status(201).json({ id: taskId, ...newTask });
+    return res.status(201).json({ id: taskRef.id, ...newTask });
   } catch (error) {
     console.error('Error creating task:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: 'Error al crear la tarea.' });
   }
 };
 
