@@ -510,3 +510,11 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 - **400**: Faltan campos obligatorios o formato incorrecto.
 - **404**: Usuario(s) no encontrado(s).
 - **500**: Error interno del servidor.
+
+### Nota importante sobre herencia de nombre y descripción
+- Solo si la tarea es **individual** y **sin relevo** (`requiereRelevo: false`), se heredan el `title` y `description` de la plantilla en `tasks` o de la tarea general en `TaskInfo`.
+- En tareas **con relevo** o **grupales**, cada asignación debe tener su propia descripción específica (`individualTask`).
+
+### Nota sobre TaskInfo
+- La colección `TaskInfo` no almacena directamente el `title` ni el `description` de la tarea.
+- Estos campos están referenciados a través del `taskId`, que apunta a la plantilla en la colección `tasks`.

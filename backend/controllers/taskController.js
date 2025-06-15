@@ -570,12 +570,10 @@ exports.getDailyTaskStatus = async (req, res) => {
 
 exports.AssignTask = async (req, res) => {
   try {
-    const { isGroupTask, taskId, title, description, startTime, endTime, priority, status, requiereRelevo, participantAssignments, assignedTo, individualTask } = req.body;
-    // Datos comunes para TaskInfo
+    const { isGroupTask, taskId, startTime, endTime, priority, status, requiereRelevo, participantAssignments, assignedTo, individualTask } = req.body;
+    // Datos comunes para TaskInfo (solo referencia a taskId, sin duplicar nombre/descripcion)
     const taskInfoData = {
       taskId: taskId,
-      title: title || null,
-      description: description || null,
       startTime: startTime ? new Date(startTime) : null,
       endTime: endTime ? new Date(endTime) : null,
       priority: priority || "normal",
@@ -644,20 +642,44 @@ exports.AssignTask = async (req, res) => {
       taskInfoData.participants = [assignedTo];
       // Crear documento en la colección TaskInfo
       const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
-      // Crear tarea individual en la colección tasksAssignments
-      const assignmentDoc = {
-        taskInfoId: taskInfoRef.id,
-        assignedTo: assignedTo,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
-        priority: priority || "normal",
-        status: status || "pendiente",
-        requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
-        individualTask: individualTask || null,
-        isGroupTask: false,
-        createdAt: new Date()
-      };
-      await db.collection("tasksAssignments").add(assignmentDoc);
+      let assignmentDoc; // Declarar assignmentDoc fuera de los bloques condicionales para evitar errores de referencia
+
+      if (requiereRelevo === false) {
+          // Tarea individual sin relevo: hereda título y descripción de TaskInfo o tasks
+          const taskDoc = await db.collection("tasks").doc(taskId).get();
+          const taskData = taskDoc.exists ? taskDoc.data() : {};
+
+          assignmentDoc = {
+            taskInfoId: taskInfoRef.id,
+            assignedTo: assignedTo,
+            startTime: startTime ? new Date(startTime) : null,
+            endTime: endTime ? new Date(endTime) : null,
+            priority: priority || "normal",
+            status: status || "pendiente",
+            requiereRelevo: false,
+            individualTask: taskData.title || null, // Hereda título de tasks
+            description: taskData.description || null, // Hereda descripción de tasks
+            isGroupTask: false,
+            createdAt: new Date()
+          };
+          await db.collection("tasksAssignments").add(assignmentDoc);
+      } else {
+          // Tarea individual con relevo: no hereda título, usa individualTask para personalizar cada tarea
+          assignmentDoc = {
+            taskInfoId: taskInfoRef.id,
+            assignedTo: assignedTo,
+            startTime: startTime ? new Date(startTime) : null,
+            endTime: endTime ? new Date(endTime) : null,
+            priority: priority || "normal",
+            status: status || "pendiente",
+            requiereRelevo: true,
+            individualTask: individualTask || null, // Personalizado para cada usuario
+            description: null, // No hereda descripción
+            isGroupTask: false,
+            createdAt: new Date()
+          };
+          await db.collection("tasksAssignments").add(assignmentDoc);
+      }
       res.status(201).json({ message: "Tarea individual registrada en TaskInfo y tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignment: assignmentDoc });
     }
   } catch (error) {
