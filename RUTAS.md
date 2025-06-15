@@ -216,13 +216,11 @@ fetch("https://proyecto-ids.vercel.app/api/checkAdmin", {
 
 ## `POST /createUser`
 **Descripción**:
-Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication. El RUT del usuario se guardará como un campo adicional dentro del perfil del usuario. El empresaId del nuevo usuario será automáticamente heredado del empresaId del administrador que realiza la creación. Si es el primer usuario de una nueva empresa (es decir, el primer administrador creado sin un padre), se le asignará un nuevo empresaId único.
+Permite a un administrador crear un nuevo usuario. El UID para este usuario será generado automáticamente por Firebase Authentication y se utilizará como el identificador del documento en Firestore. Los campos `rut`, `name` y `lastName` se encriptarán automáticamente antes de su almacenamiento en la base de datos para proteger la información sensible. El empresaId del nuevo usuario será automáticamente heredado del empresaId del administrador que realiza la creación. Si es el primer usuario de una nueva empresa (es decir, el primer administrador creado sin un padre), se le asignará un nuevo empresaId único.
 
 **Headers requeridos:**:
-    Authorization: "Bearer <token>"(si el creador es un admin y se desea heredar el empresaId)
-
-    Content-Type: "application/json"
-
+    `Authorization: "Bearer <token>"` (si el creador es un admin y se desea heredar el empresaId)
+    `Content-Type: "application/json"`
 
 **Cuerpo del request:**:
     Debe contener los datos del nuevo usuario, excluyendo el UID y el empresaId (ya que este será generado o heredado).
@@ -237,11 +235,10 @@ Permite a un administrador crear un nuevo usuario. El UID para este usuario ser�
   "role": "user",
   "isAdmin": false
 }
-
 ```
 
 **Respuesta**:
-Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo el UID generado por Firebase y el empresaId asignado, o un mensaje de error si falló alguna validación o permisos.
+Devuelve un mensaje de éxito con los datos del usuario creado, incluyendo los campos sensibles (rut, name, lastName) desencriptados, el UID generado por Firebase y el empresaId asignado, o un mensaje de error si falló alguna validación o permisos.
 
 **Ejemplo de fetch**:
 ```js
@@ -272,34 +269,34 @@ Para crear el primer administrador de una nueva empresa (cuando no hay un admini
 ## `GET /statustasks/:uid`
 **Descripción**:
 Devuelve las tareas asignadas a un usuario específico, permitiendo aplicar filtros por estado, prioridad, día o semana, también por si la tarea requiere relevo o no.
-Tanto el usuario como un administrador pueden consultar esta ruta (el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera).
+Tanto el usuario como un administrador pueden consultar esta ruta (el usuario solo puede ver sus propias tareas, el admin puede ver las de cualquiera). Los datos sensibles del usuario (nombre, apellido, RUT) se devolverán desencriptados en la respuesta.
 
 **Parámetro en URL**:
-    uid – UID del usuario cuyas tareas se desean consultar.
+    `uid` – UID del usuario cuyas tareas se desean consultar.
 
 **Headers requeridos**:
-    Authorization: "Bearer <token_del_user_o_admin>"
+    `Authorization: "Bearer <token_del_user_o_admin>"`
 
 ### Filtros disponibles (opcionales vía query params)
 
-| Parámetro         | Tipo                  | Descripción |
-|-------------------|-----------------------|-------------|
-| `status`          | string                | Filtra por estado de la tarea (por ejemplo: `"pendiente"`, `"completada"`). |
-| `priority`        | string                | Filtra por prioridad (por ejemplo: `"alta"`, `"media"`, `"baja"`). |
-| `today`           | boolean (como string) | Si es `"true"`, filtra las tareas que tienen `startTime` en el día actual. |
-| `week`            | boolean (como string) | Si es `"true"`, filtra las tareas programadas en la semana actual (lunes a domingo). |
-| `requiereRelevo`  | boolean (como string) | Si es `"true"`, solo retorna tareas que requieren relevo; si es `"false"`, solo tareas que no requieren relevo. Si no se incluye, retorna todas. |
+| Parámetro          | Tipo                    | Descripción                                                                                                    |
+|--------------------|-------------------------|----------------------------------------------------------------------------------------------------------------|
+| `status`           | string                  | Filtra por estado de la tarea (por ejemplo: `"pendiente"`, `"completada"`).                                    |
+| `priority`         | string                  | Filtra por prioridad (por ejemplo: `"alta"`, `"media"`, `"baja"`).                                             |
+| `today`            | boolean (como string)   | Si es `"true"`, filtra las tareas que tienen `startTime` en el día actual.                                    |
+| `week`             | boolean (como string)   | Si es `"true"`, filtra las tareas programadas en la semana actual (lunes a domingo).                           |
+| `requiereRelevo`   | boolean (como string)   | Si es `"true"`, solo retorna tareas que requieren relevo; si es `"false"`, solo tareas que no requieren relevo. Si no se incluye, retorna todas. |
 
 > 🔸 **Nota**: Los filtros `today` y `week` son **excluyentes** entre sí. Si ambos están presentes, se evalúan en el orden del backend.
 
 **Respuesta**:
-  Devuelve un objeto con:
+Devuelve un objeto con:
 
-  - Información del usuario (id, name, lastName)
-  - Conteo de tareas (count)
-  - Lista de tareas (tasks), cada una con:
-    - id, title, description, status, priority
-    - startTime, endTime, createdAt (como fechas JS)
+- Información del usuario (id, name, lastName, rut) - *Nota: 'name', 'lastName' y 'rut' se devuelven desencriptados.*
+- Conteo de tareas (count)
+- Lista de tareas (tasks), cada una con:
+  - id, title, description, status, priority
+  - startTime, endTime, createdAt (como fechas JS)
 
 **Ejemplo de fetch**:
 
@@ -319,10 +316,6 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
   }
 })
 ```
-
-## Notas importantes sobre el cuerpo de la solicitud:##
-Los campos createdBy y empresaId no deben ser enviados en el cuerpo de la solicitud. Estos valores se obtienen automáticamente del token del administrador autenticado (req.user) para garantizar la seguridad y la correcta asociación.
-Los campos createdAt, realStartTime y realEndTime también se gestionan automáticamente por el servidor.
 
 ## `PATCH /api/tasks/:taskId/status`
 **Descripción**:
