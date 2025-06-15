@@ -642,6 +642,21 @@ exports.AssignTask = async (req, res) => {
     if (notFound.length > 0) {
       return res.status(404).json({ error: `Usuarios no encontrados: ${notFound.join(", ")}` });
     }
+
+    // Validar solapamiento de tareas para cada participante
+    for (const assignment of participantsArray) {
+      const { userId, startTimeIndividualTask, endTimeIndividualTask } = assignment;
+      // Buscar tareas asignadas al usuario que se solapen con el nuevo rango
+      const overlappingTasks = await db.collection("tasksAssignments")
+        .where("assignedTo", "==", userId)
+        .where("startTimeIndividualTask", "<", new Date(endTimeIndividualTask))
+        .where("endTimeIndividualTask", ">", new Date(startTimeIndividualTask))
+        .get();
+      if (!overlappingTasks.empty) {
+        return res.status(400).json({ error: `El usuario ${userId} ya tiene una tarea asignada en el rango de tiempo solicitado.` });
+      }
+    }
+
     // Guardar los participantes en TaskInfo
     taskInfoData.participants = participantsArray.map(a => a.userId);
     // Crear documento en la colección TaskInfo (tarea general)

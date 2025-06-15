@@ -552,3 +552,7 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 ### Nota sobre TaskInfo
 - La colección `TaskInfo` no almacena directamente el `title` ni el `description` de la tarea.
 - Estos campos están referenciados a través del `taskId`, que apunta a la plantilla en la colección `tasks`.
+
+### Validación de solapamiento de tareas
+- Antes de asignar una tarea, el backend verifica que ningún usuario tenga otra tarea asignada que se solape con el rango de tiempo solicitado (`startTimeIndividualTask` y `endTimeIndividualTask`).
+- Si existe solapamiento, la asignación es rechazada y se retorna un error 400 indicando el usuario afectado.
