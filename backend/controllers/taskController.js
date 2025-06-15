@@ -587,101 +587,136 @@ exports.AssignTask = async (req, res) => {
       createdAt: new Date()
     };
 
+    // Unificar participantAssignments para todos los casos
+    let participantsArray = [];
     if (isGroupTask) {
-      // Lógica para tareas grupales
+      // Tarea grupal: usar participantAssignments tal cual
       if (!Array.isArray(participantAssignments) || participantAssignments.length === 0) {
         return res.status(400).json({ error: "Se requieren los participantes con sus tareas individuales." });
       }
-      // Verificar que todos los participantes existen
-      const notFound = [];
-      for (const assignment of participantAssignments) {
-        const { userId } = assignment;
-        const userDoc = await db.collection("users").doc(userId).get();
-        if (!userDoc.exists) {
-          notFound.push(userId);
-        }
+      participantsArray = participantAssignments;
+    } else if (requiereRelevo === true) {
+      // Tarea individual con relevo: participantAssignments debe venir como array de asignaciones
+      if (!Array.isArray(participantAssignments) || participantAssignments.length === 0) {
+        return res.status(400).json({ error: "Se requieren los participantes con sus tareas individuales para el relevo." });
       }
-      if (notFound.length > 0) {
-        return res.status(404).json({ error: `Usuarios no encontrados: ${notFound.join(", ")}` });
-      }
-      // Participantes
-      taskInfoData.participants = participantAssignments.map(a => a.userId);
-      // Crear documento en la colección TaskInfo
-      const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
-      // Crear tareas individuales en la colección tasksAssignments
-      const assignments = [];
-      for (const assignment of participantAssignments) {
-        const { userId, individualTask } = assignment;
-        const assignmentDoc = {
-          taskInfoId: taskInfoRef.id,
-          assignedTo: userId,
-          startTime: startTime ? new Date(startTime) : null,
-          endTime: endTime ? new Date(endTime) : null,
-          priority: priority || "normal",
-          status: status || "pendiente",
-          requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
-          individualTask: individualTask || null,
-          isGroupTask: true,
-          createdAt: new Date()
-        };
-        await db.collection("tasksAssignments").add(assignmentDoc);
-        assignments.push(assignmentDoc);
-      }
-      res.status(201).json({ message: "Tarea grupal registrada en TaskInfo y tareas individuales creadas en tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
+      participantsArray = participantAssignments;
     } else {
-      // Lógica para tarea individual
+      // Tarea individual sin relevo: construir participantAssignments con un solo usuario
       if (!assignedTo) {
         return res.status(400).json({ error: "Se requiere el usuario asignado." });
       }
-      // Verificar que el usuario existe
-      const userDoc = await db.collection("users").doc(assignedTo).get();
-      if (!userDoc.exists) {
-        return res.status(404).json({ error: `Usuario no encontrado: ${assignedTo}` });
-      }
-      // Participantes
-      taskInfoData.participants = [assignedTo];
-      // Crear documento en la colección TaskInfo
-      const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
-      let assignmentDoc; // Declarar assignmentDoc fuera de los bloques condicionales para evitar errores de referencia
-
-      if (requiereRelevo === false) {
-          // Tarea individual sin relevo: hereda título y descripción de TaskInfo o tasks
-          const taskDoc = await db.collection("tasks").doc(taskId).get();
-          const taskData = taskDoc.exists ? taskDoc.data() : {};
-
-          assignmentDoc = {
-            taskInfoId: taskInfoRef.id,
-            assignedTo: assignedTo,
-            startTime: startTime ? new Date(startTime) : null,
-            endTime: endTime ? new Date(endTime) : null,
-            priority: priority || "normal",
-            status: status || "pendiente",
-            requiereRelevo: false,
-            individualTask: taskData.title || null, // Hereda título de tasks
-            description: taskData.description || null, // Hereda descripción de tasks
-            isGroupTask: false,
-            createdAt: new Date()
-          };
-          await db.collection("tasksAssignments").add(assignmentDoc);
-      } else {
-          // Tarea individual con relevo: no hereda título, usa individualTask para personalizar cada tarea
-          assignmentDoc = {
-            taskInfoId: taskInfoRef.id,
-            assignedTo: assignedTo,
-            startTime: startTime ? new Date(startTime) : null,
-            endTime: endTime ? new Date(endTime) : null,
-            priority: priority || "normal",
-            status: status || "pendiente",
-            requiereRelevo: true,
-            individualTask: individualTask || null, // Personalizado para cada usuario
-            description: null, // No hereda descripción
-            isGroupTask: false,
-            createdAt: new Date()
-          };
-          await db.collection("tasksAssignments").add(assignmentDoc);
-      }
-      res.status(201).json({ message: "Tarea individual registrada en TaskInfo y tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignment: assignmentDoc });
+      participantsArray = [{
+        userId: assignedTo,
+        individualTask: individualTask || null,
+        startTimeIndividualTask: startTime ? new Date(startTime) : null,
+        endTimeIndividualTask: endTime ? new Date(endTime) : null
+      }];
     }
+
+    // Validación estricta de tiempos generales
+    if (!startTime || !endTime) {
+      return res.status(400).json({ error: "Se requiere startTime y endTime para la tarea general." });
+    }
+    if (isNaN(new Date(startTime)) || isNaN(new Date(endTime))) {
+      return res.status(400).json({ error: "startTime o endTime no son fechas válidas." });
+    }
+    if (new Date(startTime).getTime() === new Date(endTime).getTime()) {
+      return res.status(400).json({ error: "El tiempo de inicio y término de la tarea general no pueden ser iguales." });
+    }
+    if (new Date(startTime) > new Date(endTime)) {
+      return res.status(400).json({ error: "El tiempo de inicio de la tarea general no puede ser mayor que el de término." });
+    }
+
+    // Verificar que todos los participantes existen
+    const notFound = [];
+    for (const assignment of participantsArray) {
+      const { userId } = assignment;
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (!userDoc.exists) {
+        notFound.push(userId);
+      }
+    }
+    if (notFound.length > 0) {
+      return res.status(404).json({ error: `Usuarios no encontrados: ${notFound.join(", ")}` });
+    }
+    // Participantes
+    taskInfoData.participants = participantsArray.map(a => a.userId);
+    // Crear documento en la colección TaskInfo
+    const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
+    // Crear tareas individuales en la colección tasksAssignments
+    const assignments = [];
+    for (const assignment of participantsArray) {
+      const { userId, individualTask, startTimeIndividualTask, endTimeIndividualTask } = assignment;
+      // Validación estricta de tiempos individuales
+      if (!startTimeIndividualTask || !endTimeIndividualTask) {
+        return res.status(400).json({ error: `Se requiere startTimeIndividualTask y endTimeIndividualTask para la asignación de ${userId}.` });
+      }
+      if (isNaN(new Date(startTimeIndividualTask)) || isNaN(new Date(endTimeIndividualTask))) {
+        return res.status(400).json({ error: `startTimeIndividualTask o endTimeIndividualTask de ${userId} no son fechas válidas.` });
+      }
+      if (new Date(startTimeIndividualTask) < new Date(startTime)) {
+        return res.status(400).json({ error: `El startTimeIndividualTask de ${userId} es menor que el startTime general.` });
+      }
+      if (new Date(endTimeIndividualTask) > new Date(endTime)) {
+        return res.status(400).json({ error: `El endTimeIndividualTask de ${userId} es mayor que el endTime general.` });
+      }
+      if (new Date(startTimeIndividualTask).getTime() === new Date(endTimeIndividualTask).getTime()) {
+        return res.status(400).json({ error: `El tiempo de inicio y término de la tarea individual de ${userId} no pueden ser iguales.` });
+      }
+      if (new Date(startTimeIndividualTask) > new Date(endTimeIndividualTask)) {
+        return res.status(400).json({ error: `El tiempo de inicio de la tarea individual de ${userId} no puede ser mayor que el de término.` });
+      }
+      // Validar que el tiempo de inicio no sea igual al de término
+      if (
+        startTimeIndividualTask && endTimeIndividualTask &&
+        new Date(startTimeIndividualTask).getTime() === new Date(endTimeIndividualTask).getTime()
+      ) {
+        return res.status(400).json({ error: `El tiempo de inicio y término de la tarea individual de ${userId} no pueden ser iguales.` });
+      }
+      // Validar que el tiempo de inicio no sea mayor que el de término
+      if (
+        startTimeIndividualTask && endTimeIndividualTask &&
+        new Date(startTimeIndividualTask) > new Date(endTimeIndividualTask)
+      ) {
+        return res.status(400).json({ error: `El tiempo de inicio de la tarea individual de ${userId} no puede ser mayor que el de término.` });
+      }
+      // Validar que el tiempo individual no sea igual al tiempo general
+      // Solo aplica para tareas grupales o individuales con relevo
+      if ((isGroupTask || requiereRelevo === true) &&
+        startTimeIndividualTask && endTimeIndividualTask &&
+        new Date(startTimeIndividualTask).getTime() === new Date(startTime).getTime() &&
+        new Date(endTimeIndividualTask).getTime() === new Date(endTime).getTime()
+      ) {
+        return res.status(400).json({ error: `El tiempo de la tarea individual de ${userId} no puede ser exactamente igual al tiempo general.` });
+      }
+      // Heredar nombre y descripción del taskId solo para tarea individual sin relevo
+      let extraFields = {};
+      if (!isGroupTask && requiereRelevo !== true) {
+        const taskDoc = await db.collection("tasks").doc(taskId).get();
+        const taskData = taskDoc.exists ? taskDoc.data() : {};
+        extraFields = {
+          individualTask: taskData.title || null,
+          description: taskData.description || null
+        };
+      }
+      const assignmentDoc = {
+        taskInfoId: taskInfoRef.id,
+        assignedTo: userId,
+        startTimeIndividualTask: startTimeIndividualTask ? new Date(startTimeIndividualTask) : null,
+        endTimeIndividualTask: endTimeIndividualTask ? new Date(endTimeIndividualTask) : null,
+        priority: priority || "normal",
+        status: status || "pendiente",
+        requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
+        individualTask: individualTask || null,
+        isGroupTask: !!isGroupTask,
+        createdAt: new Date(),
+        ...extraFields
+      };
+      await db.collection("tasksAssignments").add(assignmentDoc);
+      assignments.push(assignmentDoc);
+    }
+    res.status(201).json({ message: "Tarea registrada en TaskInfo y tareas individuales creadas en tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
   } catch (error) {
     console.error("Error al asignar tarea:", error);
     res.status(500).json({ error: "Error interno al asignar la tarea" });
