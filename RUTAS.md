@@ -455,53 +455,87 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 
 ### Lógica general
 - Si `isGroupTask` es `true`, se debe enviar un array `participantAssignments` con los usuarios y sus tareas individuales.
-- Si `isGroupTask` es `false`, se debe enviar el campo `assignedTo` con el UID del usuario.
+- Si `isGroupTask` es `false` y `requiereRelevo` es `true`, se debe enviar un array `participantAssignments` con los usuarios y sus tareas individuales (caso relevo).
+- Si `isGroupTask` es `false` y `requiereRelevo` es `false`, se debe enviar el campo `assignedTo` con el UID del usuario.
 - Se valida la existencia de los usuarios antes de asignar la tarea.
 - Se crean los documentos en `TaskInfo` (tarea general) y en `tasksAssignments` (asignaciones individuales).
 
 ### Campos esperados
 - `isGroupTask` (boolean): Indica si es tarea grupal.
 - `taskId` (string, opcional): ID de referencia para la tarea.
-- `title` (string): Título de la tarea.
-- `description` (string): Descripción de la tarea.
-- `startTime` (string, fecha ISO): Fecha/hora de inicio.
-- `endTime` (string, fecha ISO): Fecha/hora de término.
+- `startTime` (string, fecha ISO): Fecha/hora de inicio general.
+- `endTime` (string, fecha ISO): Fecha/hora de término general.
 - `priority` (string): Prioridad (por defecto "normal").
 - `status` (string): Estado inicial (por defecto "pendiente").
 - `requiereRelevo` (boolean): Si requiere relevo.
-- `participantAssignments` (array, solo grupal): Cada elemento debe tener `{ userId, individualTask }`.
-- `assignedTo` (string, solo individual): UID del usuario asignado.
-- `individualTask` (string, opcional): Descripción específica para la tarea individual.
+- `participantAssignments` (array, solo grupal o individual con relevo): Cada elemento debe tener `{ userId, individualTask, startTimeIndividualTask, endTimeIndividualTask }`.
+- `assignedTo` (string, solo individual sin relevo): UID del usuario asignado.
 
 ### Ejemplo de request para tarea grupal
 ```json
 {
   "isGroupTask": true,
-  "title": "Inventario nocturno",
-  "description": "Revisión de inventario por equipo",
-  "startTime": "2025-06-15T20:00:00.000Z",
-  "endTime": "2025-06-15T22:00:00.000Z",
+  "taskId": "9TQOx53T4eDowwa6e8SD",
   "priority": "alta",
+  "status": "pendiente",
   "requiereRelevo": false,
+  "startTime": "2025-06-14T13:00:00.000Z",
+  "endTime": "2025-06-14T15:00:00.000Z",
   "participantAssignments": [
-    { "userId": "UID_1", "individualTask": "Zona A" },
-    { "userId": "UID_2", "individualTask": "Zona B" }
+    {
+      "userId": "UID_1",
+      "individualTask": "Zona A",
+      "startTimeIndividualTask": "2025-06-14T13:00:00.000Z",
+      "endTimeIndividualTask": "2025-06-14T14:00:00.000Z"
+    },
+    {
+      "userId": "UID_2",
+      "individualTask": "Zona B",
+      "startTimeIndividualTask": "2025-06-14T14:00:00.000Z",
+      "endTimeIndividualTask": "2025-06-14T15:00:00.000Z"
+    }
   ]
 }
 ```
 
-### Ejemplo de request para tarea individual
+### Ejemplo de request para tarea individual con relevo
 ```json
 {
   "isGroupTask": false,
-  "title": "Reporte diario",
-  "description": "Completar reporte de actividades",
-  "startTime": "2025-06-15T08:00:00.000Z",
-  "endTime": "2025-06-15T09:00:00.000Z",
-  "priority": "media",
+  "taskId": "9TQOx53T4eDowwa6e8SD",
+  "priority": "normal",
+  "status": "pendiente",
+  "requiereRelevo": true,
+  "startTime": "2025-06-14T13:00:00.000Z",
+  "endTime": "2025-06-14T15:00:00.000Z",
+  "participantAssignments": [
+    {
+      "userId": "UID_1",
+      "individualTask": "Turno mañana",
+      "startTimeIndividualTask": "2025-06-14T13:00:00.000Z",
+      "endTimeIndividualTask": "2025-06-14T14:00:00.000Z"
+    },
+    {
+      "userId": "UID_2",
+      "individualTask": "Turno tarde",
+      "startTimeIndividualTask": "2025-06-14T14:00:00.000Z",
+      "endTimeIndividualTask": "2025-06-14T15:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Ejemplo de request para tarea individual sin relevo
+```json
+{
+  "isGroupTask": false,
+  "taskId": "9TQOx53T4eDowwa6e8SD",
+  "priority": "normal",
+  "status": "pendiente",
   "requiereRelevo": false,
-  "assignedTo": "UID_3",
-  "individualTask": "Reporte de limpieza"
+  "startTime": "2025-06-14T13:00:00.000Z",
+  "endTime": "2025-06-14T14:00:00.000Z",
+  "assignedTo": "UID_1"
 }
 ```
 
@@ -510,3 +544,11 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 - **400**: Faltan campos obligatorios o formato incorrecto.
 - **404**: Usuario(s) no encontrado(s).
 - **500**: Error interno del servidor.
+
+### Nota sobre herencia de nombre y descripción
+- Solo si la tarea es **individual** y **sin relevo** (`requiereRelevo: false`), la asignación hereda el `title` y `description` de la plantilla en `tasks`.
+- En tareas **con relevo** o **grupales**, cada asignación debe tener su propia descripción específica (`individualTask`).
+
+### Nota sobre TaskInfo
+- La colección `TaskInfo` no almacena directamente el `title` ni el `description` de la tarea.
+- Estos campos están referenciados a través del `taskId`, que apunta a la plantilla en la colección `tasks`.
