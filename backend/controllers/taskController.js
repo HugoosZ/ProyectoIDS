@@ -568,14 +568,16 @@ exports.getDailyTaskStatus = async (req, res) => {
   }
 };
 
+// Controlador para asignar tareas individuales o grupales
 exports.AssignTask = async (req, res) => {
   try {
+    // Extraer datos principales del request
     const { isGroupTask, taskId, startTime, endTime, priority, status, requiereRelevo, participantAssignments, assignedTo, individualTask } = req.body;
-    // Datos comunes para TaskInfo (solo referencia a taskId, sin duplicar nombre/descripcion)
+    // Construir objeto base para TaskInfo (tarea general)
     const taskInfoData = {
-      taskId: taskId,
-      startTime: startTime ? new Date(startTime) : null,
-      endTime: endTime ? new Date(endTime) : null,
+      taskId: taskId, // Referencia a la plantilla de tarea
+      startTime: startTime ? new Date(startTime) : null, // Tiempo general de inicio
+      endTime: endTime ? new Date(endTime) : null, // Tiempo general de término
       priority: priority || "normal",
       status: status || "pendiente",
       requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
@@ -590,19 +592,19 @@ exports.AssignTask = async (req, res) => {
     // Unificar participantAssignments para todos los casos
     let participantsArray = [];
     if (isGroupTask) {
-      // Tarea grupal: usar participantAssignments tal cual
+      // Caso 1: Tarea grupal (varios usuarios, cada uno con su subtarea)
       if (!Array.isArray(participantAssignments) || participantAssignments.length === 0) {
         return res.status(400).json({ error: "Se requieren los participantes con sus tareas individuales." });
       }
       participantsArray = participantAssignments;
     } else if (requiereRelevo === true) {
-      // Tarea individual con relevo: participantAssignments debe venir como array de asignaciones
+      // Caso 2: Tarea individual con relevo (varios usuarios, cada uno con su subtarea)
       if (!Array.isArray(participantAssignments) || participantAssignments.length === 0) {
         return res.status(400).json({ error: "Se requieren los participantes con sus tareas individuales para el relevo." });
       }
       participantsArray = participantAssignments;
     } else {
-      // Tarea individual sin relevo: construir participantAssignments con un solo usuario
+      // Caso 3: Tarea individual sin relevo (un solo usuario, una sola asignación)
       if (!assignedTo) {
         return res.status(400).json({ error: "Se requiere el usuario asignado." });
       }
@@ -614,7 +616,7 @@ exports.AssignTask = async (req, res) => {
       }];
     }
 
-    // Validación estricta de tiempos generales
+    // Validación estricta de tiempos generales (TaskInfo)
     if (!startTime || !endTime) {
       return res.status(400).json({ error: "Se requiere startTime y endTime para la tarea general." });
     }
@@ -628,7 +630,7 @@ exports.AssignTask = async (req, res) => {
       return res.status(400).json({ error: "El tiempo de inicio de la tarea general no puede ser mayor que el de término." });
     }
 
-    // Verificar que todos los participantes existen
+    // Verificar que todos los participantes existen en la base de datos
     const notFound = [];
     for (const assignment of participantsArray) {
       const { userId } = assignment;
@@ -640,15 +642,15 @@ exports.AssignTask = async (req, res) => {
     if (notFound.length > 0) {
       return res.status(404).json({ error: `Usuarios no encontrados: ${notFound.join(", ")}` });
     }
-    // Participantes
+    // Guardar los participantes en TaskInfo
     taskInfoData.participants = participantsArray.map(a => a.userId);
-    // Crear documento en la colección TaskInfo
+    // Crear documento en la colección TaskInfo (tarea general)
     const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
     // Crear tareas individuales en la colección tasksAssignments
     const assignments = [];
     for (const assignment of participantsArray) {
       const { userId, individualTask, startTimeIndividualTask, endTimeIndividualTask } = assignment;
-      // Validación estricta de tiempos individuales
+      // Validaciones de tiempo para cada asignación individual
       if (!startTimeIndividualTask || !endTimeIndividualTask) {
         return res.status(400).json({ error: `Se requiere startTimeIndividualTask y endTimeIndividualTask para la asignación de ${userId}.` });
       }
@@ -667,22 +669,7 @@ exports.AssignTask = async (req, res) => {
       if (new Date(startTimeIndividualTask) > new Date(endTimeIndividualTask)) {
         return res.status(400).json({ error: `El tiempo de inicio de la tarea individual de ${userId} no puede ser mayor que el de término.` });
       }
-      // Validar que el tiempo de inicio no sea igual al de término
-      if (
-        startTimeIndividualTask && endTimeIndividualTask &&
-        new Date(startTimeIndividualTask).getTime() === new Date(endTimeIndividualTask).getTime()
-      ) {
-        return res.status(400).json({ error: `El tiempo de inicio y término de la tarea individual de ${userId} no pueden ser iguales.` });
-      }
-      // Validar que el tiempo de inicio no sea mayor que el de término
-      if (
-        startTimeIndividualTask && endTimeIndividualTask &&
-        new Date(startTimeIndividualTask) > new Date(endTimeIndividualTask)
-      ) {
-        return res.status(400).json({ error: `El tiempo de inicio de la tarea individual de ${userId} no puede ser mayor que el de término.` });
-      }
-      // Validar que el tiempo individual no sea igual al tiempo general
-      // Solo aplica para tareas grupales o individuales con relevo
+      // Solo para tareas grupales o individuales con relevo, no permite que los tiempos individuales sean exactamente iguales a los generales
       if ((isGroupTask || requiereRelevo === true) &&
         startTimeIndividualTask && endTimeIndividualTask &&
         new Date(startTimeIndividualTask).getTime() === new Date(startTime).getTime() &&
@@ -700,6 +687,7 @@ exports.AssignTask = async (req, res) => {
           description: taskData.description || null
         };
       }
+      // Construir documento de asignación individual
       const assignmentDoc = {
         taskInfoId: taskInfoRef.id,
         assignedTo: userId,
@@ -716,8 +704,10 @@ exports.AssignTask = async (req, res) => {
       await db.collection("tasksAssignments").add(assignmentDoc);
       assignments.push(assignmentDoc);
     }
+    // Respuesta exitosa
     res.status(201).json({ message: "Tarea registrada en TaskInfo y tareas individuales creadas en tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
   } catch (error) {
+    // Manejo de errores generales
     console.error("Error al asignar tarea:", error);
     res.status(500).json({ error: "Error interno al asignar la tarea" });
   }
