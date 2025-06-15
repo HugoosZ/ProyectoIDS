@@ -455,3 +455,65 @@ Devuelve las tareas pendientes (status: "pendiente") asignadas al usuario autent
 - 500: Error interno del servidor.
 
 ---
+
+## `POST /api/assignTask`
+
+**Descripción**: Permite asignar tareas individuales o grupales. Soporta la creación de tareas para un solo usuario o para varios usuarios (tarea grupal), generando los documentos correspondientes en las colecciones `TaskInfo` y `tasksAssignments`.
+
+### Lógica general
+- Si `isGroupTask` es `true`, se debe enviar un array `participantAssignments` con los usuarios y sus tareas individuales.
+- Si `isGroupTask` es `false`, se debe enviar el campo `assignedTo` con el UID del usuario.
+- Se valida la existencia de los usuarios antes de asignar la tarea.
+- Se crean los documentos en `TaskInfo` (tarea general) y en `tasksAssignments` (asignaciones individuales).
+
+### Campos esperados
+- `isGroupTask` (boolean): Indica si es tarea grupal.
+- `taskId` (string, opcional): ID de referencia para la tarea.
+- `title` (string): Título de la tarea.
+- `description` (string): Descripción de la tarea.
+- `startTime` (string, fecha ISO): Fecha/hora de inicio.
+- `endTime` (string, fecha ISO): Fecha/hora de término.
+- `priority` (string): Prioridad (por defecto "normal").
+- `status` (string): Estado inicial (por defecto "pendiente").
+- `requiereRelevo` (boolean): Si requiere relevo.
+- `participantAssignments` (array, solo grupal): Cada elemento debe tener `{ userId, individualTask }`.
+- `assignedTo` (string, solo individual): UID del usuario asignado.
+- `individualTask` (string, opcional): Descripción específica para la tarea individual.
+
+### Ejemplo de request para tarea grupal
+```json
+{
+  "isGroupTask": true,
+  "title": "Inventario nocturno",
+  "description": "Revisión de inventario por equipo",
+  "startTime": "2025-06-15T20:00:00.000Z",
+  "endTime": "2025-06-15T22:00:00.000Z",
+  "priority": "alta",
+  "requiereRelevo": false,
+  "participantAssignments": [
+    { "userId": "UID_1", "individualTask": "Zona A" },
+    { "userId": "UID_2", "individualTask": "Zona B" }
+  ]
+}
+```
+
+### Ejemplo de request para tarea individual
+```json
+{
+  "isGroupTask": false,
+  "title": "Reporte diario",
+  "description": "Completar reporte de actividades",
+  "startTime": "2025-06-15T08:00:00.000Z",
+  "endTime": "2025-06-15T09:00:00.000Z",
+  "priority": "media",
+  "requiereRelevo": false,
+  "assignedTo": "UID_3",
+  "individualTask": "Reporte de limpieza"
+}
+```
+
+### Respuestas
+- **201**: Tarea(s) registrada(s) correctamente. Incluye el ID de `TaskInfo` y los datos de las asignaciones.
+- **400**: Faltan campos obligatorios o formato incorrecto.
+- **404**: Usuario(s) no encontrado(s).
+- **500**: Error interno del servidor.

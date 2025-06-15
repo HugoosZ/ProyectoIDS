@@ -7,6 +7,7 @@ const { getDateRange, getDateRangeWithTimezone } = require("../utils/dateFilters
 const { getAllTasks, getUserTasks, getUserTaskStatus } = require("../middlewares/retrieve_tasks");
 const { Timestamp } = require("firebase-admin/firestore");
 const taskController = require("../controllers/taskController");
+const { decrypt } = require("../utils/crypto"); // Importa decrypt
 
 const router = Router();
 
@@ -203,6 +204,7 @@ router.get("/my-tasks", verifyAndDecodeToken, async (req, res) => {
   }
 });
 
+router.post("/AssignTasks", verifyAndDecodeToken, checkAdminPrivileges, taskController.AssignTask);
 
 
 module.exports = router;

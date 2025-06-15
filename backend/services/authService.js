@@ -55,7 +55,6 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
         }
     }
 }
-
 exports.getAllUsersRaw = async () => {
     try {
         const usersSnapshot = await db.collection('users').get();

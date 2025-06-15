@@ -567,3 +567,101 @@ exports.getDailyTaskStatus = async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor.' });
   }
 };
+
+exports.AssignTask = async (req, res) => {
+  try {
+    const { isGroupTask, taskId, title, description, startTime, endTime, priority, status, requiereRelevo, participantAssignments, assignedTo, individualTask } = req.body;
+    // Datos comunes para TaskInfo
+    const taskInfoData = {
+      taskId: taskId,
+      title: title || null,
+      description: description || null,
+      startTime: startTime ? new Date(startTime) : null,
+      endTime: endTime ? new Date(endTime) : null,
+      priority: priority || "normal",
+      status: status || "pendiente",
+      requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
+      isGroupTask: !!isGroupTask,
+      isFinished: false,
+      participants: [],
+      shouldBeWorking: null,
+      currentlyWorking: null,
+      createdAt: new Date()
+    };
+
+    if (isGroupTask) {
+      // Lógica para tareas grupales
+      if (!Array.isArray(participantAssignments) || participantAssignments.length === 0) {
+        return res.status(400).json({ error: "Se requieren los participantes con sus tareas individuales." });
+      }
+      // Verificar que todos los participantes existen
+      const notFound = [];
+      for (const assignment of participantAssignments) {
+        const { userId } = assignment;
+        const userDoc = await db.collection("users").doc(userId).get();
+        if (!userDoc.exists) {
+          notFound.push(userId);
+        }
+      }
+      if (notFound.length > 0) {
+        return res.status(404).json({ error: `Usuarios no encontrados: ${notFound.join(", ")}` });
+      }
+      // Participantes
+      taskInfoData.participants = participantAssignments.map(a => a.userId);
+      // Crear documento en la colección TaskInfo
+      const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
+      // Crear tareas individuales en la colección tasksAssignments
+      const assignments = [];
+      for (const assignment of participantAssignments) {
+        const { userId, individualTask } = assignment;
+        const assignmentDoc = {
+          taskInfoId: taskInfoRef.id,
+          assignedTo: userId,
+          startTime: startTime ? new Date(startTime) : null,
+          endTime: endTime ? new Date(endTime) : null,
+          priority: priority || "normal",
+          status: status || "pendiente",
+          requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
+          individualTask: individualTask || null,
+          isGroupTask: true,
+          createdAt: new Date()
+        };
+        await db.collection("tasksAssignments").add(assignmentDoc);
+        assignments.push(assignmentDoc);
+      }
+      res.status(201).json({ message: "Tarea grupal registrada en TaskInfo y tareas individuales creadas en tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
+    } else {
+      // Lógica para tarea individual
+      if (!assignedTo) {
+        return res.status(400).json({ error: "Se requiere el usuario asignado." });
+      }
+      // Verificar que el usuario existe
+      const userDoc = await db.collection("users").doc(assignedTo).get();
+      if (!userDoc.exists) {
+        return res.status(404).json({ error: `Usuario no encontrado: ${assignedTo}` });
+      }
+      // Participantes
+      taskInfoData.participants = [assignedTo];
+      // Crear documento en la colección TaskInfo
+      const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
+      // Crear tarea individual en la colección tasksAssignments
+      const assignmentDoc = {
+        taskInfoId: taskInfoRef.id,
+        assignedTo: assignedTo,
+        startTime: startTime ? new Date(startTime) : null,
+        endTime: endTime ? new Date(endTime) : null,
+        priority: priority || "normal",
+        status: status || "pendiente",
+        requiereRelevo: typeof requiereRelevo === 'boolean' ? requiereRelevo : false,
+        individualTask: individualTask || null,
+        isGroupTask: false,
+        createdAt: new Date()
+      };
+      await db.collection("tasksAssignments").add(assignmentDoc);
+      res.status(201).json({ message: "Tarea individual registrada en TaskInfo y tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignment: assignmentDoc });
+    }
+  } catch (error) {
+    console.error("Error al asignar tarea:", error);
+    res.status(500).json({ error: "Error interno al asignar la tarea" });
+  }
+};

@@ -3,7 +3,8 @@ const router = express.Router();
 const { db } = require("../firebase");
 
 const { verifyAndDecodeToken } = require("../middlewares/authentication"); //  Middleware de autenticación
-const userController = require("../controllers/userController");
+const { decrypt } = require('../utils/crypto');
+const userController = require('../controllers/userController');
 const { checkAdminPrivileges } = require("../middlewares/authorization"); // Middleware de autorización
 // Se usa llaves en la asignacion de nombres para poder renombrarlos, si no, hay que ponerle el nombre del codigo y como son parecidos es mejor renombrar
 const { getDateRange } = require("../utils/dateFilters");
@@ -13,6 +14,14 @@ router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req
     res.json({ isAdmin: true });
   }
 );
+
+
+// Ruta para obtener todos los usuarios de la empresa (Agregar auntenticacion)
+router.get('/users', userController.getUsersByEmpresa);
+
+
+// Ruta para obtener todos los usuarios sin filtrar por empresa (Agregar auntenticacion)
+router.get('/allUsers', userController.getAllUsers);
 
 router.post("/createUser", verifyAndDecodeToken, checkAdminPrivileges, userController.createUser);
 
@@ -163,5 +172,6 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
     res.status(500).json({ error: "Error al obtener asistencia" });
   }
 });
+
 
 module.exports = router;
