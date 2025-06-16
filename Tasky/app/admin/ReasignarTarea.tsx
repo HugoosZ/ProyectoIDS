@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, Alert, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { Text, Alert, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
 import { useRouter } from 'expo-router';
@@ -152,7 +152,21 @@ export default function ReasignarTarea() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f3f3f3' }}>
       <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Reasignar Tarea</Text>
+        {/* Contenedor del botón "Volver" */}
+        <View style={styles.goBackContainer}>
+          {/* Botón Volver al inicio */}
+          <TouchableOpacity
+            style={styles.goBackButton}
+            onPress={() => router.push('/admin/main')} // Redirige a la página principal
+          >
+            <Text style={styles.buttonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Contenedor del Título, centrado vertical y horizontal */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Reasignar Tarea</Text>
+        </View>
 
         <Text style={globalStyles.subtitle}>
           Selecciona una tarea pendiente o en progreso:
@@ -214,7 +228,6 @@ export default function ReasignarTarea() {
             {loading ? 'Reasignando...' : 'Reasignar'}
           </Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -226,11 +239,32 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: '#f2f2f2',
   },
+  goBackContainer: {
+    alignItems: 'flex-start', // Alinea el botón "Volver" a la izquierda
+    marginBottom: 1,
+  },
+  goBackButton: {
+    backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 1, // Añadido para separar el botón del título
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  titleContainer: {
+    justifyContent: 'center', // Centra el título
+    alignItems: 'center', // Centra el título horizontalmente
+    flex: 1, // Asegura que ocupe todo el espacio disponible
+  },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    textAlign: 'center',
+    textAlign: 'center', // Centra el título horizontalmente
+    marginTop: 0, // Elimina el margen superior
   },
   cardItem: {
     backgroundColor: '#F5F5F5',
