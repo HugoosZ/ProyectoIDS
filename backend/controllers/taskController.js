@@ -364,74 +364,80 @@ exports.generarCodigoRelevo = async (req, res) => {
 
 exports.realizarRelevo = async (req, res) => {
   try {
-    const { taskId }                  = req.params;
-    const { codigoIngresado }         = req.body;
-    const { uid: nuevoUid, empresaId } = req.user;
-    const now = admin.firestore.Timestamp.now();
+    const { taskId } = req.params;
+    const { codigoIngresado, userIdEntrante } = req.body;
 
-    if (!codigoIngresado) {
-      return res.status(400).json({ message: 'Código de relevo requerido.' });
-    }
-
-    // 2.1) Verifico tarea
-    const taskRef = db.collection('tasks').doc(taskId);
-    const taskSnap= await taskRef.get();
-    if (!taskSnap.exists) 
-      return res.status(404).json({ message: 'Tarea no encontrada.' });
-
-    const task = taskSnap.data();
-    if (task.empresaId !== empresaId) 
-      return res.status(403).json({ message: 'Tarea de otra empresa.' });
-    if (!task.requiereRelevo) 
-      return res.status(400).json({ message: 'La tarea no requiere relevo.' });
-
-
-    // 2.2) Recupero el assignment
-    const asgSnap = await db.collection('taskAssignments')
+    const snapshot = await db.collection('tasksAssignments')
       .where('taskId', '==', taskId)
-      .limit(1)
+      .where('requiereRelevo', '==', true)
       .get();
-    if (asgSnap.empty) 
-      return res.status(404).json({ message: 'Asignación no encontrada.' });
 
-    const asgDoc = asgSnap.docs[0];
-    const asg   = asgDoc.data();
-    const asgRef= asgDoc.ref;
-
-    // 2.3) Valido código y expiración
-    if (!asg.codigoRelevo || asg.codigoRelevo !== codigoIngresado) {
-      return res.status(400).json({ message: 'Código incorrecto.' });
-    }
-    if (!asg.relevoExpira || asg.relevoExpira.toDate() < new Date()) {
-      return res.status(400).json({ message: 'El código ha expirado.' });
+    if (snapshot.empty) {
+      return res.status(404).json({ message: 'No se encontraron tareas con relevo para este ID.' });
     }
 
-    // 2.4) Actualizo el assignment: marco entrante y valido relevo
-    await asgRef.update({
-      userId:          nuevoUid,
-      trabajadorEntrante: nuevoUid,
-      validadoRelevo:  true,
-      timestampAsignado: now
-    });
+    let relevoRealizado = false;
 
-    // 2.5) Actualizo la tarea para reflejar que el relevo se completó
-    await taskRef.update({
-      relevoValidado: true,
-      haTenidoRelevo: true,
-      // Opcional: podrías borrar el código y la expiración
-      codigoRelevo:   admin.firestore.FieldValue.delete(),
-      relevoExpira:   admin.firestore.FieldValue.delete()
-    });
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
 
-    return res.status(200).json({ message: 'Relevo validado correctamente.' });
+      // Verificamos si este documento representa al usuario entrante
+      if (data.assignedTo === userIdEntrante) {
+        if (!data.codigoRelevo || !data.relevoExpira) {
+          return res.status(400).json({ message: 'Esta tarea no tiene un código de relevo activo.' });
+        }
+
+        const ahora = new Date();
+        const expira = data.relevoExpira.toDate();
+
+        if (ahora > expira) {
+          return res.status(400).json({ message: 'El código de relevo ha expirado.' });
+        }
+
+        if (data.codigoRelevo !== codigoIngresado) {
+          return res.status(400).json({ message: 'Código de relevo incorrecto.' });
+        }
+
+        // Encontrar la tarea del usuario saliente
+        const tareaSaliente = snapshot.docs.find(d =>
+          d.data().assignedTo !== userIdEntrante &&
+          d.data().taskId === taskId
+        );
+
+        if (!tareaSaliente) {
+          return res.status(404).json({ message: 'No se encontró usuario saliente.' });
+        }
+
+        // Actualizar ambas tareas
+        const batch = db.batch();
+
+        batch.update(doc.ref, {
+          status: 'en curso',
+          relevoValidado: true,
+          validadoRelevo: true,
+        });
+
+        batch.update(tareaSaliente.ref, {
+          status: 'finalizada',
+          validadoRelevo: true,
+        });
+
+        await batch.commit();
+        relevoRealizado = true;
+        break;
+      }
+    }
+
+    if (relevoRealizado) {
+      return res.status(200).json({ message: 'Relevo realizado con éxito.' });
+    } else {
+      return res.status(403).json({ message: 'No se pudo realizar el relevo. Usuario no autorizado o datos inválidos.' });
+    }
   } catch (error) {
-    console.error('Error al realizar el relevo:', error);
-    return res.status(500).json({ message: 'Error interno al procesar el relevo.' });
+    console.error('Error realizando relevo:', error);
+    return res.status(500).json({ message: 'Error interno al realizar el relevo.' });
   }
 };
-
-
-
 
 exports.getDailyTaskStatus = async (req, res) => {
   try {

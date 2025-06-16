@@ -204,7 +204,7 @@ router.get("/my-tasks", verifyAndDecodeToken, async (req, res) => {
   }
 });
 
-router.post("/AssignTasks", verifyAndDecodeToken, checkAdminPrivileges, taskController.AssignTask);
+router.post("/assignTask", verifyAndDecodeToken, checkAdminPrivileges, taskController.AssignTask);
 
 
 module.exports = router;
