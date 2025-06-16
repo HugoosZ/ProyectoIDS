@@ -231,9 +231,6 @@ export default function VerTareas() {
 
   return (
     <View style={{ flex: 1 }}>
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Ionicons name="log-out-outline" size={26} color="#007AFF" />
-      </TouchableOpacity>
 
       <ScrollView contentContainerStyle={globalStyles.container}>
         <Text style={globalStyles.title}>Tareas del Día</Text>
@@ -286,27 +283,38 @@ export default function VerTareas() {
         ))}
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
+      <View style={styles.bottomMenu}>
         <TouchableOpacity
-          style={styles.botonCalendario}
+          style={styles.menuButton}
           onPress={() => router.push('/trabajador/turno')}
         >
-          <Ionicons name="time" size={30} color="white" />
+          <Ionicons name="time" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Turno</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.botonCalendario}
+          style={styles.menuButton}
           onPress={() => router.push('/trabajador/tareas_completadas')}
         >
-          <Ionicons name="checkmark-done-outline" size={30} color="white" />
+          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Tareas Completadas</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.botonCalendario}
+          style={styles.menuButton}
           onPress={() => router.push('/trabajador/calendario-semanal')}
         >
-          <Ionicons name="calendar-outline" size={30} color="white" />
+          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Calendario</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={logout}
+          >
+          <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+          <Text style={[styles.menuText, {color: '#FF3B30'}]}>Cerrar Sesión</Text>
+          </TouchableOpacity>
       </View>
     </View>
   );
@@ -379,12 +387,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-
-  logoutButton: {
-  position: 'absolute',
-  top: 10,
-  left: 10,
-  zIndex: 10,
-  padding: 10,
-},
+  bottomMenu: {
+    flexDirection: 'row',
+    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    backgroundColor: '#fff',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  menuButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
+  },
 });
