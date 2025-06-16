@@ -81,9 +81,6 @@ const TopBar: React.FC = () => {
         <TouchableOpacity onPress={openMenu}>
           <Ionicons name="menu" size={32} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Notificaciones')}>
-          <Ionicons name="notifications-outline" size={32} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       {/* Menú lateral */}
