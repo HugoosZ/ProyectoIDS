@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button, Alert, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const globalStyles = StyleSheet.create({
@@ -84,13 +84,35 @@ export default function VerTareas() {
   }, []);
 
   const logout = async () => {
-  try {
-    await AsyncStorage.removeItem('userId');
-    await AsyncStorage.removeItem('userToken');
-    router.replace('/'); // Redirige a login
-  } catch (e) {
-    console.error('Error al cerrar sesión:', e);
-  }
+
+    Alert.alert(
+      "Cerrar Sesión",
+      "¿Estás seguro de que quieres cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          onPress: () => console.log("Cierre de sesión cancelado"),
+          style: "cancel"
+        },
+        {
+          text: "Confirmar",
+          onPress: async () => {
+              try {
+                await AsyncStorage.removeItem('userId');
+                await AsyncStorage.removeItem('userToken');
+                router.replace('/'); // Redirige a login
+              } catch (e) {
+                console.error('Error al cerrar sesión:', e);
+                Alert.alert("Error", "No se pudo cerrar sesión. Inténtalo de nuevo.");
+              }
+          },
+          style: "destructive"
+        }
+      ],
+      { cancelable: true }
+    );
+
+  
 };
   useEffect(() => {
     if (authUserId && authToken) {
@@ -283,7 +305,7 @@ export default function VerTareas() {
         ))}
       </ScrollView>
 
-      <View style={styles.bottomMenu}>
+      <SafeAreaView edges={['bottom']} style={styles.bottomMenu}>
         <TouchableOpacity
           style={styles.menuButton}
           onPress={() => router.push('/trabajador/turno')}
@@ -297,7 +319,7 @@ export default function VerTareas() {
           onPress={() => router.push('/trabajador/tareas_completadas')}
         >
           <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
-          <Text style={styles.menuText}>Tareas Completadas</Text>
+          <Text style={styles.menuText}>Completadas</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -315,7 +337,7 @@ export default function VerTareas() {
           <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
           <Text style={[styles.menuText, {color: '#FF3B30'}]}>Cerrar Sesión</Text>
           </TouchableOpacity>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -389,20 +411,20 @@ const styles = StyleSheet.create({
   },
   bottomMenu: {
     flexDirection: 'row',
-    height: 60,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
+    //height: 80,
+    //borderTopWidth: 1,
+    //borderTopColor: '#ddd',
     backgroundColor: '#fff',
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+    //paddingBottom: 25,
+    //paddingTop: 5,
+    alignItems: 'center',
+    paddingVertical: 5,
   },
   menuButton: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 3,
   },
   menuText: {
     fontSize: 12,
