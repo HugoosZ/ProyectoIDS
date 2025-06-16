@@ -75,14 +75,6 @@ const NuevaTarea = () => {
     fetchUsers();
   }, []);
 
-  useEffect(() => {
-    const getUserId = async () => {
-      const storedUserId = await AsyncStorage.getItem('userId');
-      if (storedUserId) setCreatedBy(storedUserId);
-    };
-    getUserId();
-  }, []);
-
   const handleConfirmStart = (date: Date) => {
     setStartTime(date.toISOString());
     setStartPickerVisible(false);
@@ -176,7 +168,20 @@ const NuevaTarea = () => {
     <SafeAreaView style={{ flex: 1 }}>
       <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Crear Nueva Tarea</Text>
+        {/* Contenedor para el botón "Volver" */}
+        <View style={styles.goBackContainer}>
+          <TouchableOpacity
+            style={styles.goBackButton}
+            onPress={() => router.push('/admin/main')} // Redirige a la página principal
+          >
+            <Text style={styles.buttonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Contenedor para el título centrado */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Crear Nueva Tarea</Text>
+        </View>
 
         <TextInput
           placeholder="Título"
@@ -293,11 +298,6 @@ const NuevaTarea = () => {
         <TouchableOpacity style={globalStyles.button} onPress={handleCreateTask}>
           <Text style={styles.buttonText}>Crear Tarea</Text>
         </TouchableOpacity>
-
-        {/* Botón "Volver al inicio" */}
-        <TouchableOpacity style={globalStyles.button} onPress={() => router.push('/admin/main')}>
-          <Text style={styles.buttonText}>Volver al inicio</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -309,11 +309,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     backgroundColor: '#f2f2f2',
   },
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center', // Centra ambos elementos en el eje horizontal
+    alignItems: 'center', // Centra los elementos verticalmente
+    marginBottom: 20,
+  },
+  goBackContainer: {
+    alignItems: 'flex-start', // Alinea el botón "Volver" a la izquierda
+    marginBottom: 1,
+  },
   title: {
     fontSize: 24,
-    marginBottom: 20,
     fontWeight: 'bold',
-    alignSelf: 'center',
+    marginBottom: 16,
+    textAlign: 'center', // Centra el título horizontalmente
+    marginTop: 0, // Elimina el margen superior
   },
   input: {
     backgroundColor: '#fff',
@@ -345,11 +356,10 @@ const styles = StyleSheet.create({
   },
   goBackButton: {
     backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
-    padding: 14,
-    borderRadius: 8,
-    marginTop: 20,
+    padding: 4,
+    borderRadius: 5,
     alignItems: 'center',
+    marginRight: 10,
   },
 });
-
 export default NuevaTarea;
