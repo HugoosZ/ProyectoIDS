@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  Modal,
   Alert,
   Image,
   StyleSheet,
@@ -30,6 +31,8 @@ export default function Index() {
   const [rut, setRut] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const router = useRouter();
   const { setJwt } = useAuth();
 
@@ -52,9 +55,17 @@ export default function Index() {
     ]).start();
   }, []);
 
+  const showError=(msg: string)=>{
+    setErrorMessage(msg);
+    setErrorModalVisible(true);
+  };
+  const closeModal=()=>{
+    setErrorModalVisible(false);
+  };
+
   const handleLogin = async () => {
     if (!rut || !password) {
-      Alert.alert('Error', 'Debe rellenar los campos');
+      showError('Por favor, completa todos los campos');
       return;
     }
 
@@ -64,12 +75,13 @@ export default function Index() {
       try {
         encryptedRut = await encryptUID(rut);
       } catch (err) {
-        Alert.alert('Error', 'No se pudo obtener el UID para este RUT');
+        showError('Rut no reconocido.');
         return;
       }
+
       const userDoc = await getDoc(doc(db, 'users', encryptedRut));
       if (!userDoc.exists()) {
-        Alert.alert('Error', 'Este usuario no existe');
+        showError('Usuario no encontrado. Verifica tu RUT.');
         return;
       }
 
@@ -86,18 +98,34 @@ export default function Index() {
         const rol = userData.isAdmin ? 'admin' : 'trabajador';
         router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
       } catch (error) {
-        console.error(error);
-        Alert.alert('Error', 'Contraseña incorrecta');
+        showError('Contraseña incorrecta. Inténtalo de nuevo.');
       }
 
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
+      showError('Error al iniciar sesión. Por favor, intenta nuevamente.');
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
+
+      <Modal
+        transparent={true}
+        visible={errorModalVisible}
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalBackground}>
+          <View style={styles.modalContainer}>
+            <Text style={styles.modalTitle}>Error</Text>
+            <Text style={styles.modalMessage}>{errorMessage}</Text>
+            <TouchableOpacity onPress={closeModal} style={styles.modalButton}>
+              <Text style={styles.modalButtonText}>Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -208,5 +236,44 @@ const styles = StyleSheet.create({
     right: 10,
     top: '50%',
     transform: [{ translateY: -20 }],
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    width: '80%',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  modalTitle: {
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#b00020',
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: '#b00020',
+    paddingVertical: 10,
+    borderRadius: 5,
+  },
+  modalButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    fontSize: 16,
   },
 });
