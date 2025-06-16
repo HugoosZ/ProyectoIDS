@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import globalStyles from '../globalStyles';
 
-import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+import TopBar from '../../components/TopBar';
 
 const AddUsers = () => {
 
@@ -94,10 +94,11 @@ const AddUsers = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
+          <TopBar />
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           <View style={{ flex: 1 }}>
-            {/* Aquí se reemplaza el botón de "Volver" por el TopBar que abre el Drawer */}
-            <TopBar />
+            
+          
 
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: -250}}>
               <Text style={[globalStyles.title, globalStyles.titleCentered]}>
