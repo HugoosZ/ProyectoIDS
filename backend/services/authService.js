@@ -1,5 +1,5 @@
 //Creacion de usuarios por parte del admin:)
-
+const { db } = require("../firebase");
 const admin = require('firebase-admin');
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
@@ -54,4 +54,12 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
         }
     }
 }
-
+exports.getAllUsersRaw = async () => {
+    try {
+        const usersSnapshot = await db.collection('users').get();
+        return usersSnapshot; // Devuelve el QuerySnapshot directamente
+    } catch (error) {
+        console.error("Error al obtener todos los usuarios (raw):", error);
+        throw new Error("No se pudieron obtener los usuarios para validación.");
+    }
+};
