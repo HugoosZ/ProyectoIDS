@@ -3,12 +3,13 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button, Alert, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 const globalStyles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
-    paddingBottom: 100,
     backgroundColor: '#f0f2f5',
   },
   title: {
@@ -82,6 +83,15 @@ export default function VerTareas() {
     loadAuthData();
   }, []);
 
+  const logout = async () => {
+  try {
+    await AsyncStorage.removeItem('userId');
+    await AsyncStorage.removeItem('userToken');
+    router.replace('/'); // Redirige a login
+  } catch (e) {
+    console.error('Error al cerrar sesión:', e);
+  }
+};
   useEffect(() => {
     if (authUserId && authToken) {
       fetchTareas();
@@ -242,99 +252,87 @@ export default function VerTareas() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={globalStyles.container}>
-        <Text style={globalStyles.title}>Tareas del Día</Text>
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
+          <Ionicons name="log-out-outline" size={26} color="#007AFF" />
+        </TouchableOpacity>
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={globalStyles.errorText}>{error}</Text>
-            <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
-          </View>
-        )}
+        <ScrollView contentContainerStyle={globalStyles.container}>
+          <Text style={globalStyles.title}>Tareas del Día</Text>
 
-        {!error && tareasDelDia.length === 0 && !loading && (
-          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
-        )}
-
-        {loading && !error && (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text>Cargando tareas...</Text>
-          </View>
-        )}
-
-        {!loading && tareasDelDia.map(tarea => (
-          <View key={tarea.id} style={styles.tareaCard}>
-            <View style={styles.tareaHeader}>
-              <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
-                {mostrarEstado(tarea.estado)}
-                </Text>
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={globalStyles.errorText}>{error}</Text>
+              <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
             </View>
-            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-            
-            {tarea.requiereRelevo && (
-              <text style={styles.requiereRelevoTexto}>
-                Tarea con relevo
-              </text>
+          )}
+
+          {!error && tareasDelDia.length === 0 && !loading && (
+            <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
+          )}
+
+          {loading && !error && (
+            <View style={styles.centered}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text>Cargando tareas...</Text>
+            </View>
+          )}
+
+          {!loading && tareasDelDia.map(tarea => (
+            <View key={tarea.id} style={styles.tareaCard}>
+              <View style={styles.tareaHeader}>
+                <Text style={styles.tareaHora}>{tarea.hora}</Text>
+                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
+              </View>
+              <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+              <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+              {tarea.estado === 'pendiente' && (
+                <Button
+                  title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
+                  color="#1E90FF"
+                  disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
+                />
               )}
 
-            {tarea.estado === 'pendiente' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
-                color="#1E90FF"
-                disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
-              />
-            )}
+              {tarea.estado === 'en progreso' && (
+                <Button
+                  title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                  color="#28a745"
+                  disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
+                />
+              )}
+            </View>
+          ))}
+        </ScrollView>
 
-            {tarea.estado === 'en progreso' && (
-              <>
-                {tarea.requiereRelevo && tarea.trabajadorEntrante === authUserId ? (
-                  <Button
-                    title="Relevar tarea"
-                    onPress={() => router.push({ pathname: '/trabajador/ingreso_relevo', params: { taskId: tarea.id } })}
-                    color="#FFA500"
-                    />
-                ) : (
-                  <Button
-                    title={actualizandoId === tarea.id ? "Cambiando..." : "Terminar"}
-                    onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                    color="#32CD32"
-                    disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
-              />
-            )}
-            </>
-            )}
-          </View>
-        ))}
-      </ScrollView>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.botonCalendario}
+            onPress={() => router.push('/trabajador/turno')}
+          >
+            <Ionicons name="time" size={30} color="white" />
+          </TouchableOpacity>
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.botonCalendario}
-          onPress={() => router.push('/trabajador/turno')}
-        >
-          <Ionicons name="time" size={30} color="white" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.botonCalendario}
+            onPress={() => router.push('/trabajador/tareas_completadas')}
+          >
+            <Ionicons name="checkmark-done-outline" size={30} color="white" />
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.botonCalendario}
-          onPress={() => router.push('/trabajador/tareas_completadas')}
-        >
-          <Ionicons name="checkmark-done-outline" size={30} color="white" />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.botonCalendario}
-          onPress={() => router.push('/trabajador/calendario-semanal')}
-        >
-          <Ionicons name="calendar-outline" size={30} color="white" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.botonCalendario}
+            onPress={() => router.push('/trabajador/calendario-semanal')}
+          >
+            <Ionicons name="calendar-outline" size={30} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -405,9 +403,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-  requiereRelevoTexto: {
-    color: '#FF4500',
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
+
+  logoutButton: {
+  position: 'absolute',
+  top: 10,
+  left: 10,
+  zIndex: 10,
+  padding: 10,
+},
 });

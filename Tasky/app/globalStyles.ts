@@ -1,4 +1,5 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, StatusBar, Platform } from 'react-native';
+
 
 const globalStyles = StyleSheet.create({
   container: {
@@ -23,7 +24,6 @@ const globalStyles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff', 
     marginBottom: 10,
   },
   input: {
@@ -184,20 +184,29 @@ backButtonText: {
     justifyContent: 'flex-start',
     alignItems: 'flex-end',
   },
-  modalContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: '80%',
-    backgroundColor: 'white',
-    padding: 20,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-    
-  },
+ modalContainer: {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  bottom: 0,
+  width: '80%',
+  backgroundColor: 'white',
+  padding: 20,
+  paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  elevation: 10,
+  shadowColor: '#000',
+  shadowOpacity: 0.2,
+  shadowOffset: { width: 0, height: 2 },
+},
+
+
+  eyeIcon: {
+  position: 'absolute',
+  right: 10,
+  top: '50%',
+  transform: [{ translateY: -19 }],
+},
+
   
   closeButton: {
     alignItems: 'flex-end',
@@ -219,7 +228,7 @@ backButtonText: {
     color: 'black',
   },
   topBar: {
-    backgroundColor: 'rgb(90, 22, 163)', 
+    backgroundColor: 'rgba(137, 113, 187, 1)', 
     paddingTop: 15, 
     paddingBottom: 15,
     paddingHorizontal: 15,
@@ -239,12 +248,19 @@ backButtonText: {
     alignItems: 'center',
   },
   adminContainer: {
-    flexGrow: 1, // Necesario para ScrollView
-    justifyContent: 'center', // o 'flex-start', según tu diseño
+    paddingTop: 40,
+    flex: 1,
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 20,
-    backgroundColor: 'rgb(255, 255, 255)',
-  },  
+    backgroundColor: '#f2f2f2',
+  },
+  adminSubtitle: {
+    fontSize: 23,
+    fontWeight: 'bold',
+    color: 'rgb(75, 41, 150)', 
+    marginBottom: 10,
+  },
 
 });
 

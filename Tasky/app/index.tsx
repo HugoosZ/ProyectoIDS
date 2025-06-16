@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '../lib/context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encryptUID } from '../lib/api/encryptUID';
 
 const db = getFirestore();
 
@@ -58,9 +59,17 @@ export default function Index() {
     }
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', rut));
+      // Obtener el UID codificado desde el backend usando el RUT
+      let encryptedRut;
+      try {
+        encryptedRut = await encryptUID(rut);
+      } catch (err) {
+        Alert.alert('Error', 'No se pudo obtener el UID para este RUT');
+        return;
+      }
+      const userDoc = await getDoc(doc(db, 'users', encryptedRut));
       if (!userDoc.exists()) {
-        Alert.alert('Error', 'Usuario no encontrado');
+        Alert.alert('Error', 'Este usuario no existe');
         return;
       }
 
@@ -71,11 +80,9 @@ export default function Index() {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const token = await user.getIdToken();
-
-        setJwt(token);
+        setJwt(token); 
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userId', user.uid);
-
         const rol = userData.isAdmin ? 'admin' : 'trabajador';
         router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
       } catch (error) {
@@ -154,7 +161,7 @@ export default function Index() {
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
+                  style={globalStyles.eyeIcon}
                 >
                   <Ionicons
                     name={showPassword ? 'eye-off' : 'eye'}

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   View,
   Dimensions,
   StyleSheet,
-  SafeAreaView,
   FlatList,
-  ScrollView,
-  Switch,
   Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
@@ -28,7 +26,6 @@ type Tarea = {
 export default function AdminMain() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [estadoFiltro, setEstadoFiltro] = useState('todas');
-  const [verPorUsuarios, setVerPorUsuarios] = useState(false);
   const [usuarios, setUsuarios] = useState<Record<string, string>>({});
 
   const screenWidth = Dimensions.get('window').width;
@@ -36,6 +33,7 @@ export default function AdminMain() {
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      console.log(token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
@@ -49,7 +47,6 @@ export default function AdminMain() {
       });
 
       const data = await res.json();
-
       const usuariosMap: Record<string, string> = {};
       data.forEach((usuario: any) => {
         usuariosMap[usuario.id] = `${usuario.name} ${usuario.lastName}`;
@@ -77,6 +74,7 @@ export default function AdminMain() {
       });
 
       const data = await res.json();
+      console.log(data);
       setTareas(data);
     } catch (error) {
       console.error('Error al obtener tareas:', error);
@@ -88,12 +86,35 @@ export default function AdminMain() {
     fetchTareas();
   }, []);
 
-  const formatearFecha = (timestamp?: { _seconds: number }) => {
+/*   const formatearFecha = (timestamp?: { _seconds: number }) => {
     if (!timestamp?._seconds) return 'Fecha inválida';
     const fecha = new Date(timestamp._seconds * 1000);
     return fecha.toLocaleString();
-  };
+  }; */
 
+
+  const formatearFecha = (fecha: any) => {
+    let dateObj;
+
+    if (fecha?._seconds) {
+      // Si es un timestamp de Firebase
+      dateObj = new Date(fecha._seconds * 1000);
+    } else if (typeof fecha === 'string') {
+      // Si ya es un string de fecha
+      dateObj = new Date(fecha);
+    } else {
+      return 'Fecha inválida';
+    }
+
+    if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+
+    return new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(dateObj);
+  };
+  
   const tareasFiltradas = tareas.filter((tarea) => {
     if (estadoFiltro === 'todas') return true;
     if (estadoFiltro === 'pendientes') {
@@ -111,20 +132,15 @@ export default function AdminMain() {
     return true;
   });
 
-  const tareasPorUsuario = tareasFiltradas.reduce<Record<string, Tarea[]>>((acc, tarea) => {
-    const nombreUsuario = usuarios[tarea.assignedTo || ''] || 'Sin asignar';
-    if (!acc[nombreUsuario]) acc[nombreUsuario] = [];
-    acc[nombreUsuario].push(tarea);
-    return acc;
-  }, {});
-
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <TopBar />
-      <View style={globalStyles.container}>
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
+    <TopBar />
+    <View style={globalStyles.adminContainer}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
-          <View style={styles.filaFiltro}>
+
+          <View style={styles.tituloYFiltro}>
+            <Text style={globalStyles.adminSubtitle}>Lista de tareas</Text>
             <View style={styles.pickerWrapper}>
               <Picker
                 selectedValue={estadoFiltro}
@@ -138,36 +154,12 @@ export default function AdminMain() {
                 <Picker.Item label="Finalizadas" value="finalizadas" />
               </Picker>
             </View>
-
-            <View style={styles.switchWrapper}>
-              <Switch value={verPorUsuarios} onValueChange={() => setVerPorUsuarios(!verPorUsuarios)} />
-            </View>
           </View>
-        </View>
 
-        {!verPorUsuarios && <Text style={globalStyles.subtitle}>Lista de tareas</Text>}
+        </View>
 
         {tareasFiltradas.length === 0 ? (
           <Text>No hay tareas para mostrar</Text>
-        ) : verPorUsuarios ? (
-          <>
-            <Text style={globalStyles.subtitle}>Lista de usuarios</Text>
-            <ScrollView>
-              {Object.keys(tareasPorUsuario).map((usuario) => (
-                <View key={usuario} style={{ marginBottom: 20 }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 6 }}>{usuario}</Text>
-                  {tareasPorUsuario[usuario].map((tarea) => (
-                    <View key={tarea.id || Math.random().toString()} style={styles.tareaContainer}>
-                      <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                      <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
-                      <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
-                      <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </ScrollView>
-          </>
         ) : (
           <FlatList
             data={tareasFiltradas}
@@ -175,10 +167,19 @@ export default function AdminMain() {
             renderItem={({ item: tarea }) => (
               <View style={styles.tareaContainer}>
                 <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                <Text><Text style={styles.labelBold}>Asignado a:</Text> {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}</Text>
-                <Text><Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}</Text>
-                <Text><Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}</Text>
-                <Text><Text style={styles.labelBold}>Estado:</Text> {tarea.status}</Text>
+                <Text>
+                  <Text style={styles.labelBold}>Asignado a:</Text>{' '}
+                  {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}
+                </Text>
+                <Text>
+                  <Text style={styles.labelBold}>Estado:</Text> {tarea.status}
+                </Text>
               </View>
             )}
           />
@@ -190,10 +191,6 @@ export default function AdminMain() {
 }
 
 const styles = StyleSheet.create({
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   filtroContainer: {
     marginBottom: 20,
   },
@@ -208,10 +205,6 @@ const styles = StyleSheet.create({
     color: 'rgb(132, 106, 180)',
     fontWeight: 'bold',
   },
-  label: {
-    fontSize: 12,
-    marginBottom: 5,
-  },
   labelBold: {
     fontWeight: 'bold',
   },
@@ -220,23 +213,28 @@ const styles = StyleSheet.create({
   },
   filaFiltro: {
     flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 4,
+  },
+  pickerWrapper: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    overflow: 'hidden',
+    width: 120,
+  },
+  picker: {
+    height: 30,
+    width: '100%',
+  },
+  tituloYFiltro: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 15,
     paddingHorizontal: 4,
   },
-  switchWrapper: {
-    marginLeft: 10,
-  },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    overflow: 'hidden',
-    width: 180,
-  },
-  picker: {
-    height: 40,
-    width: '100%',
-  },
+  
 });

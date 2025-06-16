@@ -1,18 +1,29 @@
-
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import {
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  Platform,
+  StatusBar,
+  KeyboardAvoidingView,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+
 import globalStyles from '../globalStyles';
 
+import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+
 const AddUsers = () => {
-  const router = useRouter();
+
 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [rut, setRUT] = useState('');
   const [token, setToken] = useState<string | null>(null);
 
@@ -26,38 +37,34 @@ const AddUsers = () => {
 
   const manejarEnvio = async () => {
     if (!nombre || !apellido || !email || !password || !rut) {
-
       Alert.alert('Campos requeridos', 'Por favor completa todos los campos.');
       return;
     }
 
     if (!token) {
-
       Alert.alert('Error de autenticación', 'Token no disponible. Inicia sesión nuevamente.');
       return;
     }
 
     try {
-      const res = await fetch("https://proyecto-ids.vercel.app/api/createUser", {
-        method: "POST",
+      const res = await fetch('https://proyecto-ids.vercel.app/api/createUser', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-         },
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           rut,
           email,
           password,
           name: nombre,
           lastName: apellido,
-          role: "user",
-          isAdmin: false
-
-        })
+          role: 'user',
+          isAdmin: false,
+        }),
       });
 
       if (res.ok) {
-
         Alert.alert('Usuario creado', 'El trabajador fue registrado exitosamente.');
         setNombre('');
         setApellido('');
@@ -69,55 +76,77 @@ const AddUsers = () => {
         Alert.alert('Error', `No se pudo crear el usuario: ${error}`);
       }
     } catch (err) {
-      console.error("Error al enviar:", err);
+      console.error('Error al enviar:', err);
       Alert.alert('Error', 'Ocurrió un error al conectar con el servidor.');
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      <Text style={globalStyles.title}>Agregar Nuevo Trabajador</Text>
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Nombre"
-        value={nombre}
-        onChangeText={setNombre}
-      />
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Apellido"
-        value={apellido}
-        onChangeText={setApellido}
-      />
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TextInput
-        style={globalStyles.input}
-        placeholder="Rut"
-        value={rut}
-        onChangeText={setRUT}
-      />
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: '#f3f3f3', // Fondo sin el contenedor sombreado
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+      }}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
+      >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+          <View style={{ flex: 1 }}>
+            {/* Aquí se reemplaza el botón de "Volver" por el TopBar que abre el Drawer */}
+            <TopBar />
 
-      <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
-        <Text style={globalStyles.buttonText}>Guardar Trabajador</Text>
-      </TouchableOpacity>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: -250}}>
+              <Text style={[globalStyles.title, globalStyles.titleCentered]}>
+                Agregar Nuevo Trabajador
+              </Text>
 
-      <TouchableOpacity style={[globalStyles.button, { backgroundColor: '#999', marginTop: 16 }]} onPress={() => router.back()}>
-        <Text style={globalStyles.buttonText}>Volver</Text>
-      </TouchableOpacity>
-    </ScrollView>
+              <View style={globalStyles.formContainer}>
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Nombre"
+                  value={nombre}
+                  onChangeText={setNombre}
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Apellido"
+                  value={apellido}
+                  onChangeText={setApellido}
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="Contraseña"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                />
+                <TextInput
+                  style={globalStyles.input}
+                  placeholder="RUT (Ej: 12345678-9)"
+                  value={rut}
+                  onChangeText={setRUT}
+                />
+
+                <TouchableOpacity style={globalStyles.button} onPress={manejarEnvio}>
+                  <Text style={globalStyles.buttonText}>Guardar Trabajador</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
