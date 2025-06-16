@@ -11,7 +11,6 @@ exports.createUser = async (req, res) => {
 
     let finalEmpresaId;
 
-
     if (req.user && req.user.isAdmin && req.user.empresaId) {
       finalEmpresaId = req.user.empresaId; // Hereda el empresaId del admin que crea el usuario
       console.log(

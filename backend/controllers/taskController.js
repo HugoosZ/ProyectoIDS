@@ -660,7 +660,7 @@ exports.AssignTask = async (req, res) => {
     // Guardar los participantes en TaskInfo
     taskInfoData.participants = participantsArray.map(a => a.userId);
     // Crear documento en la colección TaskInfo (tarea general)
-    const taskInfoRef = await db.collection("TaskInfo").add(taskInfoData);
+    const taskInfoRef = await db.collection("taskInfo").add(taskInfoData);
     // Crear tareas individuales en la colección tasksAssignments
     const assignments = [];
     for (const assignment of participantsArray) {
@@ -716,11 +716,11 @@ exports.AssignTask = async (req, res) => {
         createdAt: new Date(),
         ...extraFields
       };
-      await db.collection("tasksAssignments").add(assignmentDoc);
+      await db.collection("taskAssignments").add(assignmentDoc);
       assignments.push(assignmentDoc);
     }
     // Respuesta exitosa
-    res.status(201).json({ message: "Tarea registrada en TaskInfo y tareas individuales creadas en tasksAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
+    res.status(201).json({ message: "Tarea registrada en taskInfo y tareas individuales creadas en taskAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
   } catch (error) {
     // Manejo de errores generales
     console.error("Error al asignar tarea:", error);
