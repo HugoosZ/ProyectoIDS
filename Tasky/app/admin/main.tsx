@@ -33,6 +33,7 @@ export default function AdminMain() {
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      console.log(token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
@@ -73,6 +74,7 @@ export default function AdminMain() {
       });
 
       const data = await res.json();
+      console.log(data);
       setTareas(data);
     } catch (error) {
       console.error('Error al obtener tareas:', error);
@@ -84,12 +86,35 @@ export default function AdminMain() {
     fetchTareas();
   }, []);
 
-  const formatearFecha = (timestamp?: { _seconds: number }) => {
+/*   const formatearFecha = (timestamp?: { _seconds: number }) => {
     if (!timestamp?._seconds) return 'Fecha inválida';
     const fecha = new Date(timestamp._seconds * 1000);
     return fecha.toLocaleString();
-  };
+  }; */
 
+
+  const formatearFecha = (fecha: any) => {
+    let dateObj;
+
+    if (fecha?._seconds) {
+      // Si es un timestamp de Firebase
+      dateObj = new Date(fecha._seconds * 1000);
+    } else if (typeof fecha === 'string') {
+      // Si ya es un string de fecha
+      dateObj = new Date(fecha);
+    } else {
+      return 'Fecha inválida';
+    }
+
+    if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+
+    return new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(dateObj);
+  };
+  
   const tareasFiltradas = tareas.filter((tarea) => {
     if (estadoFiltro === 'todas') return true;
     if (estadoFiltro === 'pendientes') {

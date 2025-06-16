@@ -1,5 +1,4 @@
-import { StyleSheet } from 'react-native';
-import { StatusBar, Platform } from 'react-native';
+import { StyleSheet, StatusBar, Platform } from 'react-native';
 
 
 const globalStyles = StyleSheet.create({
@@ -25,7 +24,6 @@ const globalStyles = StyleSheet.create({
   subtitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#fff', 
     marginBottom: 10,
   },
   input: {

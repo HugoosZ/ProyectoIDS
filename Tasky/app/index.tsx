@@ -11,6 +11,7 @@ import type { UserCredential } from 'firebase/auth';
 import { fetchUsers } from '../lib/api/users';
 import { useAuth } from '../lib/context/AuthContext'; // ajusta la ruta si es necesario
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { encryptUID } from '../lib/api/encryptUID';
 
 const db = getFirestore();
 
@@ -26,32 +27,38 @@ export default function Index() {
       Alert.alert('Error', 'Debe rellenar los campos');
       return;
     }
-  
+
     try {
-      const userDoc = await getDoc(doc(db, 'users', rut));
-      if (!userDoc.exists()) {
-        Alert.alert('Error', 'Usuario no encontrado');
+      // Obtener el UID codificado desde el backend usando el RUT
+      let encryptedRut;
+      try {
+        encryptedRut = await encryptUID(rut);
+      } catch (err) {
+        Alert.alert('Error', 'No se pudo obtener el UID para este RUT');
         return;
       }
-  
+      const userDoc = await getDoc(doc(db, 'users', encryptedRut));
+      if (!userDoc.exists()) {
+        Alert.alert('Error', 'Este usuario no existe');
+        return;
+      }
+
       const userData = userDoc.data();
       const email = userData.email;
-  
+
       try {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
         const token = await user.getIdToken();
-        
         setJwt(token); 
         await AsyncStorage.setItem('userToken', token);
         await AsyncStorage.setItem('userId', user.uid);
-
         const rol = userData.isAdmin ? 'admin' : 'trabajador';
         router.push(rol === 'admin' ? '/admin/main' : '/trabajador/ver-tareas');
       } catch (error) {
         console.error(error);
       }
-  
+
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Ocurrió un problema al intentar iniciar sesión');
