@@ -10,6 +10,7 @@ const globalStyles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom: 100,
     backgroundColor: '#f0f2f5',
   },
   title: {
@@ -29,7 +30,6 @@ const globalStyles = StyleSheet.create({
     color: '#555',
     marginTop: 20,
   },
-  
 });
 
 type Tarea = {
@@ -106,20 +106,8 @@ export default function VerTareas() {
 
     console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
 
-    const filtros={
-        //today: "true",
-        //week: "true",
-       //status: "en proceso",
-      //priority: "alta",
-      //requiereRelevo: "true",
-      }
-
-      const queryParams = new URLSearchParams(filtros).toString();
-
     try {
-
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}?${queryParams}`, {
-        method: 'GET',
+      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "application/json",
@@ -151,17 +139,7 @@ export default function VerTareas() {
           trabajadorEntrante: apiTask.trabajadorEntrante || ''
         }));
 
-        const tareasFiltradas = tareas.filter(tarea => {
-          const esHoy=tarea.startTime && new Date(tarea.startTime).toDateString() === new Date().toDateString();
-          const esEstadoValido=tarea.estado === 'pendiente' || tarea.estado === 'en progreso';
-
-          const esAsignado = 
-            (!tarea.requiereRelevo && tarea.trabajadorSaliente === authUserId) || // tareas normales
-            (tarea.requiereRelevo && (tarea.trabajadorSaliente === authUserId || tarea.trabajadorEntrante === authUserId)); // con relevo
-
-          return esHoy && esEstadoValido && esAsignado;
-});
-
+        const tareasFiltradas = tareas.filter(tarea => tarea.estado === 'pendiente' || tarea.estado === 'en progreso');
 
         console.log('Tareas filtradas:', tareasFiltradas);
         setTareasDelDia(tareasFiltradas);
@@ -252,87 +230,93 @@ export default function VerTareas() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Ionicons name="log-out-outline" size={26} color="#007AFF" />
+    <View style={{ flex: 1 }}>
+
+      <ScrollView contentContainerStyle={globalStyles.container}>
+        <Text style={globalStyles.title}>Tareas del Día</Text>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={globalStyles.errorText}>{error}</Text>
+            <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
+          </View>
+        )}
+
+        {!error && tareasDelDia.length === 0 && !loading && (
+          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
+        )}
+
+        {loading && !error && (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text>Cargando tareas...</Text>
+          </View>
+        )}
+
+        {!loading && tareasDelDia.map(tarea => (
+          <View key={tarea.id} style={styles.tareaCard}>
+            <View style={styles.tareaHeader}>
+              <Text style={styles.tareaHora}>{tarea.hora}</Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
+            </View>
+            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+            {tarea.estado === 'pendiente' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
+                color="#1E90FF"
+                disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
+              />
+            )}
+
+            {tarea.estado === 'en progreso' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                color="#28a745"
+                disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
+              />
+            )}
+          </View>
+        ))}
+      </ScrollView>
+
+      <View style={styles.bottomMenu}>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/turno')}
+        >
+          <Ionicons name="time" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Turno</Text>
         </TouchableOpacity>
 
-        <ScrollView contentContainerStyle={globalStyles.container}>
-          <Text style={globalStyles.title}>Tareas del Día</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/tareas_completadas')}
+        >
+          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Tareas Completadas</Text>
+        </TouchableOpacity>
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={globalStyles.errorText}>{error}</Text>
-              <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
-            </View>
-          )}
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/calendario-semanal')}
+        >
+          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Calendario</Text>
+        </TouchableOpacity>
 
-          {!error && tareasDelDia.length === 0 && !loading && (
-            <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
-          )}
-
-          {loading && !error && (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text>Cargando tareas...</Text>
-            </View>
-          )}
-
-          {!loading && tareasDelDia.map(tarea => (
-            <View key={tarea.id} style={styles.tareaCard}>
-              <View style={styles.tareaHeader}>
-                <Text style={styles.tareaHora}>{tarea.hora}</Text>
-                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
-              </View>
-              <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-              <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-
-              {tarea.estado === 'pendiente' && (
-                <Button
-                  title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
-                  color="#1E90FF"
-                  disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
-                />
-              )}
-
-              {tarea.estado === 'en progreso' && (
-                <Button
-                  title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                  color="#28a745"
-                  disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
-                />
-              )}
-            </View>
-          ))}
-        </ScrollView>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/turno')}
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={logout}
           >
-            <Ionicons name="time" size={30} color="white" />
+          <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+          <Text style={[styles.menuText, {color: '#FF3B30'}]}>Cerrar Sesión</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/tareas_completadas')}
-          >
-            <Ionicons name="checkmark-done-outline" size={30} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/calendario-semanal')}
-          >
-            <Ionicons name="calendar-outline" size={30} color="white" />
-          </TouchableOpacity>
-        </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -403,12 +387,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
-
-  logoutButton: {
-  position: 'absolute',
-  top: 10,
-  left: 10,
-  zIndex: 10,
-  padding: 10,
-},
+  bottomMenu: {
+    flexDirection: 'row',
+    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    backgroundColor: '#fff',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  menuButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
+  },
 });
