@@ -71,7 +71,7 @@ exports.createUser = async (req, res) => {
     const encryptedName = encrypt(name);
     const encryptedLastName = encrypt(lastName);
 
-    const result = await authService.createUserWithRole({
+    const newUser = await authService.createUserWithRole({
       email,
       password,
       rut: encryptedRut, // Guardar cifrado
@@ -82,22 +82,8 @@ exports.createUser = async (req, res) => {
       empresaId: finalEmpresaId,
     });
 
-    const responseUser = {
-        uid: result.user.uid, // Asumiendo que newUserRecord tiene el UID
-        email: email,
-        rut: rut, // <-- Ya está desencriptado (es el 'rut' original del req.body)
-        name: name, // <-- Ya está desencriptado (es el 'name' original del req.body)
-        lastName: lastName, // <-- Ya está desencriptado (es el 'lastName' original del req.body)
-        role: role,
-        isAdmin: isAdmin,
-        empresaId: finalEmpresaId,
-    };
-
-        try { responseUser.rut = decrypt(responseUser.rut); } catch (e) { console.error("Error desencriptando RUT para respuesta:", e.message); }
-        try { responseUser.name = decrypt(responseUser.name); } catch (e) { console.error("Error desencriptando nombre para respuesta:", e.message); }
-        try { responseUser.lastName = decrypt(responseUser.lastName); } catch (e) { console.error("Error desencriptando apellido para respuesta:", e.message); }
-
-    res.status(201).json(responseUser);
+    res.status(201).json(newUser);
+    
   } catch (error) {
     console.error("Error en userController.createUser:", error); // Cambiado para claridad
     if (error.message.includes("email ya está registrado")) {
