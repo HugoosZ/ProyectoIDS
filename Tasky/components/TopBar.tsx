@@ -84,9 +84,6 @@ const TopBar: React.FC = () => {
         <TouchableOpacity onPress={() => console.log('Notificaciones')}>
           <Ionicons name="notifications-outline" size={32} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={32} color="#fff" /> 
-        </TouchableOpacity>
       </View>
 
       {/* Menú lateral */}
@@ -153,6 +150,12 @@ const TopBar: React.FC = () => {
                       onPress={() => handleRoute('/admin/Asistencia')}
                     >
                       <Text style={globalStyles.menuText}>Asistencia</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={globalStyles.menuOption} onPress={handleLogout}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="log-out-outline" size={20} color="red" style={{ marginRight: 8 }} />
+                        <Text style={[globalStyles.menuText, { color: 'red' }]}>Cerrar sesión</Text>
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </SafeAreaView>
