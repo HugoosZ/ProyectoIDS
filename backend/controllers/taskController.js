@@ -364,80 +364,72 @@ exports.generarCodigoRelevo = async (req, res) => {
 
 exports.realizarRelevo = async (req, res) => {
   try {
-    const { taskId } = req.params;
-    const { codigoIngresado, userIdEntrante } = req.body;
+    const { uid: usuarioEntrante } = req.user;
+    const { codigoRelevo, taskInfoId } = req.body;
 
-    const snapshot = await db.collection('tasksAssignments')
-      .where('taskId', '==', taskId)
-      .where('requiereRelevo', '==', true)
+    if (!codigoRelevo || !taskInfoId) {
+      return res.status(400).json({ error: "Código de relevo y taskInfoId son requeridos." });
+    }
+
+    // Buscar asignaciones por taskInfoId
+    const snapshot = await db.collection("tasksAssignments")
+      .where("taskInfoId", "==", taskInfoId)
+      .where("requiereRelevo", "==", true)
       .get();
 
     if (snapshot.empty) {
-      return res.status(404).json({ message: 'No se encontraron tareas con relevo para este ID.' });
+      return res.status(404).json({ error: "No se encontraron asignaciones con relevo para esa tarea." });
     }
 
-    let relevoRealizado = false;
+    let relevoValido = false;
+    let salienteRef = null;
+    let entranteRef = null;
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
 
-      // Verificamos si este documento representa al usuario entrante
-      if (data.assignedTo === userIdEntrante) {
-        if (!data.codigoRelevo || !data.relevoExpira) {
-          return res.status(400).json({ message: 'Esta tarea no tiene un código de relevo activo.' });
+      // Validar código, expiración y usuario entrante
+      if (data.codigoRelevo === codigoRelevo && !data.relevoValidado) {
+        const now = new Date();
+        const expira = data.relevoExpira?.toDate?.() ?? null;
+        if (!expira || now > expira) {
+          return res.status(400).json({ error: "El código de relevo ha expirado." });
         }
 
-        const ahora = new Date();
-        const expira = data.relevoExpira.toDate();
-
-        if (ahora > expira) {
-          return res.status(400).json({ message: 'El código de relevo ha expirado.' });
+        // Encontrar asignación del usuario entrante
+        if (data.assignedTo === usuarioEntrante) {
+          entranteRef = doc.ref;
+        } else {
+          salienteRef = doc.ref;
         }
 
-        if (data.codigoRelevo !== codigoIngresado) {
-          return res.status(400).json({ message: 'Código de relevo incorrecto.' });
-        }
-
-        // Encontrar la tarea del usuario saliente
-        const tareaSaliente = snapshot.docs.find(d =>
-          d.data().assignedTo !== userIdEntrante &&
-          d.data().taskId === taskId
-        );
-
-        if (!tareaSaliente) {
-          return res.status(404).json({ message: 'No se encontró usuario saliente.' });
-        }
-
-        // Actualizar ambas tareas
-        const batch = db.batch();
-
-        batch.update(doc.ref, {
-          status: 'en curso',
-          relevoValidado: true,
-          validadoRelevo: true,
-        });
-
-        batch.update(tareaSaliente.ref, {
-          status: 'finalizada',
-          validadoRelevo: true,
-        });
-
-        await batch.commit();
-        relevoRealizado = true;
-        break;
+        relevoValido = true;
       }
     }
 
-    if (relevoRealizado) {
-      return res.status(200).json({ message: 'Relevo realizado con éxito.' });
-    } else {
-      return res.status(403).json({ message: 'No se pudo realizar el relevo. Usuario no autorizado o datos inválidos.' });
+    if (!relevoValido || !entranteRef || !salienteRef) {
+      return res.status(400).json({ error: "Código de relevo inválido o no autorizado." });
     }
+
+    // Transacción: actualizar ambos documentos
+    await db.runTransaction(async (transaction) => {
+      transaction.update(entranteRef, {
+        status: "en curso",
+        relevoValidado: true
+      });
+      transaction.update(salienteRef, {
+        status: "finalizada"
+      });
+    });
+
+    return res.status(200).json({ message: "Relevo realizado con éxito." });
+
   } catch (error) {
-    console.error('Error realizando relevo:', error);
-    return res.status(500).json({ message: 'Error interno al realizar el relevo.' });
+    console.error("Error al realizar relevo:", error);
+    return res.status(500).json({ error: "Error interno al realizar el relevo." });
   }
 };
+
 
 exports.getDailyTaskStatus = async (req, res) => {
   try {
