@@ -121,6 +121,10 @@ const NuevaTarea = () => {
       Alert.alert('Error', 'Debes seleccionar trabajador saliente y entrante');
       return;
     }
+    if (!requiereRelevo && assignedTo.length === 0) {
+      Alert.alert('Error', 'Debes seleccionar al menos un trabajador');
+      return;
+    }
 
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -139,23 +143,19 @@ const NuevaTarea = () => {
         createdBy,
       };
 
-      const body = requiereRelevo
-        ? {
-            ...commonFields,
-            requiereRelevo: true,
-            assignedTo: [trabajadorSaliente, trabajadorEntrante],
-            trabajadorSaliente,
-            trabajadorEntrante,
-            codigoRelevo: null,
-            relevoValidado: false,
-            relevoExpira: null,
-            empresaId: 'ID_EMPRESA',
-          }
-        : {
-            ...commonFields,
-            requiereRelevo: false,
-            assignedTo,
-          };
+      const body = {
+        ...commonFields,
+        requiereRelevo,
+        assignedTo: requiereRelevo ? [trabajadorSaliente, trabajadorEntrante] : assignedTo,
+        ...(requiereRelevo && {
+          trabajadorSaliente,
+          trabajadorEntrante,
+          codigoRelevo: null,
+          relevoValidado: false,
+          relevoExpira: null,
+          empresaId: 'ID_EMPRESA',
+        }),
+      };
 
       const response = await fetch('https://proyecto-ids.vercel.app/api/createTask', {
         method: 'POST',
