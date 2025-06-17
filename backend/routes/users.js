@@ -24,7 +24,7 @@ router.post('/findByRut', async (req, res) => {
     }
     const doc = snapshot.docs[0];
     const userData = doc.data();
-    res.status(200).json({ rut: userData.rut });
+    res.status(200).json({ uid: userData.rut });
   } catch (error) {
     res.status(500).json({ error: 'Error interno al buscar usuario por RUT.' });
   }
