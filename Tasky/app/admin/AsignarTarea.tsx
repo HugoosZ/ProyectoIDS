@@ -17,28 +17,16 @@ import { useRouter } from 'expo-router';
 
 const AsignarTarea = () => {
   const router = useRouter();
-  
+
   const [tasks, setTasks] = useState<any[]>([]);
-  const [selectedTask, setSelectedTask] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
-  
-  
+  const [selectedTask, setSelectedTask] = useState('');
   const [isGroupTask, setIsGroupTask] = useState(false);
   const [requiereRelevo, setRequiereRelevo] = useState(false);
+  const [assignedTo, setAssignedTo] = useState('');
+  const [participantAssignments, setParticipantAssignments] = useState<any[]>([]);
   const [priority, setPriority] = useState('normal');
   const [status, setStatus] = useState('pendiente');
-  
-  
-  const [assignedTo, setAssignedTo] = useState('');
-  
-  
-  const [participantAssignments, setParticipantAssignments] = useState<any[]>([]);
-  const [currentParticipant, setCurrentParticipant] = useState({
-    userId: '',
-    individualTask: '',
-    startTimeIndividualTask: '',
-    endTimeIndividualTask: '',
-  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,28 +34,25 @@ const AsignarTarea = () => {
       if (!token) return;
 
       try {
-        
+        // Obtener tareas
         const resTasks = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (!resTasks.ok) throw new Error('Error al obtener tareas');
+        const dataTasks = await resTasks.json();
+        setTasks(dataTasks);
 
-        
+        // Obtener usuarios
         const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
           headers: { Authorization: `Bearer ${token}` },
         });
+        if (!resUsers.ok) throw new Error('Error al obtener usuarios');
+        const dataUsers = await resUsers.json();
+        setUsers(dataUsers);
 
-        if (!resTasks.ok || !resUsers.ok) {
-          throw new Error('Error al obtener datos');
-        }
-
-        const tasksData = await resTasks.json();
-        const usersData = await resUsers.json();
-
-        setTasks(tasksData);
-        setUsers(usersData);
       } catch (error) {
-        console.error('Error al cargar datos:', error);
-        Alert.alert('Error', 'No se pudieron cargar los datos necesarios');
+        console.error('Error al obtener datos:', error);
+        Alert.alert('Error', 'No se pudieron cargar los datos necesarios.');
       }
     };
 
@@ -75,18 +60,24 @@ const AsignarTarea = () => {
   }, []);
 
   const handleAddParticipant = () => {
-    if (!currentParticipant.userId || !currentParticipant.individualTask) {
-      Alert.alert('Error', 'Debes seleccionar un usuario y especificar la tarea individual');
-      return;
-    }
+    setParticipantAssignments([
+      ...participantAssignments,
+      {
+        userId: '',
+        individualTask: '',
+        startTimeIndividualTask: '',
+        endTimeIndividualTask: ''
+      }
+    ]);
+  };
 
-    setParticipantAssignments([...participantAssignments, currentParticipant]);
-    setCurrentParticipant({
-      userId: '',
-      individualTask: '',
-      startTimeIndividualTask: selectedTask?.startTime || '',
-      endTimeIndividualTask: selectedTask?.endTime || '',
-    });
+  const handleParticipantChange = (index: number, field: string, value: string) => {
+    const updatedParticipants = [...participantAssignments];
+    updatedParticipants[index] = {
+      ...updatedParticipants[index],
+      [field]: value
+    };
+    setParticipantAssignments(updatedParticipants);
   };
 
   const handleRemoveParticipant = (index: number) => {
@@ -97,20 +88,23 @@ const AsignarTarea = () => {
 
   const handleAssignTask = async () => {
     if (!selectedTask) {
-      Alert.alert('Error', 'Debes seleccionar una tarea');
+      Alert.alert('Error', 'Por favor selecciona una tarea');
       return;
     }
 
-    if (isGroupTask || requiereRelevo) {
-      if (participantAssignments.length < 2) {
-        Alert.alert('Error', 'Debes agregar al menos 2 participantes para tareas grupales o con relevo');
-        return;
-      }
-    } else {
-      if (!assignedTo) {
-        Alert.alert('Error', 'Debes seleccionar un usuario para asignar la tarea');
-        return;
-      }
+    if (isGroupTask && participantAssignments.length < 2) {
+      Alert.alert('Error', 'Debes agregar al menos 2 participantes para una tarea grupal');
+      return;
+    }
+
+    if (requiereRelevo && participantAssignments.length !== 2) {
+      Alert.alert('Error', 'Debes agregar exactamente 2 participantes para un relevo');
+      return;
+    }
+
+    if (!isGroupTask && !requiereRelevo && !assignedTo) {
+      Alert.alert('Error', 'Debes seleccionar un usuario para asignar la tarea');
+      return;
     }
 
     try {
@@ -120,18 +114,29 @@ const AsignarTarea = () => {
         return;
       }
 
+      const selectedTaskData = tasks.find(task => task.id === selectedTask);
+      if (!selectedTaskData) {
+        Alert.alert('Error', 'No se encontró la tarea seleccionada');
+        return;
+      }
+
       const requestBody: any = {
         isGroupTask,
-        taskId: selectedTask.id,
+        taskId: selectedTask,
         priority,
         status,
         requiereRelevo,
-        startTime: selectedTask.startTime,
-        endTime: selectedTask.endTime,
+        startTime: selectedTaskData.startTime,
+        endTime: selectedTaskData.endTime
       };
 
-      if (isGroupTask || requiereRelevo) {
-        requestBody.participantAssignments = participantAssignments;
+      if (isGroupTask || (requiereRelevo && !isGroupTask)) {
+        requestBody.participantAssignments = participantAssignments.map(participant => ({
+          userId: participant.userId,
+          individualTask: participant.individualTask,
+          startTimeIndividualTask: participant.startTimeIndividualTask || selectedTaskData.startTime,
+          endTimeIndividualTask: participant.endTimeIndividualTask || selectedTaskData.endTime
+        }));
       } else {
         requestBody.assignedTo = assignedTo;
       }
@@ -149,8 +154,8 @@ const AsignarTarea = () => {
 
       if (response.ok) {
         Alert.alert('Éxito', 'Tarea asignada correctamente');
-        
-        setSelectedTask(null);
+        // Reset form
+        setSelectedTask('');
         setIsGroupTask(false);
         setRequiereRelevo(false);
         setAssignedTo('');
@@ -182,15 +187,11 @@ const AsignarTarea = () => {
           <Text style={styles.title}>Asignar Tarea</Text>
         </View>
 
-
-        <Text style={styles.label}>Seleccionar Tarea:</Text>
+        <Text style={styles.label}>Selecciona la tarea:</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={selectedTask?.id || ''}
-            onValueChange={(itemValue) => {
-              const task = tasks.find(t => t.id === itemValue);
-              setSelectedTask(task || null);
-            }}
+            selectedValue={selectedTask}
+            onValueChange={(value) => setSelectedTask(value)}
           >
             <Picker.Item label="Seleccione una tarea..." value="" />
             {tasks.map((task) => (
@@ -199,103 +200,62 @@ const AsignarTarea = () => {
           </Picker>
         </View>
 
-        {selectedTask && (
+        <Text style={styles.label}>¿Es una tarea grupal?</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={isGroupTask ? 'sí' : 'no'}
+            onValueChange={(value) => setIsGroupTask(value === 'sí')}
+          >
+            <Picker.Item label="No" value="no" />
+            <Picker.Item label="Sí" value="sí" />
+          </Picker>
+        </View>
+
+        {!isGroupTask && (
           <>
-          
-            <View style={styles.taskDetails}>
-              <Text style={styles.detailText}>Título: {selectedTask.title}</Text>
-              <Text style={styles.detailText}>Descripción: {selectedTask.description}</Text>
-              <Text style={styles.detailText}>Inicio: {new Date(selectedTask.startTime).toLocaleString()}</Text>
-              <Text style={styles.detailText}>Fin: {new Date(selectedTask.endTime).toLocaleString()}</Text>
-              <Text style={styles.detailText}>Prioridad: {selectedTask.priority}</Text>
-            </View>
-
-
-            <Text style={styles.label}>Tipo de Asignación:</Text>
+            <Text style={styles.label}>¿Requiere relevo?</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={isGroupTask ? 'grupo' : requiereRelevo ? 'relevo' : 'individual'}
-                onValueChange={(value) => {
-                  setIsGroupTask(value === 'grupo');
-                  setRequiereRelevo(value === 'relevo');
-                  setParticipantAssignments([]);
-                }}
+                selectedValue={requiereRelevo ? 'sí' : 'no'}
+                onValueChange={(value) => setRequiereRelevo(value === 'sí')}
               >
-                <Picker.Item label="Individual" value="individual" />
-                <Picker.Item label="Con Relevo" value="relevo" />
-                <Picker.Item label="Grupal" value="grupo" />
+                <Picker.Item label="No" value="no" />
+                <Picker.Item label="Sí" value="sí" />
               </Picker>
             </View>
+          </>
+        )}
 
-
-            <Text style={styles.label}>Prioridad:</Text>
+        {(!isGroupTask && !requiereRelevo) && (
+          <>
+            <Text style={styles.label}>Asignar a:</Text>
             <View style={styles.pickerContainer}>
               <Picker
-                selectedValue={priority}
-                onValueChange={setPriority}
+                selectedValue={assignedTo}
+                onValueChange={(value) => setAssignedTo(value)}
               >
-                <Picker.Item label="Alta" value="alta" />
-                <Picker.Item label="Normal" value="normal" />
-                <Picker.Item label="Baja" value="baja" />
-              </Picker>
-            </View>
-
-            <Text style={styles.label}>Estado:</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={status}
-                onValueChange={setStatus}
-              >
-                <Picker.Item label="Pendiente" value="pendiente" />
-                <Picker.Item label="En progreso" value="en progreso" />
-                <Picker.Item label="Completada" value="completada" />
-              </Picker>
-            </View>
-
-
-            {!isGroupTask && !requiereRelevo && (
-              <>
-                <Text style={styles.label}>Asignar a:</Text>
-                <View style={styles.pickerContainer}>
-                  <Picker
-                    selectedValue={assignedTo}
-                    onValueChange={setAssignedTo}
-                  >
-                    <Picker.Item label="Seleccione un usuario..." value="" />
-                    {users.map((user) => (
-                      <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
-                    ))}
-                  </Picker>
-                </View>
-              </>
-            )}
-
-            {(isGroupTask || requiereRelevo) && (
-              <>
-                <Text style={styles.label}>Participantes:</Text>
-                
-                
-                {participantAssignments.map((participant, index) => (
-                  <View key={index} style={styles.participantItem}>
-                    <Text style={styles.participantText}>
-                      {users.find(u => u.id === participant.userId)?.name}: {participant.individualTask}
-                    </Text>
-                    <TouchableOpacity 
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveParticipant(index)}
-                    >
-                      <Text style={styles.removeButtonText}>X</Text>
-                    </TouchableOpacity>
-                  </View>
+                <Picker.Item label="Seleccione un usuario..." value="" />
+                {users.map((user) => (
+                  <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
                 ))}
+              </Picker>
+            </View>
+          </>
+        )}
 
-                <Text style={styles.subLabel}>Agregar Participante:</Text>
+        {(isGroupTask || (requiereRelevo && !isGroupTask)) && (
+          <>
+            <Text style={styles.label}>Participantes:</Text>
+            {participantAssignments.map((participant, index) => (
+              <View key={index} style={styles.participantContainer}>
+                <Text style={styles.participantLabel}>Participante {index + 1}</Text>
+                
                 <View style={styles.pickerContainer}>
                   <Picker
-                    selectedValue={currentParticipant.userId}
-                    onValueChange={(value) => setCurrentParticipant({...currentParticipant, userId: value})}
+                    selectedValue={participant.userId}
+                    onValueChange={(value) => handleParticipantChange(index, 'userId', value)}
                   >
-                    <Picker.Item label="Seleccione un usuario..." value="" />
+                    <Picker.Item label="Seleccione usuario..." value="" />
                     {users.map((user) => (
                       <Picker.Item key={user.id} label={`${user.name} ${user.lastName}`} value={user.id} />
                     ))}
@@ -303,45 +263,74 @@ const AsignarTarea = () => {
                 </View>
 
                 <TextInput
-                  placeholder="Tarea individual"
+                  placeholder="Descripción individual"
                   placeholderTextColor="#999"
-                  style={styles.input}
-                  value={currentParticipant.individualTask}
-                  onChangeText={(text) => setCurrentParticipant({...currentParticipant, individualTask: text})}
+                  style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+                  value={participant.individualTask}
+                  onChangeText={(text) => handleParticipantChange(index, 'individualTask', text)}
                 />
 
                 <TextInput
-                  placeholder="Hora de inicio (ISO)"
+                  placeholder="Hora inicio (opcional)"
                   placeholderTextColor="#999"
-                  style={styles.input}
-                  value={currentParticipant.startTimeIndividualTask}
-                  onChangeText={(text) => setCurrentParticipant({...currentParticipant, startTimeIndividualTask: text})}
+                  style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+                  value={participant.startTimeIndividualTask}
+                  onChangeText={(text) => handleParticipantChange(index, 'startTimeIndividualTask', text)}
                 />
 
                 <TextInput
-                  placeholder="Hora de fin (ISO)"
+                  placeholder="Hora fin (opcional)"
                   placeholderTextColor="#999"
-                  style={styles.input}
-                  value={currentParticipant.endTimeIndividualTask}
-                  onChangeText={(text) => setCurrentParticipant({...currentParticipant, endTimeIndividualTask: text})}
+                  style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+                  value={participant.endTimeIndividualTask}
+                  onChangeText={(text) => handleParticipantChange(index, 'endTimeIndividualTask', text)}
                 />
 
                 <TouchableOpacity 
-                  style={globalStyles.button} 
-                  onPress={handleAddParticipant}
+                  style={styles.removeButton} 
+                  onPress={() => handleRemoveParticipant(index)}
                 >
-                  <Text style={styles.buttonText}>Agregar Participante</Text>
+                  <Text style={styles.removeButtonText}>Eliminar participante</Text>
                 </TouchableOpacity>
-              </>
-            )}
+              </View>
+            ))}
+
             <TouchableOpacity 
-              style={[globalStyles.button, { marginTop: 20 }]} 
-              onPress={handleAssignTask}
+              style={globalStyles.button} 
+              onPress={handleAddParticipant}
             >
-              <Text style={styles.buttonText}>Asignar Tarea</Text>
+              <Text style={styles.buttonText}>Agregar participante</Text>
             </TouchableOpacity>
           </>
         )}
+
+        <Text style={styles.label}>Prioridad:</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={priority}
+            onValueChange={(value) => setPriority(value)}
+          >
+            <Picker.Item label="Normal" value="normal" />
+            <Picker.Item label="Alta" value="alta" />
+            <Picker.Item label="Baja" value="baja" />
+          </Picker>
+        </View>
+
+        <Text style={styles.label}>Estado inicial:</Text>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={status}
+            onValueChange={(value) => setStatus(value)}
+          >
+            <Picker.Item label="Pendiente" value="pendiente" />
+            <Picker.Item label="En progreso" value="en progreso" />
+            <Picker.Item label="Completada" value="completada" />
+          </Picker>
+        </View>
+
+        <TouchableOpacity style={globalStyles.button} onPress={handleAssignTask}>
+          <Text style={styles.buttonText}>Asignar Tarea</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -384,12 +373,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontWeight: '600',
   },
-  subLabel: {
-    marginTop: 5,
-    marginBottom: 4,
-    fontWeight: '500',
-    fontSize: 14,
-  },
   pickerContainer: {
     backgroundColor: '#fff',
     borderRadius: 8,
@@ -400,7 +383,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    textAlign: 'center',
   },
   goBackButton: {
     backgroundColor: 'rgba(137, 113, 187, 1)',
@@ -409,41 +391,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
   },
-  taskDetails: {
-    backgroundColor: '#fff',
-    padding: 15,
+  participantContainer: {
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f8f8f8',
     borderRadius: 8,
-    marginBottom: 15,
     borderWidth: 1,
-    borderColor: 'rgba(137, 113, 187, 0.5)',
+    borderColor: '#ddd',
   },
-  detailText: {
-    marginBottom: 5,
-    color: '#555',
-  },
-  participantItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 5,
+  participantLabel: {
+    fontWeight: 'bold',
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
-  },
-  participantText: {
-    flex: 1,
-    color: '#555',
   },
   removeButton: {
     backgroundColor: '#ff4444',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 5,
     alignItems: 'center',
-    marginLeft: 10,
+    marginTop: 8,
   },
   removeButtonText: {
     color: '#fff',
