@@ -146,8 +146,6 @@ exports.getUserTaskStatus = async (req, res) => {
     // Desencriptar nombre y apellido
     let name = requestedUserDoc.data().name;
     let lastName = requestedUserDoc.data().lastName;
-    let rut = requestedUserDoc.data().rut;
-    try { rut = decrypt(rut); } catch (e) {}
     try { name = decrypt(name); } catch (e) {}
     try { lastName = decrypt(lastName); } catch (e) {}
 
@@ -156,7 +154,6 @@ exports.getUserTaskStatus = async (req, res) => {
         id: userId,
         name,
         lastName,
-        rut,
         //empresaId: requestedUserDoc.data().empresaId, // Incluir el empresaId del usuario solicitado
       },
       count: tasks.length,

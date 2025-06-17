@@ -1,7 +1,7 @@
 const authService = require('../services/authService');
 const { validarDigitoVerificador } = require('../utils/validadorRUT');
 const { v4: uuidv4 } = require('uuid');
-const { encrypt, decrypt } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado y desencriptado
+const { encrypt, decrypt, hashRut } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado y desencriptado
 const { db } = require('../firebase');
 
 exports.createUser = async (req, res) => {
@@ -9,8 +9,9 @@ exports.createUser = async (req, res) => {
   try {
     const { email, password, rut, name, lastName, role, isAdmin } = req.body;
 
-    let finalEmpresaId;
+    const rutHash = hashRut(rut);
 
+    let finalEmpresaId;
 
     if (req.user && req.user.isAdmin && req.user.empresaId) {
       finalEmpresaId = req.user.empresaId; // Hereda el empresaId del admin que crea el usuario
@@ -54,27 +55,22 @@ exports.createUser = async (req, res) => {
     }
 
     // Validar si el RUT ya existe (comparando desencriptado)
-    const usersSnapshot = await authService.getAllUsersRaw(); // Debes implementar este método para obtener todos los usuarios sin desencriptar
-    for (const doc of usersSnapshot.docs) {
-      const userData = doc.data();
-      let decryptedRut = null;
-      try { decryptedRut = decrypt(userData.rut); } catch (e) {
-        console.warn("Error al desencriptar RUT:", e);
-      }
-      if (decryptedRut === rut) {
-        return res.status(409).json({ error: "El RUT ya está registrado." });
-      }
+    const existing = await db.collection('users').where('rutHash', '==', rutHash).get();
+    if (!existing.empty) {
+      return res.status(409).json({ error: "El RUT ya está registrado." });
     }
+
 
     // Cifrar datos sensibles antes de crear el usuario
     const encryptedRut = encrypt(rut);
     const encryptedName = encrypt(name);
     const encryptedLastName = encrypt(lastName);
 
-    const result = await authService.createUserWithRole({
+    const newUser = await authService.createUserWithRole({
       email,
       password,
       rut: encryptedRut, // Guardar cifrado
+      rutHash,
       name: encryptedName, // Guardar cifrado
       lastName: encryptedLastName, // Guardar cifrado
       role,
@@ -82,22 +78,8 @@ exports.createUser = async (req, res) => {
       empresaId: finalEmpresaId,
     });
 
-    const responseUser = {
-        uid: result.user.uid, // Asumiendo que newUserRecord tiene el UID
-        email: email,
-        rut: rut, // <-- Ya está desencriptado (es el 'rut' original del req.body)
-        name: name, // <-- Ya está desencriptado (es el 'name' original del req.body)
-        lastName: lastName, // <-- Ya está desencriptado (es el 'lastName' original del req.body)
-        role: role,
-        isAdmin: isAdmin,
-        empresaId: finalEmpresaId,
-    };
-
-        try { responseUser.rut = decrypt(responseUser.rut); } catch (e) { console.error("Error desencriptando RUT para respuesta:", e.message); }
-        try { responseUser.name = decrypt(responseUser.name); } catch (e) { console.error("Error desencriptando nombre para respuesta:", e.message); }
-        try { responseUser.lastName = decrypt(responseUser.lastName); } catch (e) { console.error("Error desencriptando apellido para respuesta:", e.message); }
-
-    res.status(201).json(responseUser);
+    res.status(201).json(newUser);
+    
   } catch (error) {
     console.error("Error en userController.createUser:", error); // Cambiado para claridad
     if (error.message.includes("email ya está registrado")) {

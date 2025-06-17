@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const ALGORITHM = 'aes-256-gcm'; //la clave es de 256 bits/32 bytes    
 const KEY = Buffer.from(process.env.DATA_KEY, 'hex'); // Debe ser 32 bytes (64 hex chars)
 const IV_LENGTH = 12; // Recomendado para GCM (Modo de operacion Galois/Counter Mode) que añade autenticidad
+const RUT_HASH_SALT = process.env.SALT_KEY// Cambia esto por un valor seguro y mantenlo privado
 
 function encrypt(text) {
   const iv = crypto.randomBytes(IV_LENGTH); //vector de inicialización aleatorio
@@ -24,4 +25,9 @@ function decrypt(encrypted) {
   return decrypted; 
 }
 
-module.exports = { encrypt, decrypt };
+function hashRut(rut) {
+  // Aplica un salt fijo y hashea el RUT
+  return crypto.createHash('sha256').update(rut + RUT_HASH_SALT).digest('hex');
+}
+
+module.exports = { encrypt, decrypt, hashRut };
