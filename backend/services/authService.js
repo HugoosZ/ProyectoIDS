@@ -33,12 +33,8 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
                     uid: rut, 
                     email: email,
                     rut: rut,
-                    name: name,
-                    lastName: lastName,
                     role: role,
-                    isAdmin: isAdmin,
                     empresaId: empresaId,
-                    rutHash: rutHash,
                 }
             };
     }
