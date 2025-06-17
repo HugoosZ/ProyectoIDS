@@ -16,11 +16,8 @@ router.post('/findByRut', async (req, res) => {
     if (!rut) {
       return res.status(400).json({ error: 'El RUT es necesario.' });
     }
-    console.log("DEBUG: RUT recibido para búsqueda:", rut);
-    const rutHash = hashRut(rut);
     
-    console.log("DEBUG: RUT hasheado para búsqueda:", rutHash);
-    console.log("DEBUG: process.env.SALT_KEY:", JSON.stringify(process.env.SALT_KEY));
+    const rutHash = hashRut(rut);
     const snapshot = await db.collection('users').where('rutHash', '==', rutHash).limit(1).get();
     if (snapshot.empty) {
       return res.status(404).json({ error: 'Usuario no encontrado con ese RUT.' });
