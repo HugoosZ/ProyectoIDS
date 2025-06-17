@@ -15,11 +15,11 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Picker } from '@react-native-picker/picker';
 import globalStyles from '../globalStyles';
 
-import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
-import { useRouter } from 'expo-router'; // Importa useRouter desde expo-router
+import TopBar from '../../components/TopBar'; 
+import { useRouter } from 'expo-router'; 
 
 const NuevaTarea = () => {
-  const router = useRouter(); // Inicializa el hook useRouter para la navegación
+  const router = useRouter(); 
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -37,8 +37,8 @@ const NuevaTarea = () => {
   const [requiereRelevo, setRequiereRelevo] = useState(false);
   const [trabajadorSaliente, setTrabajadorSaliente] = useState('');
   const [trabajadorEntrante, setTrabajadorEntrante] = useState('');
-
-  useEffect(() => {
+/*SOLO LOS PRESENTES
+ useEffect(() => {
     const fetchUsers = async () => {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
@@ -74,6 +74,32 @@ const NuevaTarea = () => {
 
     fetchUsers();
   }, []);
+*/
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) return;
+  
+      try {
+        const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+  
+        if (!resUsers.ok) throw new Error('Error al obtener usuarios');
+  
+        const dataUsers = await resUsers.json();
+        setUsers(dataUsers);
+  
+      } catch (error) {
+        console.error('Error al obtener usuarios:', error);
+        Alert.alert('Error', 'No se pudieron cargar los usuarios.');
+      }
+    };
+  
+    fetchUsers();
+  }, []);
+  
 
   const handleConfirmStart = (date: Date) => {
     setStartTime(date.toISOString());
@@ -166,9 +192,9 @@ const NuevaTarea = () => {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
+      <TopBar /> 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Contenedor para el botón "Volver" */}
+
         <View style={styles.goBackContainer}>
           <TouchableOpacity
             style={styles.goBackButton}
@@ -178,7 +204,7 @@ const NuevaTarea = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Contenedor para el título centrado */}
+
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Crear Nueva Tarea</Text>
         </View>
@@ -197,6 +223,8 @@ const NuevaTarea = () => {
           value={description}
           onChangeText={setDescription}
         />
+         {/*
+         Version celu
 
         <TouchableOpacity style={styles.input} onPress={() => setStartPickerVisible(true)}>
           <Text style={[styles.pickerText, { color: '#999' }]}>
@@ -221,6 +249,25 @@ const NuevaTarea = () => {
           onConfirm={handleConfirmEnd}
           onCancel={() => setEndPickerVisible(false)}
         />
+*/}
+
+<TextInput
+          placeholder="Ingresa fecha y hora inicio"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={startTime}
+          onChangeText={setStartTime}
+        />
+
+
+<TextInput
+          placeholder="Ingresa fecha y hora fin"
+          placeholderTextColor="#999"
+          style={[styles.input, { borderColor: 'rgba(137, 113, 187, 1)', color: '#999' }]}
+          value={endTime}
+          onChangeText={setEndTime}
+        />
+
 
         <TextInput
           placeholder="Prioridad (alta, media, baja)"
@@ -311,20 +358,20 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     flexDirection: 'row',
-    justifyContent: 'center', // Centra ambos elementos en el eje horizontal
-    alignItems: 'center', // Centra los elementos verticalmente
+    justifyContent: 'center', 
+    alignItems: 'center', 
     marginBottom: 20,
   },
   goBackContainer: {
-    alignItems: 'flex-start', // Alinea el botón "Volver" a la izquierda
+    alignItems: 'flex-start', 
     marginBottom: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    textAlign: 'center', // Centra el título horizontalmente
-    marginTop: 0, // Elimina el margen superior
+    textAlign: 'center', 
+    marginTop: 0,
   },
   input: {
     backgroundColor: '#fff',
@@ -355,7 +402,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   goBackButton: {
-    backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
+    backgroundColor: 'rgba(137, 113, 187, 1)', 
     padding: 4,
     borderRadius: 5,
     alignItems: 'center',
