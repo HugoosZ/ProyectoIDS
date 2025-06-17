@@ -13,7 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import globalStyles from '../app/globalStyles';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../lib/context/AuthContext'; // Asegúrate de tener este hook de contexto
+import { useAuth } from '../lib/context/AuthContext';
 
 
 
@@ -129,6 +129,12 @@ const TopBar: React.FC = () => {
                       onPress={() => handleRoute('/admin/NuevaTarea')}
                     >
                       <Text style={globalStyles.menuText}>Nueva tarea</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/AsignarTarea')}
+                    >
+                      <Text style={globalStyles.menuText}>Asignar tarea</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={globalStyles.menuOption}
