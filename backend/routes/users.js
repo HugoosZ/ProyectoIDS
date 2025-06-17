@@ -4,32 +4,26 @@ const { verifyAndDecodeToken } = require('../middlewares/authentication');
 const { checkIn, checkOut } = require('../controllers/attendanceController');
 const { checkAdminPrivileges } = require('../middlewares/authorization');
 const { getDateRange } = require("../utils/dateFilters");
-const { decrypt, encrypt } = require('../utils/crypto'); 
+const { decrypt, hashRut } = require('../utils/crypto'); 
 
 const router = Router();
 
 
-// Ruta para buscar usuario por RUT desencriptado y retornar UID y email
+// Ruta para buscar usuario por RUT (usando hash) y retorna el RUT decodificado
 router.post('/findByRut', async (req, res) => {
   try {
     const { rut } = req.body;
     if (!rut) {
       return res.status(400).json({ error: 'El RUT es necesario.' });
     }
-    const snapshot = await db.collection('users').get();
-    let foundUser = null;
-    snapshot.forEach(doc => {
-      const userData = doc.data();
-      let decryptedRut = null;
-      try { decryptedRut = decrypt(userData.rut); } catch (e) {}
-      if (decryptedRut === rut) {
-        foundUser = { uid: doc.id, email: userData.email };
-      }
-    });
-    if (!foundUser) {
+    const rutHash = hashRut(rut);
+    const snapshot = await db.collection('users').where('rutHash', '==', rutHash).limit(1).get();
+    if (snapshot.empty) {
       return res.status(404).json({ error: 'Usuario no encontrado con ese RUT.' });
     }
-    res.status(200).json(foundUser);
+    const doc = snapshot.docs[0];
+    const userData = doc.data();
+    res.status(200).json({ rut: userData.rut });
   } catch (error) {
     res.status(500).json({ error: 'Error interno al buscar usuario por RUT.' });
   }

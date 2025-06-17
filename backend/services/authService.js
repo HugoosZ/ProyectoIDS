@@ -3,7 +3,7 @@ const { db } = require("../firebase");
 const admin = require('firebase-admin');
 
 exports.createUserWithRole = async (userData) => { // i) función como asíncrona
-    const { email, password, rut, name, lastName, role, isAdmin, empresaId } = userData;
+    const { email, password, rut, name, lastName, role, isAdmin, empresaId, rutHash } = userData;
 
     try {
         // 1. Crear en Firebase Auth
@@ -21,6 +21,7 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
         lastName: lastName,
         email: email,
         rut: rut,
+        rutHash,
         role: role,
         empresaId: empresaId,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -36,19 +37,23 @@ exports.createUserWithRole = async (userData) => { // i) función como asíncron
                     lastName: lastName,
                     role: role,
                     isAdmin: isAdmin,
-                    empresaId: empresaId 
+                    empresaId: empresaId,
+                    rutHash: rutHash,
                 }
             };
     }
     
     catch (error) { 
         console.error("Error en authService.createUserWithRole:", error);
+
         if (error.message === 'El RUT ya está registrado.') {
             throw new Error(error.message);
         } else if (error.code === 'auth/email-already-exists') {
             throw new Error('El email ya está registrado.');
         } else if (error.code === 'auth/invalid-password') {
             throw new Error('La contraseña debe tener al menos 6 caracteres.');
+        } else if (error.code === 'auth/invalid-email') {
+            throw new Error('El email proporcionado no es válido.');
         } else {
             throw new Error('Error interno del servidor al crear usuario: ' + error.message);
         }
