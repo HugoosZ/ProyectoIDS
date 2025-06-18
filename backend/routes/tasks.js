@@ -18,7 +18,7 @@ router.post("/createTask", verifyAndDecodeToken, checkAdminPrivileges, createTas
 router.get("/tasks", verifyAndDecodeToken, taskController.getAllCompanyTasks);
 
 // Obtener todas las tareas de un usuario específico
-router.get("/tasks/:userId", verifyAndDecodeToken, checkEmpresaId, taskController.getTasksByUserId);
+router.get("/tasks/:userId", verifyAndDecodeToken, taskController.getTasksByUserId);
 
 // Actualizar el estado de una tarea
 router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);

@@ -47,66 +47,74 @@ exports.createTask = async (req, res) => {
 
 
 exports.getTasksByUserId = async (req, res) => {
-    try {
-        const userId = req.params.userId; // El UID del usuario cuyas tareas queremos obtener
-        const authenticatedUserEmpresaId = req.user.empresaId; // Empresa ID del usuario que hace la solicitud
+  try {
+    const userId = req.params.userId;
+    const authenticatedUserEmpresaId = req.user.empresaId;
 
-        if (!userId) {
-            return res.status(400).json({ message: "Missing userId in request parameters." });
-        }
-        if (!authenticatedUserEmpresaId) {
-            return res.status(403).json({ message: "Forbidden: User is not associated with an enterprise." });
-        }
-
-        // Construir la consulta a Firestore
-        // 1. Filtrar por el usuario asignado
-        // 2. Filtrar por la empresa del usuario autenticado (para asegurar que solo se vean tareas de la propia empresa)
-        let query = db.collection("tasks")
-                      .where("assignedTo", "==", userId)
-                      .where("empresaId", "==", authenticatedUserEmpresaId);
-
-        // Opcional: Podrías añadir ordenación, por ejemplo, por fecha de inicio
-        // query = query.orderBy("startTime", "asc");
-
-        const snapshot = await query.get();
-
-        if (snapshot.empty) {
-            return res.status(200).json([]); // Devolver un array vacío si no hay tareas para ese usuario en esa empresa
-        }
-
-        const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Convertir Timestamps a formato de fecha ISO (YYYY-MM-DD) para el cliente
-        const formattedTasks = tasks.map(task => {
-            const formattedTask = { ...task };
-            if (formattedTask.createdAt instanceof Timestamp) {
-                formattedTask.createdAt = formattedTask.createdAt.toDate().toISOString().split('T')[0];
-            }
-            if (formattedTask.startTime instanceof Timestamp) {
-                formattedTask.startTime = formattedTask.startTime.toDate().toISOString().split('T')[0];
-            }
-            if (formattedTask.endTime instanceof Timestamp) {
-                formattedTask.endTime = formattedTask.endTime.toDate().toISOString().split('T')[0];
-            }
-            if (formattedTask.realStartTime instanceof Timestamp && formattedTask.realStartTime !== null) {
-                formattedTask.realStartTime = formattedTask.realStartTime.toDate().toISOString().split('T')[0];
-            } else if (formattedTask.realStartTime === null) {
-                formattedTask.realStartTime = null;
-            }
-            if (formattedTask.realEndTime instanceof Timestamp && formattedTask.realEndTime !== null) {
-                formattedTask.realEndTime = formattedTask.realEndTime.toDate().toISOString().split('T')[0];
-            } else if (formattedTask.realEndTime === null) {
-                formattedTask.realEndTime = null;
-            }
-            return formattedTask;
-        });
-
-        return res.status(200).json(formattedTasks);
-
-    } catch (error) {
-        console.error("Error fetching tasks by user ID:", error);
-        return res.status(500).json({ message: "Internal Server Error" });
+    if (!userId) {
+      return res.status(400).json({ message: "Falta el userId en los parámetros." });
     }
+    if (!authenticatedUserEmpresaId) {
+      return res.status(403).json({ message: "Usuario no asociado a una empresa." });
+    }
+
+    // 1. Buscar asignaciones del usuario
+    const assignmentsSnap = await db.collection("taskAssignments")
+      .where("assignedTo", "==", userId)
+      .get();
+
+    if (assignmentsSnap.empty) {
+      return res.status(200).json([]); // No hay tareas asignadas a este usuario
+    }
+
+    const tasks = [];
+
+    // 2. Recorrer asignaciones y obtener la info completa de cada tarea
+    for (const doc of assignmentsSnap.docs) {
+      const assignmentData = doc.data();
+      const assignmentId = doc.id;
+
+      const taskInfoRef = db.collection("taskInfo").doc(assignmentData.taskInfoId);
+      const taskInfoSnap = await taskInfoRef.get();
+
+      if (!taskInfoSnap.exists) continue;
+
+      const taskInfo = taskInfoSnap.data();
+
+      // Verificar empresa
+      if (taskInfo.empresaId !== authenticatedUserEmpresaId) continue;
+
+      // Formatear fechas (Timestamps a ISO)
+      const formatDate = (timestamp) =>
+        timestamp instanceof admin.firestore.Timestamp
+          ? timestamp.toDate().toISOString().split("T")[0]
+          : null;
+
+      tasks.push({
+        assignmentId,
+        taskInfoId: assignmentData.taskInfoId,
+        assignedTo: assignmentData.assignedTo,
+        individualTask: assignmentData.individualTask || null,
+        status: assignmentData.status,
+        startTimeIndividualTask: formatDate(assignmentData.startTimeIndividualTask),
+        endTimeIndividualTask: formatDate(assignmentData.endTimeIndividualTask),
+        // Info general
+        taskName: taskInfo.taskName || null, // puedes usar otro campo representativo
+        empresaId: taskInfo.empresaId,
+        priority: taskInfo.priority,
+        startTime: formatDate(taskInfo.startTime),
+        endTime: formatDate(taskInfo.endTime),
+        createdAt: formatDate(taskInfo.createdAt),
+        isGroupTask: taskInfo.isGroupTask,
+        requiereRelevo: taskInfo.requiereRelevo,
+      });
+    }
+
+    return res.status(200).json(tasks);
+  } catch (error) {
+    console.error("Error al obtener tareas por usuario:", error);
+    return res.status(500).json({ message: "Error interno del servidor." });
+  }
 };
 
 exports.getAllCompanyTasks = async (req, res) => {
