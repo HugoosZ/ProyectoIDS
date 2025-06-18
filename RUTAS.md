@@ -3,6 +3,124 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
+## 📝 `GET /admin/tasks/detailed`
+
+**Descripción:**
+Devuelve una vista detallada de todas las tareas (información principal y sus asignaciones individuales) que pertenecen a la misma empresa del administrador autenticado. Incluye los datos desencriptados de los usuarios participantes en cada asignación. Esta ruta está diseñada exclusivamente para administradores que necesitan una visión completa y desglosada de todas las actividades de su organización.
+
+
+
+**Roles requeridos:** `Administrador`.
+
+**Método:** `GET`
+
+**URL:** `/api/tasks`
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_administrador_autenticado>`
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Ejemplo de Respuesta:**
+```json
+[
+  {
+    "id": "MPYKDlSepXGG9nKETe9J",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": null,
+    "currentlyWorking": null,
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "codigoRelevo": "688289",
+    "relevoExpira": "2025-06-18T19:55:29.874Z",
+    "validadoRelevo": true,
+    "assignments": [
+      {
+        "id": "2U2gzDgAw8ph417V7hsW",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+        "startTimeIndividualTask": "2025-06-28T13:12:00.000Z",
+        "endTimeIndividualTask": "2025-06-29T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Pruebas a los sistemas implementados",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:29.312Z",
+        "status": "finalizada",
+        "assignedToUser": {
+          "uid": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+          "email": "sofia.vergara@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "b969c0ae-ad7d-4894-ab9b-9fc1148dde14",
+          "createdAt": "2025-06-17T22:48:56.029Z",
+          "name": "Sofia",
+          "lastName": "Vergara",
+          "rut": "20835148-6"
+        }
+      },
+      {
+        "id": "Tlbb3iBhwF9kWyxMRRhc",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+        "startTimeIndividualTask": "2025-06-18T13:10:00.000Z",
+        "endTimeIndividualTask": "2025-06-27T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Implementaciones iniciales",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:28.743Z",
+        "status": "en curso",
+        "assignedToUser": {
+          "uid": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+          "email": "paula.ovalle@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "f4141d39-d1a0-4ed6-8c55-ec33151ea7b7",
+          "createdAt": "2025-06-17T22:48:02.194Z",
+          "name": "Paula",
+          "lastName": "Ovalle",
+          "rut": "21333082-9"
+        }
+      }
+    ]
+  },
+  {
+    "id": "udy7SweJpHaZudizPsbh",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": null,
+    "currentlyWorking": null,
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "assignments": []
+  }
+]
+```
+
+
 ## 📝 `GET /api/users`
 **Descripción**:
 Permite a un usuario autenticado con rol de `admin` obtener la lista de todos los usuarios registrados **dentro de su propia empresa**. La respuesta se filtra automáticamente por el `empresaId` del administrador que realiza la solicitud, garantizando la seguridad y la visibilidad de datos solo dentro de la empresa.
