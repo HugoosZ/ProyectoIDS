@@ -322,7 +322,7 @@ fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}?${queryParams.t
 Permite a un usuario autenticado actualizar el estado de una tarea específica por su ID. La operación está restringida:
 * Un **usuario normal** solo puede actualizar el estado de las tareas que le están **asignadas**.
 * Un **administrador** puede actualizar el estado de cualquier tarea **dentro de su misma empresa**.
-* Cuando el estado cambia a `"en progreso"`, se registra `realStartTime` si no está ya establecido.
+* Cuando el estado cambia a `"en curso"`, se registra `realStartTime` si no está ya establecido.
 * Cuando el estado cambia a `"completada"`, se registra `realEndTime` si no está ya establecido y se descuenta 1 de `currentTasks` en el registro de asistencia del usuario asignado.
 
 **Headers**:
@@ -332,7 +332,7 @@ Content-Type: application/json
 **Cuerpo del request**:
 ```json
 {
-    "status": "completada" // "pendiente", "en progreso"
+    "status": "completada" // "pendiente", "en curso"
 }
 ```
 
