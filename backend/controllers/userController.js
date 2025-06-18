@@ -3,16 +3,15 @@ const { validarDigitoVerificador } = require('../utils/validadorRUT');
 const { v4: uuidv4 } = require('uuid');
 const { encrypt, decrypt, hashRut } = require('../utils/crypto'); // <-- Importa el utilitario de cifrado y desencriptado
 const { db } = require('../firebase');
+const { sendTempPassword, generateTempPassword } = require('../services/emailService');
 
 exports.createUser = async (req, res) => {
   // console.log("DEBUG: Contenido de req.body al inicio de createUser:", req.body);
   try {
-    const { email, password, rut, name, lastName, role, isAdmin } = req.body;
+    const { email, rut, name, lastName, role, isAdmin } = req.body;
 
     const rutHash = hashRut(rut);
-
     let finalEmpresaId;
-
     if (req.user && req.user.isAdmin && req.user.empresaId) {
       finalEmpresaId = req.user.empresaId; // Hereda el empresaId del admin que crea el usuario
       console.log(
@@ -32,9 +31,7 @@ exports.createUser = async (req, res) => {
       );
       finalEmpresaId = uuidv4(); // O podrías lanzar un error si prefieres que siempre se herede o se especifique
     }
-
-    // Validar campos obligatorios
-    if (!email || !password || !rut || !name || !lastName || !role) {
+    if (!email || !rut || !name || !lastName || !role) {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
@@ -59,17 +56,17 @@ exports.createUser = async (req, res) => {
     if (!existing.empty) {
       return res.status(409).json({ error: "El RUT ya está registrado." });
     }
-
-
+    // Generar contraseña temporal
+    const tempPassword = generateTempPassword(10);
     // Cifrar datos sensibles antes de crear el usuario
     const encryptedRut = encrypt(rut);
     const encryptedName = encrypt(name);
     const encryptedLastName = encrypt(lastName);
-
+    // Crear usuario en Auth y Firestore
     const newUser = await authService.createUserWithRole({
       email,
-      password,
-      rut: encryptedRut, // Guardar cifrado
+      password: tempPassword,
+      rut: encryptedRut,
       rutHash,
       name: encryptedName, // Guardar cifrado
       lastName: encryptedLastName, // Guardar cifrado
@@ -77,11 +74,11 @@ exports.createUser = async (req, res) => {
       isAdmin,
       empresaId: finalEmpresaId,
     });
-
+    // Enviar contraseña temporal al correo
+    await sendTempPassword(email, tempPassword);
     res.status(201).json(newUser);
-    
   } catch (error) {
-    console.error("Error en userController.createUser:", error); // Cambiado para claridad
+    console.error("Error en userController.createUser:", error);
     if (error.message.includes("email ya está registrado")) {
       return res.status(409).json({ error: error.message });
     } else if (
@@ -89,9 +86,7 @@ exports.createUser = async (req, res) => {
     ) {
       return res.status(400).json({ error: error.message });
     } else {
-      res
-        .status(500)
-        .json({ error: "Error interno del servidor al crear usuario." });
+      res.status(500).json({ error: "Error interno del servidor al crear usuario." });
     }
   }
 };

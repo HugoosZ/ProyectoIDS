@@ -5,6 +5,7 @@ const router = express.Router();  // Usa el Router de express directamente
 
 const {db} = require('../firebase'); // para traer el objeto db que se exporta de firebase.js
 const { decrypt } = require('../utils/crypto'); // <-- Importa la función decrypt
+const { sendTestEmail } = require('../services/emailService');
 
 
 router.get('/', async (req, res) => {
@@ -98,6 +99,20 @@ router.post("/decrypt", async (req, res) => {
     res.status(200).json({ decrypted });
   } catch (error) {
     res.status(500).json({ error: "No se pudo desencriptar.", details: error.message });
+  }
+});
+
+// Ruta para probar el envío de correo de prueba
+router.get('/test-email', async (req, res) => {
+  try {
+    const result = await sendTestEmail();
+    if (result.success) {
+      res.status(200).json({ message: 'Correo de prueba enviado correctamente.' });
+    } else {
+      res.status(500).json({ error: 'No se pudo enviar el correo de prueba.', details: result.error });
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Error inesperado al enviar el correo de prueba.' });
   }
 });
 
