@@ -307,51 +307,58 @@ function generate6DigitCode() {
 
 exports.generarCodigoRelevo = async (req, res) => {
   try {
-    const { taskId }                        = req.params;
+    const { taskId } = req.params;
     const { uid: userUid, empresaId, isAdmin } = req.user;
-    const { minutosValidez }                = req.body;
+    const { minutosValidez } = req.body;
 
     if (!minutosValidez || isNaN(minutosValidez) || minutosValidez <= 0) {
       return res.status(400).json({ message: 'minutosValidez debe ser un número > 0.' });
     }
 
-    // 1.1) Verifico tarea y permisos
-    const taskRef = db.collection('tasks').doc(taskId);
-    const taskSnap= await taskRef.get();
-    if (!taskSnap.exists) 
+    // 1. Obtener tarea individual desde taskAssignments
+    const taskRef = db.collection('taskAssignments').doc(taskId);
+    const taskSnap = await taskRef.get();
+
+    if (!taskSnap.exists) {
       return res.status(404).json({ message: 'Tarea no encontrada.' });
+    }
 
     const task = taskSnap.data();
-    if (task.empresaId !== empresaId) 
+
+    // 2. Validar permisos y que la tarea sea de relevo
+    if (!task.requiereRelevo) {
+      return res.status(400).json({ message: 'La tarea no requiere relevo.' });
+    }
+
+    if (!isAdmin && task.assignedTo !== userUid) {
+      return res.status(403).json({ message: 'Sólo admin o el asignado pueden generar el código de relevo.' });
+    }
+
+    // 3. Obtener la tarea general (taskInfo)
+    const taskInfoId = task.taskInfoId;
+    const taskInfoRef = db.collection('taskInfo').doc(taskInfoId);
+    const taskInfoSnap = await taskInfoRef.get();
+
+    if (!taskInfoSnap.exists) {
+      return res.status(404).json({ message: 'Tarea general no encontrada.' });
+    }
+
+    const taskInfo = taskInfoSnap.data();
+
+    /* if (taskInfo.empresaId !== empresaId) {
       return res.status(403).json({ message: 'No autorizado sobre esta tarea.' });
+    } */
 
-    if (!isAdmin && task.createdBy !== userUid) 
-      return res.status(403).json({ message: 'Sólo admin o creador pueden generar código.' });
-
-    if (!task.requiereRelevo) 
-      return res.status(400).json({ message: 'La tarea no está marcada como relevo.' });
-
-
-    // 1.2) Recupero el único assignment para esta tarea
-    const asgSnap = await db.collection('taskAssignments')
-      .where('taskId', '==', taskId)
-      .limit(1)
-      .get();
-    if (asgSnap.empty) 
-      return res.status(404).json({ message: 'Asignación no encontrada.' });
-
-    const asgDoc = asgSnap.docs[0];
-    const asgRef = asgDoc.ref;
-
-    // 1.3) Generar y guardar el código + expiración
-    const code      = generate6DigitCode();
+    // 4. Generar código de 6 dígitos
+    const code = generate6DigitCode();
     const expiresAt = admin.firestore.Timestamp.fromDate(
       new Date(Date.now() + minutosValidez * 60000)
     );
 
-    await asgRef.update({
-      codigoRelevo:   code,
-      relevoExpira:   expiresAt,
+    // 5. Guardar en taskInfo el código de relevo
+    await taskInfoRef.update({
+      codigoRelevo: code,
+      relevoExpira: expiresAt,
       validadoRelevo: false
     });
 
@@ -362,17 +369,43 @@ exports.generarCodigoRelevo = async (req, res) => {
   }
 };
 
+
 exports.realizarRelevo = async (req, res) => {
   try {
     const { uid: usuarioEntrante } = req.user;
-    const { codigoRelevo, taskInfoId } = req.body;
+    const { taskInfoId } = req.params;
+    const { codigoRelevo } = req.body;
 
     if (!codigoRelevo || !taskInfoId) {
       return res.status(400).json({ error: "Código de relevo y taskInfoId son requeridos." });
     }
 
-    // Buscar asignaciones por taskInfoId
-    const snapshot = await db.collection("tasksAssignments")
+    // 1. Obtener el documento en taskInfo
+    const taskInfoRef = db.collection("taskInfo").doc(taskInfoId);
+    const taskInfoSnap = await taskInfoRef.get();
+
+    if (!taskInfoSnap.exists) {
+      return res.status(404).json({ error: "Tarea general no encontrada." });
+    }
+
+    const taskInfo = taskInfoSnap.data();
+
+    // 2. Validar código
+    if (
+      taskInfo.codigoRelevo !== codigoRelevo ||
+      taskInfo.validadoRelevo === true
+    ) {
+      return res.status(400).json({ error: "Código de relevo inválido o ya utilizado." });
+    }
+
+    const now = new Date();
+    const expira = taskInfo.relevoExpira?.toDate?.() ?? null;
+    if (!expira || now > expira) {
+      return res.status(400).json({ error: "El código de relevo ha expirado." });
+    }
+
+    // 3. Buscar asignaciones de la tarea
+    const snapshot = await db.collection("taskAssignments")
       .where("taskInfoId", "==", taskInfoId)
       .where("requiereRelevo", "==", true)
       .get();
@@ -381,42 +414,34 @@ exports.realizarRelevo = async (req, res) => {
       return res.status(404).json({ error: "No se encontraron asignaciones con relevo para esa tarea." });
     }
 
-    let relevoValido = false;
-    let salienteRef = null;
     let entranteRef = null;
+    let salienteRef = null;
 
     for (const doc of snapshot.docs) {
       const data = doc.data();
+      const ref = doc.ref;
 
-      // Validar código, expiración y usuario entrante
-      if (data.codigoRelevo === codigoRelevo && !data.relevoValidado) {
-        const now = new Date();
-        const expira = data.relevoExpira?.toDate?.() ?? null;
-        if (!expira || now > expira) {
-          return res.status(400).json({ error: "El código de relevo ha expirado." });
-        }
-
-        // Encontrar asignación del usuario entrante
-        if (data.assignedTo === usuarioEntrante) {
-          entranteRef = doc.ref;
-        } else {
-          salienteRef = doc.ref;
-        }
-
-        relevoValido = true;
+      if (data.assignedTo === usuarioEntrante) {
+        entranteRef = ref;
+      } else if (data.status !== "finalizada") {
+        salienteRef = ref;
       }
     }
 
-    if (!relevoValido || !entranteRef || !salienteRef) {
-      return res.status(400).json({ error: "Código de relevo inválido o no autorizado." });
+    if (!entranteRef || !salienteRef) {
+      return res.status(400).json({ error: "No se pudo identificar al usuario entrante o saliente." });
     }
 
-    // Transacción: actualizar ambos documentos
+    // 4. Ejecutar transacción para actualizar ambos documentos
     await db.runTransaction(async (transaction) => {
-      transaction.update(entranteRef, {
-        status: "en curso",
-        relevoValidado: true
+      transaction.update(taskInfoRef, {
+        validadoRelevo: true
       });
+
+      transaction.update(entranteRef, {
+        status: "en curso"
+      });
+
       transaction.update(salienteRef, {
         status: "finalizada"
       });
@@ -429,6 +454,7 @@ exports.realizarRelevo = async (req, res) => {
     return res.status(500).json({ error: "Error interno al realizar el relevo." });
   }
 };
+
 
 
 exports.getDailyTaskStatus = async (req, res) => {
@@ -537,6 +563,7 @@ exports.AssignTask = async (req, res) => {
   try {
     // Extraer datos principales del request
     const { isGroupTask, taskId, startTime, endTime, priority, status, requiereRelevo, participantAssignments, assignedTo, individualTask } = req.body;
+    const { uid: assignedBy, empresaId } = req.user;
     // Construir objeto base para TaskInfo (tarea general)
     const taskInfoData = {
       taskId: taskId, // Referencia a la plantilla de tarea
@@ -550,6 +577,8 @@ exports.AssignTask = async (req, res) => {
       participants: [],
       shouldBeWorking: null,
       currentlyWorking: null,
+      assignedBy,
+      empresaId,
       createdAt: new Date()
     };
 
@@ -611,7 +640,7 @@ exports.AssignTask = async (req, res) => {
     for (const assignment of participantsArray) {
       const { userId, startTimeIndividualTask, endTimeIndividualTask } = assignment;
       // Buscar tareas asignadas al usuario que se solapen con el nuevo rango
-      const overlappingTasks = await db.collection("tasksAssignments")
+      const overlappingTasks = await db.collection("taskAssignments")
         .where("assignedTo", "==", userId)
         .where("startTimeIndividualTask", "<", new Date(endTimeIndividualTask))
         .where("endTimeIndividualTask", ">", new Date(startTimeIndividualTask))
@@ -625,7 +654,7 @@ exports.AssignTask = async (req, res) => {
     taskInfoData.participants = participantsArray.map(a => a.userId);
     // Crear documento en la colección TaskInfo (tarea general)
     const taskInfoRef = await db.collection("taskInfo").add(taskInfoData);
-    // Crear tareas individuales en la colección tasksAssignments
+    // Crear tareas individuales en la colección taskAssignments
     const assignments = [];
     for (const assignment of participantsArray) {
       const { userId, individualTask, startTimeIndividualTask, endTimeIndividualTask } = assignment;
