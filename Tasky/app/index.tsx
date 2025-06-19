@@ -75,7 +75,7 @@ export default function Index() {
       try {
         encryptedRut = await encryptUID(rut);
       } catch (err) {
-        showError('Rut no reconocido.');
+        showError('Usuario no encontrado, verifica tu RUT.');
         return;
       }
 
@@ -145,7 +145,7 @@ export default function Index() {
             ]}
           >
             <Image
-              source={require('../assets/images/logotasky.jpg')}
+              source={require('../assets/images/logotasky.png')}
               style={globalStyles.logo}
             />
 
