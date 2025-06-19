@@ -223,8 +223,6 @@ Devuelve todas las tareas que pertenecen a la misma empresa del usuario autentic
 **Query params opcionales:**
 - `status`: Filtra por estado de la tarea (ej: "pendiente", "completada").
 - `priority`: Filtra por prioridad (ej: "alta", "media", "baja").
-- `today`: Si es `true`, solo tareas del día actual.
-- `week`: Si es `true`, solo tareas de la semana actual.
 - `requiereRelevo`: Si es `true`/`false`, filtra por tareas que requieren/no requieren relevo.
 
 **Ejemplo de Solicitud (desde el cliente):**
