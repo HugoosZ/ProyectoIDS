@@ -220,6 +220,13 @@ Devuelve todas las tareas que pertenecen a la misma empresa del usuario autentic
 * `Authorization`: `Bearer <token_del_usuario_autenticado>`
 * `Content-Type`: `application/json` (opcional para GET)
 
+**Query params opcionales:**
+- `status`: Filtra por estado de la tarea (ej: "pendiente", "completada").
+- `priority`: Filtra por prioridad (ej: "alta", "media", "baja").
+- `today`: Si es `true`, solo tareas del día actual.
+- `week`: Si es `true`, solo tareas de la semana actual.
+- `requiereRelevo`: Si es `true`/`false`, filtra por tareas que requieren/no requieren relevo.
+
 **Ejemplo de Solicitud (desde el cliente):**
 ```javascript
 fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.app/api/tasks)", {
@@ -230,12 +237,19 @@ fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.a
 .then(res => res.json())
 .then(data => console.log(data));
 ```
+
+**Respuesta:**
+Array de tareas de la empresa del usuario autenticado, filtradas según los parámetros enviados.
+
+---
+
 ## 📝 `GET /tasks/:userId`
 
 **Descripción:**
 Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID.
-Esta ruta aplica las siguientes reglas de autorización:
-* Un **usuario normal** solo puede consultar sus *propias* tareas (es decir, el `:userId` en la URL debe coincidir con su propio UID autenticado).
+
+**Reglas de autorización:**
+* Un **usuario normal** solo puede consultar sus *propias* tareas (el `:userId` debe coincidir con su propio UID autenticado).
 * Un **administrador** puede consultar las tareas de *cualquier* usuario, **siempre y cuando ese usuario pertenezca a la misma empresa** que el administrador.
 
 **Roles requeridos:** `Usuario` o `Administrador` (con las restricciones mencionadas).
@@ -249,7 +263,10 @@ Esta ruta aplica las siguientes reglas de autorización:
 
 **Headers:**
 * `Authorization`: `Bearer <token_del_usuario_autenticado>`
-* `Content-Type`: `application/json` (aunque no es estrictamente necesario para GET)
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Query params opcionales:**
+- `status`, `priority`, `today`, `week`, `requiereRelevo` (igual que en `/tasks`)
 
 **Ejemplo de Solicitud (desde el cliente):**
 ```javascript
@@ -261,16 +278,58 @@ fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_MI_PROPIO_USUARIO](http
 })
 .then(res => res.json())
 .then(data => console.log(data));
-
-// Para un administrador viendo tareas de un usuario de su misma empresa
-fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA](https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA)", {
-  headers: {
-    'Authorization': 'Bearer <token_del_administrador>'
-  }
-})
-.then(res => res.json())
-.then(data => console.log(data));
 ```
+
+**Respuesta:**
+Array de tareas asignadas al usuario solicitado, filtradas según los parámetros enviados.
+
+---
+
+## 📝 `POST /tasks/:taskInfoId/relief`
+
+**Descripción:**
+Genera y asigna un código de relevo temporal de 6 dígitos a una tarea que requiere relevo. El código es único, visible para el trabajador saliente y tiene una validez configurable (en minutos) que debe ser enviada en el body de la petición. El código y su expiración se almacenan en la tarea y se devuelven en la respuesta.
+
+**Roles requeridos:**
+- Trabajador asignado a la tarea o administrador de la empresa.
+
+**Método:** `POST`
+
+**URL:** `/api/tasks/:taskInfoId/relief`
+
+**Parámetros de URL:**
+- `taskInfoId` (string): ID de la tarea para la que se genera el código de relevo.
+
+**Headers:**
+- `Authorization`: `Bearer <token_usuario_o_admin>`
+- `Content-Type`: `application/json`
+
+**Body:**
+```json
+{
+  "minutosValidez": 20 // Tiempo de validez del código en minutos
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "code": "123456",
+  "expiresAt": "2025-06-19T18:00:00.000Z"
+}
+```
+
+**Errores posibles:**
+- 400: Faltan parámetros, minutos de validez inválidos, etc.
+- 403: No autorizado (ni trabajador asignado ni admin).
+- 404: Tarea no encontrada.
+- 500: Error interno del servidor.
+
+**Notas:**
+- El código solo puede ser generado por el trabajador asignado o un administrador.
+- El tiempo de validez es configurable por el frontend/administrador en cada solicitud.
+
+---
 
 ## `PUT /reassign-task/:taskId`
 **Descripción**:
