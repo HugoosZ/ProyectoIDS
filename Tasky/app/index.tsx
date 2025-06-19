@@ -75,7 +75,7 @@ export default function Index() {
       try {
         encryptedRut = await encryptUID(rut);
       } catch (err) {
-        showError('Rut no reconocido.');
+        showError('Usuario no encontrado, verifica tu RUT.');
         return;
       }
 

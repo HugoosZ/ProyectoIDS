@@ -19,7 +19,7 @@ export async function encryptUID(rut: string) {
       const data = await response.json();
       return data.uid; // Retornamos el UID del usuario encontrado
     } catch (error) {
-      console.error("Error al buscar usuario por RUT:", error);
+      //console.error("Error al buscar usuario por RUT:", error);
       throw error;
     }
   }
