@@ -21,7 +21,7 @@ router.get("/tasks", verifyAndDecodeToken, taskController.getAllCompanyTasks);
 router.get("/tasks/:userId", verifyAndDecodeToken, taskController.getTasksByUserId);
 
 // Actualizar el estado de una tarea
-router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);
+//router.patch("/tasks/:taskId/status", verifyAndDecodeToken, updateTaskStatus);
 
 // Obtener estado de las tareas del usuario donde tanto como el admin y el usuario puede ver tareas asignadas a alguien
 router.get("/statustasks/:userId", verifyAndDecodeToken, getUserTaskStatus);
