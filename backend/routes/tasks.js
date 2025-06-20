@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const { db } = require("../firebase");
-const { createTask, getAllCompanyTasks, getTasksByUserId, updateTaskStatus } = require("../controllers/taskController");
+const { createTask, getAllCompanyTasks, getTasksByUserId, updateTaskStatus, patchAssignmentStatus } = require("../controllers/taskController");
 const { checkAdminPrivileges, checkEmpresaId } = require("../middlewares/authorization");
 const { verifyAndDecodeToken } = require("../middlewares/authentication");
 const { getDateRange, getDateRangeWithTimezone } = require("../utils/dateFilters");
@@ -33,6 +33,8 @@ router.post('/tasks/:taskInfoId/relief', verifyAndDecodeToken, taskController.re
 router.post('/tasks/:taskId/generarCodigoRelevo', verifyAndDecodeToken, taskController.generarCodigoRelevo);
 
 router.get('/getDailyTasks/', verifyAndDecodeToken, taskController.getDailyTaskStatus);
+
+router.patch('/tasks/:assignmentId/status', verifyAndDecodeToken, taskController.patchAssignmentStatus);
 
 // Reasignar tarea a usuario usando uid en lugar de rut
 router.put("/reassign-task/:taskId", async (req, res) => {

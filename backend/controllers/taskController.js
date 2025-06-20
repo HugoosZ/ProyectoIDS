@@ -854,3 +854,21 @@ exports.getAdminDetailedTasks = async (req, res) => {
         res.status(500).json({ error: "Error interno del servidor al obtener tareas detalladas.", details: error.message });
     }
 };
+
+exports.patchAssignmentStatus = async (req, res) => {
+  const { assignmentId } = req.params;
+  const { status } = req.body;
+  const { uid: userId } = req.user;
+
+  const ref = db.collection('taskAssignments').doc(assignmentId);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ error: 'Asignación no encontrada.' });
+
+  const data = snap.data();
+  if (data.assignedTo !== userId) {
+    return res.status(403).json({ error: 'No autorizado.' });
+  }
+
+  await ref.update({ status });
+  return res.json({ message: 'Estado actualizado.' });
+};

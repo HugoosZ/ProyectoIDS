@@ -3,170 +3,82 @@ const { db } = require("../firebase"); // Asegúrate de que importas 'db' de fir
 const { Timestamp } = require("firebase-admin/firestore"); // Para manejar fechas de Firestore
 const { getDateRange } = require("../utils/dateFilters"); // Asegúrate de que esta utilidad exista y funcione.
 const { decrypt } = require('../utils/crypto'); // <-- Importa decrypt
+const admin = require('firebase-admin');
 
 exports.getUserTaskStatus = async (req, res) => {
   try {
-    const { userId } = req.params; // UID del usuario cuyas tareas se quieren ver (el de la URL)
+    const { userId } = req.params;
+    const { uid: requesterId, empresaId: requesterEmpresa, isAdmin } = req.user;
 
-    // Datos del usuario que hace la petición (vienen del token, inyectados por authentication.js)
-    const requestingUserId = req.user.uid;
-    const requestingUserEmpresaId = req.user.empresaId;
-    const requestingUserIsAdmin = req.user.isAdmin;
-
-    // 1. Obtener los datos del usuario solicitado (el del `:userId` en la URL)
-    const requestedUserDoc = await db.collection("users").doc(userId).get();
-    if (!requestedUserDoc.exists) {
-      console.log(
-        "DEBUG: Usuario solicitado NO encontrado en Firestore:",
-        userId
-      );
-      return res
-        .status(404)
-        .json({ error: "Usuario solicitado no encontrado." });
-    }
-    const requestedUserEmpresaId = requestedUserDoc.data().empresaId; // EmpresaId del usuario solicitado
-         console.log(
-      "DEBUG: EmpresaId del usuario solicitado (desde Firestore):",
-      requestedUserEmpresaId
-    ); 
-
-    // 2. Lógica de permisos (combinando la tuya con la base de tu compañero)
-    // Un usuario NO admin solo puede ver sus propias tareas y debe estar en la misma empresa.
-         if (!requestingUserIsAdmin) {
-      if (userId !== requestingUserId) {
-        console.log(
-          "DEBUG: Acceso denegado - Usuario NO admin intentó ver tareas de OTRO usuario."
-        );
-        return res
-          .status(403)
-          .json({
-            error:
-              "No autorizado: Un usuario regular solo puede ver sus propias tareas.",
-          });
-      }
-      // Si es el propio usuario, también debe verificar que su empresaId coincide con el solicitado
-      if (requestingUserEmpresaId !== requestedUserEmpresaId) {
-        console.log(
-          "DEBUG: Acceso denegado - Usuario intentó ver sus propias tareas pero la empresaId no coincide (anomalía)."
-        );
-        return res
-          .status(403)
-          .json({ error: "No autorizado: Discrepancia en empresa." });
-      }
-    } else {
-      // Si es un admin, puede ver tareas de cualquier usuario de SU MISMA EMPRESA.
-      if (requestingUserEmpresaId !== requestedUserEmpresaId) {
-        return res
-          .status(403)
-          .json({
-            error:
-              "Acceso denegado: El administrador no puede ver tareas de otras empresas.",
-          });
-      }
-    } 
-
-    // 3. Construir la consulta a Firestore para obtener las tareas
-    // La consulta siempre debe filtrar por el assignedTo (el uid de la URL)
-    // y por el empresaId del usuario solicitado
-    let tasksQuery = db.collection("tasks").where("assignedTo", "array-contains", userId);
-    //.where("empresaId", "==", requestedUserEmpresaId); // Filtro crucial por empresaId DESACTIVADO TEMPORALMENTE
-
-    // 4. Aplicar filtros opcionales (status, priority, today, week, requiereRelevo)
-    const { status, priority, today, week, requiereRelevo } = req.query;
-    const { getDateRangeWithTimezone } = require("../utils/dateFilters");
-    const { Timestamp } = require("firebase-admin/firestore");
-
-    if (status) {
-      tasksQuery = tasksQuery.where("status", "==", status);
-    }
-    if (priority) {
-      tasksQuery = tasksQuery.where("priority", "==", priority);
-    }
-    // Filtro por requiereRelevo (solo si viene en el query param)
-    if (typeof requiereRelevo !== 'undefined') {
-      // Acepta 'true'/'false' como string o booleano real
-      let boolRelevo = requiereRelevo;
-      if (typeof requiereRelevo === 'string') {
-        if (requiereRelevo.toLowerCase() === 'true') boolRelevo = true;
-        else if (requiereRelevo.toLowerCase() === 'false') boolRelevo = false;
-      }
-      tasksQuery = tasksQuery.where("requiereRelevo", "==", boolRelevo);
+    // Permisos
+    if (!isAdmin && requesterId !== userId) {
+      return res.status(403).json({ error: 'No autorizado.' });
     }
 
-    // Considerar "today" y "week" mutuamente excluyentes (se usa else if)
-    if (today === "true") {
-      const { startDate, endDate } = getDateRangeWithTimezone("today");
-      const startTimestamp = Timestamp.fromDate(startDate);
-      const endTimestamp = Timestamp.fromDate(endDate);
-      tasksQuery = tasksQuery
-        .where("startTime", ">=", startTimestamp)
-        .where("startTime", "<=", endTimestamp);
-    } else if (week === "true") {
-      const { startDate, endDate } = getDateRangeWithTimezone("week");
-      const startTimestamp = Timestamp.fromDate(startDate);
-      const endTimestamp = Timestamp.fromDate(endDate);
-      tasksQuery = tasksQuery
-        .where("startTime", ">=", startTimestamp)
-        .where("startTime", "<=", endTimestamp);
-    }
+    // Buscar asignaciones
+    const assignmentsSnap = await db
+      .collection('taskAssignments')
+      .where('assignedTo', '==', userId)
+      .get();
 
-    // 5. Ordenar los resultados
-    tasksQuery = tasksQuery.orderBy("createdAt", "desc");
+    if (assignmentsSnap.empty) return res.json([]);
 
-    // 6. Ejecutar la consulta
-    const snapshot = await tasksQuery.get();
+    const assignments = assignmentsSnap.docs.map(doc => ({
+      assignmentId: doc.id,
+      ...doc.data(),
+    }));
+    const taskInfoIds = [...new Set(assignments.map(a => a.taskInfoId))];
 
-    // 7. Formatear la respuesta
-    let tasks = snapshot.docs.map((doc) => {
-      const taskData = doc.data();
+    // Obtener taskInfo
+    const taskInfoSnap = await db
+      .collection('taskInfo')
+      .where(admin.firestore.FieldPath.documentId(), 'in', taskInfoIds)
+      .get();
+
+    const taskInfos = {};
+    taskInfoSnap.docs.forEach(doc => taskInfos[doc.id] = doc.data());
+
+    // (Opcional) Obtener datos de plantilla en 'tasks' si lo necesitas
+    const taskIds = [...new Set(taskInfoSnap.docs.map(d => d.data().taskId))];
+    const tasksSnap = await db
+      .collection('tasks')
+      .where(admin.firestore.FieldPath.documentId(), 'in', taskIds)
+      .get();
+    const tasks = {};
+    tasksSnap.docs.forEach(doc => tasks[doc.id] = doc.data());
+
+    // Combinar todo
+    const result = assignments.map(a => {
+      const info = taskInfos[a.taskInfoId] || {};
+      const plantilla = tasks[info.taskId] || {};
       return {
-        id: doc.id,
-        title: taskData.title,
-        description: taskData.description,
-        status: taskData.status,
-        priority: taskData.priority,
-        startTime: taskData.startTime?.toDate() || null,
-        endTime: taskData.endTime?.toDate() || null,
-        createdAt: taskData.createdAt.toDate(),
-        haTenidoRelevo: typeof taskData.haTenidoRelevo === 'boolean' ? taskData.haTenidoRelevo : false,
-        requiereRelevo: typeof taskData.requiereRelevo === 'boolean' ? taskData.requiereRelevo : null,
+        assignmentId: a.assignmentId,
+        taskInfoId: a.taskInfoId,
+        assignedTo: a.assignedTo,
+        individualTask: a.individualTask,
+        status: a.status,
+        startTimeIndividualTask: a.startTimeIndividualTask,
+        endTimeIndividualTask: a.endTimeIndividualTask,
+        requiereRelevo: a.requiereRelevo,
+        isGroupTask: a.isGroupTask,
+        priority: a.priority,
+        createdAt: info.createdAt,
+        startTime: info.startTime,
+        endTime: info.endTime,
+        taskName: plantilla.title || null,
+        taskDescription: plantilla.description || null,
+        empresaId: info.empresaId,
       };
     });
 
-    // Filtro extra en memoria para requiereRelevo, por si hay datos legacy o inconsistentes
-    if (typeof requiereRelevo !== 'undefined') {
-      let boolRelevo = requiereRelevo;
-      if (typeof requiereRelevo === 'string') {
-        if (requiereRelevo.toLowerCase() === 'true') boolRelevo = true;
-        else if (requiereRelevo.toLowerCase() === 'false') boolRelevo = false;
-      }
-      tasks = tasks.filter(t => t.requiereRelevo === boolRelevo);
-    }
-
-    // Desencriptar nombre y apellido
-    let name = requestedUserDoc.data().name;
-    let lastName = requestedUserDoc.data().lastName;
-    try { name = decrypt(name); } catch (e) {}
-    try { lastName = decrypt(lastName); } catch (e) {}
-
-    res.status(200).json({
-      user: {
-        id: userId,
-        name,
-        lastName,
-        //empresaId: requestedUserDoc.data().empresaId, // Incluir el empresaId del usuario solicitado
-      },
-      count: tasks.length,
-      tasks,
-    });
+    res.json(result);
   } catch (error) {
-    console.error("Error al obtener tareas del usuario:", error);
-    res.status(500).json({
-      error: "Error interno del servidor al obtener tareas.",
-      details: error.message,
-    });
+    console.error(error);
+    res.status(500).json({ error: 'Error interno al cargar tareas.' });
   }
 };
+
+
 
 exports.getAllTasks = async (req, res) => {
   try {
