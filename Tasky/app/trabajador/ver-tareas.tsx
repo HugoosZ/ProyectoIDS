@@ -98,60 +98,73 @@ export default function VerTareas() {
   }, [authUserId, authToken]);
 
   const fetchTareas = async () => {
-    if (!authUserId || !authToken) return;
+  if (!authUserId || !authToken) return;
 
-    setLoading(true);
-    setError(null);
+  setLoading(true);
+  setError(null);
 
-    console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
+  console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
 
-    try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+  try {
+    const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error(`Error HTTP ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}`);
+    }
 
-      const data = await response.json();
+    const data = await response.json();
+    console.log('Respuesta de la API:', data);
 
-      console.log('Respuesta de la API:', data);
+    if (Array.isArray(data)) {
+      const tareas: Tarea[] = data.map((apiTask: any) => {
+        // Convertir timestamp de Firestore a Date
+        const parseFirestoreTime = (timeObj: any) => 
+          timeObj && timeObj._seconds 
+            ? new Date(timeObj._seconds * 1000) 
+            : null;
 
-      if (data && data.tasks) {
-        const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
-          id: apiTask.id,
-          nombre: apiTask.title,
-          descripcion: apiTask.description,
+        return {
+          id: apiTask.assignmentId,
+          nombre: apiTask.taskName || apiTask.individualTask || 'Sin nombre',
+          descripcion: apiTask.taskDescription || '',
           estado: apiTask.status.toLowerCase(),
           hora: apiTask.startTime
-            ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
+            ? parseFirestoreTime(apiTask.startTime)?.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: false 
+              }) || 'N/A'
             : 'N/A',
-          priority: apiTask.priority,
-          startTime: apiTask.startTime ? new Date(apiTask.startTime) : null,
-          endTime: apiTask.endTime ? new Date(apiTask.endTime) : null,
+          priority: apiTask.priority || 'normal',
+          startTime: parseFirestoreTime(apiTask.startTime),
+          endTime: parseFirestoreTime(apiTask.endTime),
           requiereRelevo: apiTask.requiereRelevo || false,
           trabajadorSaliente: apiTask.trabajadorSaliente || '',
           trabajadorEntrante: apiTask.trabajadorEntrante || ''
-        }));
+        };
+      });
 
-        const tareasFiltradas = tareas.filter(tarea => tarea.estado === 'pendiente' || tarea.estado === 'en progreso');
+      const tareasFiltradas = tareas.filter(tarea => 
+        tarea.estado === 'pendiente' || tarea.estado === 'en progreso'
+      );
 
-        console.log('Tareas filtradas:', tareasFiltradas);
-        setTareasDelDia(tareasFiltradas);
-      } else {
-        throw new Error('No se encontraron tareas en la respuesta');
-      }
-    } catch (err: any) {
-      console.error("Error al obtener tareas:", err);
-      setError("Error al cargar las tareas.");
-    } finally {
-      setLoading(false);
+      console.log('Tareas filtradas:', tareasFiltradas);
+      setTareasDelDia(tareasFiltradas);
+    } else {
+      throw new Error('Formato de respuesta inválido: se esperaba un array');
     }
-  };
+  } catch (err: any) {
+    console.error("Error al obtener tareas:", err);
+    setError("Error al cargar las tareas: " + (err.message || 'Error desconocido'));
+  } finally {
+    setLoading(false);
+  }
+};
 
   const hayTareaEnProgreso = (): boolean => {
     return tareasDelDia.some(tarea => tarea.estado === "en progreso");
