@@ -145,7 +145,7 @@ export default function Index() {
             ]}
           >
             <Image
-              source={require('../assets/images/logotasky.png')}
+              source={require('../assets/images/logotasky.jpg')}
               style={globalStyles.logo}
             />
 

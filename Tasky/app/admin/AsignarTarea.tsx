@@ -32,16 +32,16 @@ const AsignarTarea = () => {
     const fetchData = async () => {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
-
+  
       try {
-        // Obtener tareas
+        // Obtener solo IDs y títulos de las tareas
         const resTasks = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!resTasks.ok) throw new Error('Error al obtener tareas');
         const dataTasks = await resTasks.json();
-        setTasks(dataTasks);
-
+        setTasks(dataTasks.map(task => ({ id: task.id, title: task.title })));
+  
         // Obtener usuarios
         const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
           headers: { Authorization: `Bearer ${token}` },
@@ -49,13 +49,13 @@ const AsignarTarea = () => {
         if (!resUsers.ok) throw new Error('Error al obtener usuarios');
         const dataUsers = await resUsers.json();
         setUsers(dataUsers);
-
+  
       } catch (error) {
         console.error('Error al obtener datos:', error);
         Alert.alert('Error', 'No se pudieron cargar los datos necesarios.');
       }
     };
-
+  
     fetchData();
   }, []);
 
@@ -92,21 +92,6 @@ const AsignarTarea = () => {
       return;
     }
 
-    if (isGroupTask && participantAssignments.length < 2) {
-      Alert.alert('Error', 'Debes agregar al menos 2 participantes para una tarea grupal');
-      return;
-    }
-
-    if (requiereRelevo && participantAssignments.length !== 2) {
-      Alert.alert('Error', 'Debes agregar exactamente 2 participantes para un relevo');
-      return;
-    }
-
-    if (!isGroupTask && !requiereRelevo && !assignedTo) {
-      Alert.alert('Error', 'Debes seleccionar un usuario para asignar la tarea');
-      return;
-    }
-
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
@@ -114,9 +99,15 @@ const AsignarTarea = () => {
         return;
       }
 
-      const selectedTaskData = tasks.find(task => task.id === selectedTask);
-      if (!selectedTaskData) {
-        Alert.alert('Error', 'No se encontró la tarea seleccionada');
+      const resTask = await fetch(`https://proyecto-ids.vercel.app/api/tasks/${selectedTask}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      if (!resTask.ok) throw new Error('Error al obtener detalles de la tarea');
+      const selectedTaskData = await resTask.json();
+
+      if (!selectedTaskData.startTime || !selectedTaskData.endTime) {
+        Alert.alert('Error', 'La tarea seleccionada no tiene definidos los horarios de inicio y fin');
         return;
       }
 
@@ -126,8 +117,8 @@ const AsignarTarea = () => {
         priority,
         status,
         requiereRelevo,
-        startTime: selectedTaskData.startTime,
-        endTime: selectedTaskData.endTime
+        startTime: selectedTaskData.startTime, 
+        endTime: selectedTaskData.endTime,   
       };
 
       if (isGroupTask || (requiereRelevo && !isGroupTask)) {
@@ -141,6 +132,8 @@ const AsignarTarea = () => {
         requestBody.assignedTo = assignedTo;
       }
 
+      console.log('Enviando request:', requestBody); 
+
       const response = await fetch('https://proyecto-ids.vercel.app/api/assignTask', {
         method: 'POST',
         headers: {
@@ -152,21 +145,19 @@ const AsignarTarea = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
-        Alert.alert('Éxito', 'Tarea asignada correctamente');
-        // Reset form
-        setSelectedTask('');
-        setIsGroupTask(false);
-        setRequiereRelevo(false);
-        setAssignedTo('');
-        setParticipantAssignments([]);
-      } else {
-        console.error('Error en la respuesta del servidor:', data);
-        Alert.alert('Error', data.message || 'No se pudo asignar la tarea');
-      }
+      if (!response.ok) throw data;
+
+      Alert.alert('Éxito', 'Tarea asignada correctamente');
+      // Reset form
+      setSelectedTask('');
+      setIsGroupTask(false);
+      setRequiereRelevo(false);
+      setAssignedTo('');
+      setParticipantAssignments([]);
+      
     } catch (error) {
       console.error('Error al asignar tarea:', error);
-      Alert.alert('Error', 'Ocurrió un error al asignar la tarea');
+      Alert.alert('Error', error.message || 'Ocurrió un error al asignar la tarea');
     }
   };
 
