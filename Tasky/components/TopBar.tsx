@@ -13,7 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import globalStyles from '../app/globalStyles';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../lib/context/AuthContext'; // Asegúrate de tener este hook de contexto
+import { useAuth } from '../lib/context/AuthContext';
 
 
 
@@ -81,12 +81,6 @@ const TopBar: React.FC = () => {
         <TouchableOpacity onPress={openMenu}>
           <Ionicons name="menu" size={32} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => console.log('Notificaciones')}>
-          <Ionicons name="notifications-outline" size={32} color="#fff" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={32} color="#fff" /> 
-        </TouchableOpacity>
       </View>
 
       {/* Menú lateral */}
@@ -138,6 +132,12 @@ const TopBar: React.FC = () => {
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={globalStyles.menuOption}
+                      onPress={() => handleRoute('/admin/AsignarTarea')}
+                    >
+                      <Text style={globalStyles.menuText}>Asignar tarea</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={globalStyles.menuOption}
                       onPress={() => handleRoute('/admin/AddUsers')}
                     >
                       <Text style={globalStyles.menuText}>Añadir usuarios</Text>
@@ -153,6 +153,12 @@ const TopBar: React.FC = () => {
                       onPress={() => handleRoute('/admin/Asistencia')}
                     >
                       <Text style={globalStyles.menuText}>Asistencia</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={globalStyles.menuOption} onPress={handleLogout}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="log-out-outline" size={20} color="red" style={{ marginRight: 8 }} />
+                        <Text style={[globalStyles.menuText, { color: 'red' }]}>Cerrar sesión</Text>
+                      </View>
                     </TouchableOpacity>
                   </View>
                 </SafeAreaView>
