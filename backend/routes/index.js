@@ -15,38 +15,7 @@ router.get('/', async (req, res) => {
     res.send("Prueba de que funciona:)");
 })
 
-router.get("/users", async (req, res) => {
-  try {
-    // 1. Obtener todos los documentos de la colección "users"
-    const querySnapshot = await db.collection("users").get();
 
-    // 2. Mapear los datos de cada documento a un array de objetos
-    const users = querySnapshot.docs.map((doc) => {
-      const data = doc.data();
-      let name = data.name;
-      let lastName = data.lastName;
-      let rut = data.rut;
-      // Desencriptar si existen
-      try { name = decrypt(name); } catch (e) {}
-      try { lastName = decrypt(lastName); } catch (e) {}
-      try { rut = decrypt(rut); } catch (e) {}
-      return {
-        rut,
-        isAdmin: data.isAdmin,
-        name,
-        lastName,
-        email: data.email,
-        role: data.role,
-      };
-    });
-
-    // 3. Enviar la respuesta como JSON
-    res.status(200).json(users);
-  } catch (error) {
-    console.error("Error al obtener usuarios:", error);
-    res.status(500).json({ error: "Error al cargar los usuarios" });
-  }
-});
 
 router.get("/collections", async (req, res) => {
   //Para ver las tablas!
