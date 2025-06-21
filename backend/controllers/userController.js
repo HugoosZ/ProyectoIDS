@@ -120,9 +120,9 @@ exports.getUsersByEmpresa = async (req, res) => {
             try { rut = decrypt(rut); } catch (e) {}
             // Opcional: Eliminar campos sensibles antes de enviar la respuesta
             delete userData.password; // Si almacenas contraseñas, elimínala
-            // delete userData.someOtherSensitiveField;
             return {
                 id: doc.id,
+                uid: doc.id, // UID sin desencriptar
                 ...userData,
                 name,
                 lastName,
@@ -153,7 +153,8 @@ exports.getAllUsers = async (req, res) => {
             try { rut = decrypt(rut); } catch (e) {}
             delete userData.password;
             return {
-                id: doc.id,
+                id: doc.id, // Firestore document ID
+                uid: doc.id, // UID sin desencriptar
                 ...userData,
                 name,
                 lastName,
