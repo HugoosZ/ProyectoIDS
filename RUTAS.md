@@ -3,6 +3,124 @@
 Este documento describe las rutas disponibles para realizar `fetch` desde el frontend hacia el backend.  
 La URL base para todas las peticiones es: https://proyecto-ids.vercel.app/api/
 
+## 📝 `GET /admin/tasks/detailed`
+
+**Descripción:**
+Devuelve una vista detallada de todas las tareas (información principal y sus asignaciones individuales) que pertenecen a la misma empresa del administrador autenticado. Incluye los datos desencriptados de los usuarios participantes en cada asignación. Esta ruta está diseñada exclusivamente para administradores que necesitan una visión completa y desglosada de todas las actividades de su organización.
+
+
+
+**Roles requeridos:** `Administrador`.
+
+**Método:** `GET`
+
+**URL:** `/api/tasks`
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_administrador_autenticado>`
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Ejemplo de Respuesta:**
+```json
+[
+  {
+    "id": "MPYKDlSepXGG9nKETe9J",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": null,
+    "currentlyWorking": null,
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "codigoRelevo": "688289",
+    "relevoExpira": "2025-06-18T19:55:29.874Z",
+    "validadoRelevo": true,
+    "assignments": [
+      {
+        "id": "2U2gzDgAw8ph417V7hsW",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+        "startTimeIndividualTask": "2025-06-28T13:12:00.000Z",
+        "endTimeIndividualTask": "2025-06-29T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Pruebas a los sistemas implementados",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:29.312Z",
+        "status": "finalizada",
+        "assignedToUser": {
+          "uid": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+          "email": "sofia.vergara@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "b969c0ae-ad7d-4894-ab9b-9fc1148dde14",
+          "createdAt": "2025-06-17T22:48:56.029Z",
+          "name": "Sofia",
+          "lastName": "Vergara",
+          "rut": "20835148-6"
+        }
+      },
+      {
+        "id": "Tlbb3iBhwF9kWyxMRRhc",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+        "startTimeIndividualTask": "2025-06-18T13:10:00.000Z",
+        "endTimeIndividualTask": "2025-06-27T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Implementaciones iniciales",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:28.743Z",
+        "status": "en curso",
+        "assignedToUser": {
+          "uid": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+          "email": "paula.ovalle@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "f4141d39-d1a0-4ed6-8c55-ec33151ea7b7",
+          "createdAt": "2025-06-17T22:48:02.194Z",
+          "name": "Paula",
+          "lastName": "Ovalle",
+          "rut": "21333082-9"
+        }
+      }
+    ]
+  },
+  {
+    "id": "udy7SweJpHaZudizPsbh",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": null,
+    "currentlyWorking": null,
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "assignments": []
+  }
+]
+```
+
+
 ## 📝 `GET /api/users`
 **Descripción**:
 Permite a un usuario autenticado con rol de `admin` obtener la lista de todos los usuarios registrados **dentro de su propia empresa**. La respuesta se filtra automáticamente por el `empresaId` del administrador que realiza la solicitud, garantizando la seguridad y la visibilidad de datos solo dentro de la empresa.
@@ -102,6 +220,11 @@ Devuelve todas las tareas que pertenecen a la misma empresa del usuario autentic
 * `Authorization`: `Bearer <token_del_usuario_autenticado>`
 * `Content-Type`: `application/json` (opcional para GET)
 
+**Query params opcionales:**
+- `status`: Filtra por estado de la tarea (ej: "pendiente", "completada").
+- `priority`: Filtra por prioridad (ej: "alta", "media", "baja").
+- `requiereRelevo`: Si es `true`/`false`, filtra por tareas que requieren/no requieren relevo.
+
 **Ejemplo de Solicitud (desde el cliente):**
 ```javascript
 fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.app/api/tasks)", {
@@ -112,12 +235,19 @@ fetch("[https://proyecto-ids.vercel.app/api/tasks](https://proyecto-ids.vercel.a
 .then(res => res.json())
 .then(data => console.log(data));
 ```
+
+**Respuesta:**
+Array de tareas de la empresa del usuario autenticado, filtradas según los parámetros enviados.
+
+---
+
 ## 📝 `GET /tasks/:userId`
 
 **Descripción:**
 Devuelve todas las tareas asignadas a un usuario específico, consultado por su UID.
-Esta ruta aplica las siguientes reglas de autorización:
-* Un **usuario normal** solo puede consultar sus *propias* tareas (es decir, el `:userId` en la URL debe coincidir con su propio UID autenticado).
+
+**Reglas de autorización:**
+* Un **usuario normal** solo puede consultar sus *propias* tareas (el `:userId` debe coincidir con su propio UID autenticado).
 * Un **administrador** puede consultar las tareas de *cualquier* usuario, **siempre y cuando ese usuario pertenezca a la misma empresa** que el administrador.
 
 **Roles requeridos:** `Usuario` o `Administrador` (con las restricciones mencionadas).
@@ -131,7 +261,10 @@ Esta ruta aplica las siguientes reglas de autorización:
 
 **Headers:**
 * `Authorization`: `Bearer <token_del_usuario_autenticado>`
-* `Content-Type`: `application/json` (aunque no es estrictamente necesario para GET)
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Query params opcionales:**
+- `status`, `priority`, `today`, `week`, `requiereRelevo` (igual que en `/tasks`)
 
 **Ejemplo de Solicitud (desde el cliente):**
 ```javascript
@@ -143,16 +276,58 @@ fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_MI_PROPIO_USUARIO](http
 })
 .then(res => res.json())
 .then(data => console.log(data));
-
-// Para un administrador viendo tareas de un usuario de su misma empresa
-fetch("[https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA](https://proyecto-ids.vercel.app/api/tasks/UID_DE_USUARIO_DE_MISMA_EMPRESA)", {
-  headers: {
-    'Authorization': 'Bearer <token_del_administrador>'
-  }
-})
-.then(res => res.json())
-.then(data => console.log(data));
 ```
+
+**Respuesta:**
+Array de tareas asignadas al usuario solicitado, filtradas según los parámetros enviados.
+
+---
+
+## 📝 `POST /tasks/:taskInfoId/relief`
+
+**Descripción:**
+Genera y asigna un código de relevo temporal de 6 dígitos a una tarea que requiere relevo. El código es único, visible para el trabajador saliente y tiene una validez configurable (en minutos) que debe ser enviada en el body de la petición. El código y su expiración se almacenan en la tarea y se devuelven en la respuesta.
+
+**Roles requeridos:**
+- Trabajador asignado a la tarea o administrador de la empresa.
+
+**Método:** `POST`
+
+**URL:** `/api/tasks/:taskInfoId/relief`
+
+**Parámetros de URL:**
+- `taskInfoId` (string): ID de la tarea para la que se genera el código de relevo.
+
+**Headers:**
+- `Authorization`: `Bearer <token_usuario_o_admin>`
+- `Content-Type`: `application/json`
+
+**Body:**
+```json
+{
+  "minutosValidez": 20 // Tiempo de validez del código en minutos
+}
+```
+
+**Respuesta exitosa:**
+```json
+{
+  "code": "123456",
+  "expiresAt": "2025-06-19T18:00:00.000Z"
+}
+```
+
+**Errores posibles:**
+- 400: Faltan parámetros, minutos de validez inválidos, etc.
+- 403: No autorizado (ni trabajador asignado ni admin).
+- 404: Tarea no encontrada.
+- 500: Error interno del servidor.
+
+**Notas:**
+- El código solo puede ser generado por el trabajador asignado o un administrador.
+- El tiempo de validez es configurable por el frontend/administrador en cada solicitud.
+
+---
 
 ## `PUT /reassign-task/:taskId`
 **Descripción**:

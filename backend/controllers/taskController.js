@@ -2,6 +2,7 @@ const { db } = require("../firebase");
 const admin = require('firebase-admin');
 const { Timestamp } = require("firebase-admin/firestore");
 const { getDateRange } = require("../utils/dateFilters"); // OK
+const { decrypt } = require("../utils/crypto"); 
 
 
 // Función para verificar si dos rangos de tiempo se superponen
@@ -727,4 +728,147 @@ exports.AssignTask = async (req, res) => {
     console.error("Error al asignar tarea:", error);
     res.status(500).json({ error: "Error interno al asignar la tarea" });
   }
+};
+
+const getUserDataAndDecrypt = async (userId) => {
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (!userDoc.exists) {
+            return null; // O manejar como un error si un usuario asignado no existe
+        }
+        const userData = userDoc.data();
+
+        // Desencriptar los campos sensibles
+        const decryptedUserData = {
+            uid: userId, // El UID es el ID del documento y es el RUT desencriptado
+            email: userData.email,
+            role: userData.role,
+            isAdmin: userData.isAdmin,
+            empresaId: userData.empresaId,
+            createdAt: userData.createdAt ? userData.createdAt.toDate() : null, // Convertir Timestamp a Date
+            // Desencriptar campos si existen
+            name: userData.name ? decrypt(userData.name) : null,
+            lastName: userData.lastName ? decrypt(userData.lastName) : null,
+            rut: userData.rut ? decrypt(userData.rut) : null, // El campo 'rut' dentro del doc está encriptado
+        };
+        // No incluir rutHash en la respuesta del usuario detallado si no es necesario para el frontend
+        // delete decryptedUserData.rutHash; // Si lo guardas y no quieres enviarlo
+
+        return decryptedUserData;
+    } catch (error) {
+        console.error("Error al obtener y desencriptar datos de usuario (ID:", userId, "):", error);
+        return null; // En caso de error (ej. dato corrupto), retornar null para ese usuario
+    }
+};
+
+
+// Nueva función para obtener todas las tareas detalladas para el administrador
+exports.getAdminDetailedTasks = async (req, res) => {
+    try {
+        const adminEmpresaId = req.user.empresaId;
+
+        if (!adminEmpresaId) {
+            return res.status(403).json({ message: "Forbidden: El administrador no está asociado a una empresa." });
+        }
+
+        const tasksSnapshot = await db.collection('taskInfo')
+            .where('empresaId', '==', adminEmpresaId)
+            .get();
+
+        if (tasksSnapshot.empty) {
+            return res.status(200).json([]);
+        }
+
+        const detailedTasks = [];
+
+        for (const taskDoc of tasksSnapshot.docs) {
+            const taskInfo = {
+                id: taskDoc.id,
+                ...taskDoc.data()
+            };
+
+            // Convertir Timestamp a Date para taskInfo.createdAt
+            if (taskInfo.createdAt instanceof Timestamp) {
+                taskInfo.createdAt = taskInfo.createdAt.toDate();
+            }
+            // También convertir startTime y endTime de la tarea principal si existen y son Timestamps
+            if (taskInfo.startTime instanceof Timestamp) {
+                taskInfo.startTime = taskInfo.startTime.toDate();
+            }
+            if (taskInfo.endTime instanceof Timestamp) {
+                taskInfo.endTime = taskInfo.endTime.toDate();
+            }
+            // Convertir relevoExpira si existe y es Timestamp en taskInfo
+            if (taskInfo.relevoExpira instanceof Timestamp) {
+                taskInfo.relevoExpira = taskInfo.relevoExpira.toDate();
+            }
+
+
+            const assignmentsSnapshot = await db.collection('taskAssignments')
+                .where('taskInfoId', '==', taskInfo.id)
+                .get();
+
+            const assignments = [];
+            for (const assignmentDoc of assignmentsSnapshot.docs) {
+                const assignmentData = {
+                    id: assignmentDoc.id,
+                    ...assignmentDoc.data()
+                };
+
+                // Convertir Timestamps a Date para los campos de la asignación
+                if (assignmentData.startTimeIndividualTask instanceof Timestamp) {
+                    assignmentData.startTimeIndividualTask = assignmentData.startTimeIndividualTask.toDate();
+                }
+                if (assignmentData.endTimeIndividualTask instanceof Timestamp) {
+                    assignmentData.endTimeIndividualTask = assignmentData.endTimeIndividualTask.toDate();
+                }
+                if (assignmentData.createdAt instanceof Timestamp) {
+                    assignmentData.createdAt = assignmentData.createdAt.toDate();
+                }
+                // Si tienes un campo 'relevoExpira' en taskAssignments y es un Timestamp, conviértelo también
+                if (assignmentData.relevoExpira instanceof Timestamp) {
+                    assignmentData.relevoExpira = assignmentData.relevoExpira.toDate();
+                }
+
+                let assignedUser = null;
+                if (assignmentData.assignedTo) {
+                    assignedUser = await getUserDataAndDecrypt(assignmentData.assignedTo);
+                }
+
+                assignments.push({
+                    ...assignmentData,
+                    assignedToUser: assignedUser
+                });
+            }
+
+            detailedTasks.push({
+                ...taskInfo,
+                assignments: assignments
+            });
+        }
+
+        res.status(200).json(detailedTasks);
+
+    } catch (error) {
+        console.error("Error al obtener tareas detalladas para el admin:", error);
+        res.status(500).json({ error: "Error interno del servidor al obtener tareas detalladas.", details: error.message });
+    }
+};
+
+exports.patchAssignmentStatus = async (req, res) => {
+  const { assignmentId } = req.params;
+  const { status } = req.body;
+  const { uid: userId } = req.user;
+
+  const ref = db.collection('taskAssignments').doc(assignmentId);
+  const snap = await ref.get();
+  if (!snap.exists) return res.status(404).json({ error: 'Asignación no encontrada.' });
+
+  const data = snap.data();
+  if (data.assignedTo !== userId) {
+    return res.status(403).json({ error: 'No autorizado.' });
+  }
+
+  await ref.update({ status });
+  return res.json({ message: 'Estado actualizado.' });
 };

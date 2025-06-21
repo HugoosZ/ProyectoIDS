@@ -8,6 +8,11 @@ const userController = require('../controllers/userController');
 const { checkAdminPrivileges } = require("../middlewares/authorization"); // Middleware de autorización
 // Se usa llaves en la asignacion de nombres para poder renombrarlos, si no, hay que ponerle el nombre del codigo y como son parecidos es mejor renombrar
 const { getDateRange } = require("../utils/dateFilters");
+const taskController = require('../controllers/taskController');
+
+
+// Nueva Ruta para obtener todas las tareas de la empresa con detalles de participantes para el Admin
+router.get("/admin/tasks/detailed", verifyAndDecodeToken, checkAdminPrivileges, taskController.getAdminDetailedTasks);
 
 router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
     // Como ya se pasaron las auntenticaciones se puede postear el json
