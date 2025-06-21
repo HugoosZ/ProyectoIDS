@@ -18,6 +18,57 @@ function doTimeRangesOverlap(fromTime1, toTime1, fromTime2, toTime2) {
 
 // CONSTANTE: Tiempo mínimo de ejecución para tareas sin relevo
 const MIN_EXECUTION_TIME_MINUTES = 15;
+//CONSTANTE: Umbral de porcentaje de completado para enviar alerta al frontend
+const COMPLETION_ALERT_THRESHOLD_PERCENTAGE = 70; 
+
+// **Función auxiliar para recalcular y actualizar shouldBeWorking y currentlyWorking en taskInfo**
+// Esta función será llamada cuando haya un cambio relevante en taskAssignments
+async function updateDynamicTaskInfoStatus(taskInfoId) {
+    try {
+        const taskInfoRef = db.collection("taskInfo").doc(taskInfoId);
+        const taskInfoDoc = await taskInfoRef.get();
+
+        if (!taskInfoDoc.exists) {
+            console.warn(`WARN: taskInfo ${taskInfoId} no encontrada para actualización dinámica.`);
+            return;
+        }
+
+        const assignmentsSnapshot = await db.collection("taskAssignments")
+            .where("taskInfoId", "==", taskInfoId)
+            .get();
+
+        const currentTime = new Date();
+        const shouldBeWorkingUids = [];
+        const currentlyWorkingUids = [];
+
+        for (const assignmentDoc of assignmentsSnapshot.docs) {
+            const assignmentData = assignmentDoc.data();
+            const individualStartTime = assignmentData.startTimeIndividualTask ? assignmentData.startTimeIndividualTask.toDate() : null;
+            const individualEndTime = assignmentData.endTimeIndividualTask ? assignmentData.endTimeIndividualTask.toDate() : null;
+
+            if (individualStartTime && individualEndTime &&
+                currentTime >= individualStartTime &&
+                currentTime <= individualEndTime) {
+                if (!shouldBeWorkingUids.includes(assignmentData.assignedTo)) {
+                    shouldBeWorkingUids.push(assignmentData.assignedTo);
+                }
+                if (assignmentData.status === "en progreso" && !currentlyWorkingUids.includes(assignmentData.assignedTo)) {
+                    currentlyWorkingUids.push(assignmentData.assignedTo);
+                }
+            }
+        }
+        
+        // Actualizar el documento taskInfo con los nuevos arrays
+        await taskInfoRef.update({
+            shouldBeWorking: shouldBeWorkingUids,
+            currentlyWorking: currentlyWorkingUids,
+        });
+        console.log(`DEBUG: shouldBeWorking y currentlyWorking actualizados para taskInfo ${taskInfoId}.`);
+
+    } catch (error) {
+        console.error(`Error al actualizar shouldBeWorking y currentlyWorking para taskInfo ${taskInfoId}:`, error);
+    }
+}
 
 // Crear tarea (solo campos base)
 exports.createTask = async (req, res) => {
@@ -169,121 +220,100 @@ exports.getAllCompanyTasks = async (req, res) => {
     }
 };
 
-exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a 'updateTaskStatus' para ser más específica
+exports.updateTaskStatus = async (req, res) => {
     try {
-        const { taskId } = req.params;
+        const { assignmentId } = req.params;
         const { status } = req.body;
         const { uid: requestingUserUid, empresaId: requestingUserEmpresaId, isAdmin: requestingUserIsAdmin } = req.user;
 
-        if (!taskId) {
-            return res.status(400).json({ message: "Task ID is required." });
+        if (!assignmentId) {
+            return res.status(400).json({ message: "Assignment ID es requerido." });
         }
         if (!status) {
-            return res.status(400).json({ message: "Status is required for update." });
+            return res.status(400).json({ message: "El estado es requerido para la actualización." });
         }
 
-        const validStatuses = ["pendiente", "en progreso", "completada"]; // Cuidado con tildes si se usan en la DB
+        const validStatuses = ["pendiente", "en progreso", "completada"]; 
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ error: "Estado inválido. Los estados permitidos son: 'pendiente', 'en progreso', 'completada'." });
         }
 
-        const taskRef = db.collection("tasks").doc(taskId);
-        const taskDoc = await taskRef.get();
+        const assignmentRef = db.collection("taskAssignments").doc(assignmentId);
+        const assignmentDoc = await assignmentRef.get();
 
-        if (!taskDoc.exists) {
-            return res.status(404).json({ message: "Tarea no encontrada." });
+        if (!assignmentDoc.exists) {
+            return res.status(404).json({ message: "Asignación de tarea no encontrada." });
         }
 
-        const taskData = taskDoc.data();
+        const assignmentData = assignmentDoc.data();
 
-        // 1. Verificación de EmpresaId (Obligatorio para cualquier operación)
-        if (taskData.empresaId !== requestingUserEmpresaId) {
-            console.log(`DEBUG: Acceso denegado - Tarea de otra empresa. Tarea empresaId: ${taskData.empresaId}, Usuario empresaId: ${requestingUserEmpresaId}`);
-            return res.status(403).json({ message: "No autorizado: No puedes actualizar tareas de otra empresa." });
-        } 
+        const taskInfoRef = db.collection("taskInfo").doc(assignmentData.taskInfoId);
+        const taskInfoDoc = await taskInfoRef.get();
 
-        // 2. Verificación de Permisos (User vs Admin)
-        if (!requestingUserIsAdmin && (!taskData.assignedTo || !taskData.assignedTo.includes(requestingUserUid))) {
-        // Un usuario normal solo puede actualizar su tarea si está asignado a ella.
-        // Un administrador puede actualizar cualquier tarea de su empresa.
-            console.log(`DEBUG: Acceso denegado - Usuario no admin intentó actualizar tarea no asignada. Tarea asignada a: ${taskData.assignedTo}, Usuario: ${requestingUserUid}`);
-            return res.status(403).json({ message: "No autorizado: Solo puedes actualizar tareas asignadas a ti mismo o si eres administrador de la empresa." });
+        if (!taskInfoDoc.exists) {
+            return res.status(404).json({ message: "Tarea principal (taskInfo) asociada no encontrada." });
         }
-        // Si es admin, y la empresaId ya se validó, puede continuar.
-        // Si es el usuario asignado, y la empresaId ya se validó, puede continuar.
+        const taskInfoData = taskInfoDoc.data();
+
+        if (taskInfoData.empresaId !== requestingUserEmpresaId) {
+            console.log(`DEBUG: Acceso denegado - Tarea de otra empresa. Tarea empresaId: ${taskInfoData.empresaId}, Usuario empresaId: ${requestingUserEmpresaId}`);
+            return res.status(403).json({ message: "No autorizado: No puedes actualizar asignaciones de tareas de otra empresa." });
+        }
+
+        if (!requestingUserIsAdmin && assignmentData.assignedTo !== requestingUserUid) {
+            console.log(`DEBUG: Acceso denegado - Usuario no admin intentó actualizar asignación no propia. Asignado a: ${assignmentData.assignedTo}, Usuario solicitante: ${requestingUserUid}`);
+            return res.status(403).json({ message: "No autorizado: Sólo puedes actualizar tus propias asignaciones o si eres administrador de la empresa." });
+        }
 
         const updateData = { status };
 
-        // Lógica de realStartTime y realEndTime (conservada de tu compañero)
         if (status === "en progreso") {
-            // Verificar si el usuario que solicita tiene otra tarea "en progreso"
-            const ongoingTasksSnapshot = await db.collection("tasks")
-                .where("assignedTo", "array-contains", requestingUserUid) // Buscar si está asignado a tareas
+            const ongoingAssignmentsSnapshot = await db.collection("taskAssignments")
+                .where("assignedTo", "==", requestingUserUid)
                 .where("status", "==", "en progreso")
-                .where("empresaId", "==", requestingUserEmpresaId) // Asegurar que sea de la misma empresa
                 .get();
 
-            // Si encuentra otra tarea en progreso que no sea la actual (en caso de que la actual ya estuviera en progreso)
-            const hasOtherOngoingTask = ongoingTasksSnapshot.docs.some(doc => doc.id !== taskId);
-
-            if (hasOtherOngoingTask) {
-                return res.status(400).json({ message: "No puedes iniciar esta tarea porque ya tienes otra tarea en progreso." });
+            const hasOtherOngoingAssignment = ongoingAssignmentsSnapshot.docs.some(doc => doc.id !== assignmentId);
+            if (hasOtherOngoingAssignment) {
+                return res.status(400).json({ message: "No puedes iniciar esta asignación porque ya tienes otra tarea en progreso." });
             }
 
-            // Si la tarea aún no tiene realStartTime, sellarlo
-            if (!taskData.realStartTime) {
+            if (!assignmentData.realStartTime) {
                 updateData.realStartTime = Timestamp.now();
             }
-            updateData.status = status; // Actualizar el estado
-
         }
 
         if (status === "completada") {
-            // Asegurarse de que la tarea haya sido iniciada
-            if (!taskData.realStartTime) {
-                return res.status(400).json({ message: "No puedes finalizar esta tarea porque no ha sido iniciada." });
+            if (!assignmentData.realStartTime) {
+                return res.status(400).json({ message: "No puedes finalizar esta asignación porque no ha sido iniciada." });
             }
 
             const currentTime = Timestamp.now().toDate();
-            const startTime = taskData.realStartTime.toDate();
+            const startTime = assignmentData.realStartTime.toDate();
             const durationMs = currentTime.getTime() - startTime.getTime();
             const durationMinutes = durationMs / (1000 * 60);
 
-            // Validar tiempo mínimo de ejecución
             if (durationMinutes < MIN_EXECUTION_TIME_MINUTES) {
-                return res.status(400).json({ message: `No puedes finalizar esta tarea hasta que hayan pasado al menos ${MIN_EXECUTION_TIME_MINUTES} minutos desde su inicio.` });
+                return res.status(400).json({ message: `No puedes finalizar esta asignación hasta que hayan pasado al menos ${MIN_EXECUTION_TIME_MINUTES} minutos desde su inicio.` });
             }
 
-            // Si cumple el tiempo mínimo y aún no tiene realEndTime, sellarlo
-            if (!taskData.realEndTime) {
+            if (!assignmentData.realEndTime) {
                 updateData.realEndTime = Timestamp.now();
             }
-            updateData.status = status; // Actualizar el estado
         }
 
-        // Si el estado no es "en progreso" ni "completada" (ej. "pendiente"), solo actualiza el estado.
-        // O si ya tiene realStartTime/realEndTime y solo se cambia el estado (ej. de completada a pendiente)
-        if (Object.keys(updateData).length === 0 && taskData.status !== status) {
-            // Esto cubre casos donde solo se cambia el status sin afectar realStartTime/realEndTime
-            // por ejemplo, si ya tenía realStartTime y se intenta poner en progreso de nuevo.
-            updateData.status = status;
-        } else if (Object.keys(updateData).length === 0 && taskData.status === status) {
-            // Si el estado es el mismo y no hay cambios en realStartTime/realEndTime, no hay nada que hacer.
-            return res.status(200).json({ message: "El estado de la tarea ya es el solicitado. No se realizaron cambios." });
+        if (Object.keys(updateData).length === 1 && updateData.status === assignmentData.status) {
+            return res.status(200).json({ message: "El estado de la asignación de tarea ya es el solicitado. No se realizaron cambios." });
         }
 
-        await taskRef.update(updateData);
+        await assignmentRef.update(updateData);
 
-        // Lógica para descontar currentTasks si pasa a "completada" (conservada de tu compañero)
-        if (status === "completada" && taskData.status !== "completada") {
+        if (status === "completada" && assignmentData.status !== "completada") {
             const today = new Date().toISOString().split('T')[0];
-            // Determinar a quiénes se les debe decrementar el currentTasks
-            // Si el requestingUser es un admin, asumimos que está completando la tarea en nombre de los asignados.
-            // Si el requestingUser es uno de los asignados, solo se decrementa para él.
-            const usersToDecrement = requestingUserIsAdmin ? taskData.assignedTo : [requestingUserUid];
-            for (const userIdToDecrement of usersToDecrement) {
+            const userIdToDecrement = assignmentData.assignedTo; 
+
             const asistenciaQuery = await db.collection("asistencias")
-                .where("userId", "==", requestingUserUid) // Importante: Usar el userId asignado a la tarea, no el que hace la solicitud si el admin la completa
+                .where("userId", "==", userIdToDecrement) 
                 .where("date", "==", today)
                 .limit(1)
                 .get();
@@ -294,18 +324,57 @@ exports.updateTaskStatus = async (req, res) => { // Renombrada de 'updateTask' a
                 await asistenciaDoc.ref.update({
                     currentTasks: Math.max(0, currentCount - 1),
                 });
-                console.log(`DEBUG: Tarea completada para usuario ${requestingUserUid}. currentTasks actualizado.`);
+                console.log(`DEBUG: Asignación finalizada para usuario ${userIdToDecrement}. currentTasks actualizado.`);
             } else {
-                console.log(`DEBUG: No se encontró registro de asistencia para ${requestingUserUid} el día ${today}. No se actualizó currentTasks.`);
+                console.log(`DEBUG: No se encontró registro de asistencia para ${userIdToDecrement} el día ${today}. No se actualizó currentTasks.`);
             }
         }
-    }
 
-        res.status(200).json({ message: "Estado de la tarea actualizado exitosamente." });
+        // === Lógica para Finalizar Tarea Grupal Y RECALCULAR shouldBeWorking/currentlyWorking ===
+        // Llamar a la función auxiliar para actualizar los campos dinámicos
+        await updateDynamicTaskInfoStatus(assignmentData.taskInfoId); // <--- ESTA LÍNEA ES CLAVE
+
+        // --- INICIO: Lógica para alerta de progreso al frontend ---
+        const allRelatedAssignmentsSnapshot = await db.collection("taskAssignments")
+            .where("taskInfoId", "==", assignmentData.taskInfoId)
+            .get();
+
+        const totalAssignments = allRelatedAssignmentsSnapshot.docs.length;
+        const completedAssignments = allRelatedAssignmentsSnapshot.docs.filter(doc => doc.data().status === "finalizada").length;
+        
+        let completionPercentage = 0;
+        if (totalAssignments > 0) {
+            completionPercentage = (completedAssignments / totalAssignments) * 100;
+        }
+
+        let sendCompletionAlert = false;
+        // Solo enviar alerta si es tarea grupal, no está ya finalizada y se cruza el umbral
+        if (totalAssignments > 0 && completionPercentage >= COMPLETION_ALERT_THRESHOLD_PERCENTAGE && taskInfoData.isGroupTask && !taskInfoData.isFinished) {
+            sendCompletionAlert = true;
+        }
+        // --- FIN: Lógica para alerta de progreso al frontend ---
+
+
+        const allAssignmentsAreCompleted = allRelatedAssignmentsSnapshot.docs.every(doc => doc.data().status === "completada");
+
+        if (allAssignmentsAreCompleted) {
+            await taskInfoRef.update({
+                status: "completada",
+                isFinished: true 
+            });
+            console.log(`DEBUG: Tarea principal (taskInfo) ${assignmentData.taskInfoId} marcada como 'completada' porque todas sus asignaciones individuales están completadas.`);
+        }
+        
+        // La respuesta ahora incluye 'sendCompletionAlert' y 'currentCompletionPercentage'
+        res.status(200).json({ 
+            message: "Estado de la asignación de tarea actualizado exitosamente.",
+            sendCompletionAlert: sendCompletionAlert,
+            currentCompletionPercentage: completionPercentage 
+        });
 
     } catch (error) {
-        console.error("Error al actualizar el estado de la tarea:", error);
-        res.status(500).json({ message: "Error interno del servidor al actualizar el estado.", details: error.message });
+        console.error("Error al actualizar el estado de la asignación de tarea:", error);
+        res.status(500).json({ message: "Error interno del servidor al actualizar el estado de la asignación.", details: error.message });
     }
 };
 
@@ -584,8 +653,8 @@ exports.AssignTask = async (req, res) => {
       isGroupTask: !!isGroupTask,
       isFinished: false,
       participants: [],
-      shouldBeWorking: null,
-      currentlyWorking: null,
+      shouldBeWorking: [],
+      currentlyWorking: [],
       assignedBy,
       empresaId,
       createdAt: new Date()
@@ -721,6 +790,8 @@ exports.AssignTask = async (req, res) => {
       await db.collection("taskAssignments").add(assignmentDoc);
       assignments.push(assignmentDoc);
     }
+    await updateDynamicTaskInfoStatus(taskInfoRef.id); // Actualizar el estado de la tarea general después de crear las asignaciones
+
     // Respuesta exitosa
     res.status(201).json({ message: "Tarea registrada en taskInfo y tareas individuales creadas en taskAssignments", taskInfoId: taskInfoRef.id, ...taskInfoData, assignments });
   } catch (error) {
@@ -765,93 +836,74 @@ const getUserDataAndDecrypt = async (userId) => {
 // Nueva función para obtener todas las tareas detalladas para el administrador
 exports.getAdminDetailedTasks = async (req, res) => {
     try {
-        const adminEmpresaId = req.user.empresaId;
+        const { empresaId: adminEmpresaId, isAdmin } = req.user;
 
+        if (!isAdmin) {
+            return res.status(403).json({ message: "No autorizado: Solo los administradores pueden acceder a esta ruta." });
+        }
         if (!adminEmpresaId) {
-            return res.status(403).json({ message: "Forbidden: El administrador no está asociado a una empresa." });
+            return res.status(403).json({ message: "No autorizado: El administrador no está asociado a una empresa." });
         }
 
-        const tasksSnapshot = await db.collection('taskInfo')
-            .where('empresaId', '==', adminEmpresaId)
+        // Obtener todas las taskInfo para la empresa del administrador
+        const taskInfoSnapshot = await db.collection("taskInfo")
+            .where("empresaId", "==", adminEmpresaId)
             .get();
-
-        if (tasksSnapshot.empty) {
-            return res.status(200).json([]);
-        }
 
         const detailedTasks = [];
 
-        for (const taskDoc of tasksSnapshot.docs) {
-            const taskInfo = {
-                id: taskDoc.id,
-                ...taskDoc.data()
-            };
+        for (const taskDoc of taskInfoSnapshot.docs) {
+            const taskInfo = { id: taskDoc.id, ...taskDoc.data() };
 
-            // Convertir Timestamp a Date para taskInfo.createdAt
-            if (taskInfo.createdAt instanceof Timestamp) {
-                taskInfo.createdAt = taskInfo.createdAt.toDate();
-            }
-            // También convertir startTime y endTime de la tarea principal si existen y son Timestamps
-            if (taskInfo.startTime instanceof Timestamp) {
-                taskInfo.startTime = taskInfo.startTime.toDate();
-            }
-            if (taskInfo.endTime instanceof Timestamp) {
-                taskInfo.endTime = taskInfo.endTime.toDate();
-            }
-            // Convertir relevoExpira si existe y es Timestamp en taskInfo
-            if (taskInfo.relevoExpira instanceof Timestamp) {
-                taskInfo.relevoExpira = taskInfo.relevoExpira.toDate();
+            // Convertir Timestamps a ISO 8601 strings
+            for (const key of ['startTime', 'endTime', 'createdAt', 'relevoExpira']) {
+                if (taskInfo[key] instanceof Timestamp) {
+                    taskInfo[key] = taskInfo[key].toDate().toISOString();
+                } else if (taskInfo[key] instanceof Date) { // Si ya es Date, convertir a ISO string
+                    taskInfo[key] = taskInfo[key].toISOString();
+                }
             }
 
-
-            const assignmentsSnapshot = await db.collection('taskAssignments')
-                .where('taskInfoId', '==', taskInfo.id)
+            // Obtener todas las asignaciones para esta tareaInfo
+            const assignmentsSnapshot = await db.collection("taskAssignments")
+                .where("taskInfoId", "==", taskInfo.id)
                 .get();
 
             const assignments = [];
             for (const assignmentDoc of assignmentsSnapshot.docs) {
-                const assignmentData = {
-                    id: assignmentDoc.id,
-                    ...assignmentDoc.data()
-                };
+                const assignmentData = { id: assignmentDoc.id, ...assignmentDoc.data() };
 
-                // Convertir Timestamps a Date para los campos de la asignación
-                if (assignmentData.startTimeIndividualTask instanceof Timestamp) {
-                    assignmentData.startTimeIndividualTask = assignmentData.startTimeIndividualTask.toDate();
-                }
-                if (assignmentData.endTimeIndividualTask instanceof Timestamp) {
-                    assignmentData.endTimeIndividualTask = assignmentData.endTimeIndividualTask.toDate();
-                }
-                if (assignmentData.createdAt instanceof Timestamp) {
-                    assignmentData.createdAt = assignmentData.createdAt.toDate();
-                }
-                // Si tienes un campo 'relevoExpira' en taskAssignments y es un Timestamp, conviértelo también
-                if (assignmentData.relevoExpira instanceof Timestamp) {
-                    assignmentData.relevoExpira = assignmentData.relevoExpira.toDate();
+                // Convertir Timestamps a ISO 8601 strings para la asignación
+                for (const key of ['startTimeIndividualTask', 'endTimeIndividualTask', 'createdAt', 'realStartTime', 'realEndTime']) {
+                    if (assignmentData[key] instanceof Timestamp) {
+                        assignmentData[key] = assignmentData[key].toDate().toISOString();
+                    } else if (assignmentData[key] instanceof Date) {
+                        assignmentData[key] = assignmentData[key].toISOString();
+                    }
                 }
 
-                let assignedUser = null;
+                // Desencriptar datos del usuario asignado
                 if (assignmentData.assignedTo) {
-                    assignedUser = await getUserDataAndDecrypt(assignmentData.assignedTo);
+                    assignmentData.assignedToUser = await getUserDataAndDecrypt(assignmentData.assignedTo);
                 }
 
-                assignments.push({
-                    ...assignmentData,
-                    assignedToUser: assignedUser
-                });
+                assignments.push(assignmentData);
             }
 
-            detailedTasks.push({
-                ...taskInfo,
-                assignments: assignments
-            });
+            taskInfo.assignments = assignments;
+            // shouldBeWorking y currentlyWorking ya vienen de la DB, no se recalculan aquí.
+            taskInfo.shouldBeWorking = taskInfo.shouldBeWorking || [];
+            taskInfo.currentlyWorking = taskInfo.currentlyWorking || [];
+
+
+            detailedTasks.push(taskInfo);
         }
 
         res.status(200).json(detailedTasks);
 
     } catch (error) {
-        console.error("Error al obtener tareas detalladas para el admin:", error);
-        res.status(500).json({ error: "Error interno del servidor al obtener tareas detalladas.", details: error.message });
+        console.error("Error al obtener tareas detalladas para administrador:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener tareas detalladas." });
     }
 };
 

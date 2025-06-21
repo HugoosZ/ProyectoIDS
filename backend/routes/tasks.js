@@ -36,6 +36,9 @@ router.get('/getDailyTasks/', verifyAndDecodeToken, taskController.getDailyTaskS
 
 router.patch('/tasks/:assignmentId/status', verifyAndDecodeToken, taskController.patchAssignmentStatus);
 
+// Actualizar el estado de una asignación de tarea (renombrada de patchAssignmentStatus)
+router.patch("/update-task-status/:assignmentId", verifyAndDecodeToken, taskController.updateTaskStatus);
+
 // Reasignar tarea a usuario usando uid en lugar de rut
 router.put("/reassign-task/:taskId", async (req, res) => {
   const { taskId } = req.params;

@@ -120,6 +120,250 @@ Devuelve una vista detallada de todas las tareas (información principal y sus a
 ]
 ```
 
+### 📝 `POST /api/assignTask`
+
+**Descripción:**
+Permite a un administrador asignar una nueva tarea. Puede ser una tarea individual o una tarea grupal con múltiples asignaciones a diferentes participantes.
+
+**Roles requeridos:** `Administrador`.
+
+**Método:** `POST`
+
+**URL:** `/api/assignTask`
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_administrador_autenticado>`
+* `Content-Type`: `application/json`
+
+**Request Body (JSON):**
+```json
+{
+    "isGroupTask": true,
+    "taskId": "ID_DE_PLANTILLA_DE_TAREA_EXISTENTE",
+    "startTime": "2025-06-25T09:00:00Z",
+    "endTime": "2025-06-25T17:00:00Z",
+    "priority": "normal",
+    "status": "pendiente",
+    "requiereRelevo": false,
+    "participantAssignments": [
+        {
+            "userId": "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+            "individualTask": "Parte A del Proyecto X",
+            "startTimeIndividualTask": "2025-06-25T09:00:00Z",
+            "endTimeIndividualTask": "2025-06-25T13:00:00Z"
+        },
+        {
+            "userId": "3569de2e92223d247c66c590:9b09cd40b2421e03a72dd5c802510745:a281fb9df51feffd63ec",
+            "individualTask": "Parte B del Proyecto X",
+            "startTimeIndividualTask": "2025-06-25T13:00:00Z",
+            "endTimeIndividualTask": "2025-06-25T17:00:00Z"
+        }
+    ]
+}
+```
+
+**Ejemplo de repuseta de exito:**
+```json
+{
+    "message": "Tarea registrada en taskInfo y tareas individuales creadas en taskAssignments",
+    "taskInfoId": "6YJldL26JxpVNWe6uZ9Y",
+    "taskId": "QMfhV1J8FpFr9xtf4TC0",
+    "startTime": "2025-06-25T09:00:00.000Z",
+    "endTime": "2025-06-25T17:00:00.000Z",
+    "priority": "normal",
+    "status": "pendiente",
+    "requiereRelevo": false,
+    "isGroupTask": true,
+    "isFinished": false,
+    "participants": [
+        "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+        "3569de2e92223d247c66c590:9b09cd40b2421e03a72dd5c802510745:a281fb9df51feffd63ec"
+    ],
+    "shouldBeWorking": [],
+    "currentlyWorking": [],
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-21T18:41:58.110Z",
+    "assignments": [
+        {
+            "taskInfoId": "6YJldL26JxpVNWe6uZ9Y",
+            "assignedTo": "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+            "startTimeIndividualTask": "2025-06-25T09:00:00.000Z",
+            "endTimeIndividualTask": "2025-06-25T13:00:00.000Z",
+            "priority": "normal",
+            "status": "pendiente",
+            "requiereRelevo": false,
+            "individualTask": "Parte A del Proyecto X",
+            "isGroupTask": true,
+            "createdAt": "2025-06-21T18:42:00.278Z"
+        },
+        {
+            "taskInfoId": "6YJldL26JxpVNWe6uZ9Y",
+            "assignedTo": "3569de2e92223d247c66c590:9b09cd40b2421e03a72dd5c802510745:a281fb9df51feffd63ec",
+            "startTimeIndividualTask": "2025-06-25T13:00:00.000Z",
+            "endTimeIndividualTask": "2025-06-25T17:00:00.000Z",
+            "priority": "normal",
+            "status": "pendiente",
+            "requiereRelevo": false,
+            "individualTask": "Parte B del Proyecto X",
+            "isGroupTask": true,
+            "createdAt": "2025-06-21T18:42:00.769Z"
+        }
+    ]
+}
+```
+
+### 📝 `PATCH /api/update-task-status/:assignmentId`
+
+**Descripción:**
+Permite a un usuario actualizar el estado de una asignación de tarea individual a la que está asignado. También puede ser utilizada por un administrador para forzar un cambio de estado. La lógica incluye validaciones como el tiempo mínimo de ejecución para pasar a "completada" y la prevención de múltiples tareas "en progreso" para un mismo usuario.
+
+**Roles requeridos:** `Administrador o usuario asignado`.
+
+**Método:** `PATCH`
+
+**URL:** `/api/update-task-status/:assignmentId`
+
+**Parámetros de ruta:**
+:assignmentId (string): El ID único de la asignación de tarea individual (ID del documento en la colección taskAssignments).
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_administrador_autenticado>`
+* `Content-Type`: `application/json`
+
+**Request Body (JSON):**
+```json
+{
+    "status": "en progreso"
+    // o "status": "completada"
+    // o "status": "pendiente" (si se desea revertir)
+}
+```
+**Respuesta de éxito:**
+
+```json
+{
+    "message": "Estado de la asignación de tarea actualizado exitosamente.",
+    "sendCompletionAlert": false, // Será 'true' si se supera el umbral de completado de la tarea grupal (ej. 70%)
+    "currentCompletionPercentage": 0 // Porcentaje actual de completado de la tarea grupal principal
+}
+```
+
+### 📝 `GET /api/admin/detailed-tasks`
+
+**Descripción:**
+Devuelve una vista detallada de todas las tareas (información principal de `taskInfo` y sus asignaciones individuales de `taskAssignments`) para la empresa del administrador autenticado. Esta ruta incluye el cálculo y la visualización de los arrays `shouldBeWorking` y `currentlyWorking` en tiempo real para cada tarea grupal, y los datos desencriptados de los usuarios participantes en cada asignación.
+
+**Roles requeridos:** `Administrador`.
+
+**Método:** `GET`
+
+**URL:** `/api/admin/detailed-tasks`
+
+**Headers:**
+* `Authorization`: `Bearer <token_del_administrador_autenticado>`
+* `Content-Type`: `application/json` (opcional para GET)
+
+**Request Body:** N/A
+
+**Ejemplo de Respuesta (Éxito - 200 OK):**
+```json
+[
+  {
+    "id": "MPYKDlSepXGG9nKETe9J",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": ["UID_DE_USUARIO_QUE_DEBERIA_ESTAR_TRABAJANDO_AHORA"],
+    "currentlyWorking": ["UID_DE_USUARIO_QUE_REALMENTE_ESTA_TRABAJANDO_AHORA"],
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "codigoRelevo": "688289",
+    "relevoExpira": "2025-06-18T19:55:29.874Z",
+    "validadoRelevo": true,
+    "assignments": [
+      {
+        "id": "2U2gzDgAw8ph417V7hsW",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+        "startTimeIndividualTask": "2025-06-28T13:12:00.000Z",
+        "endTimeIndividualTask": "2025-06-29T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Pruebas a los sistemas implementados",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:29.312Z",
+        "status": "finalizada",
+        "assignedToUser": {
+          "uid": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
+          "email": "sofia.vergara@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "b969c0ae-ad7d-4894-ab9b-9fc1148dde14",
+          "createdAt": "2025-06-17T22:48:56.029Z",
+          "name": "Sofia",
+          "lastName": "Vergara",
+          "rut": "20835148-6"
+        }
+      },
+      {
+        "id": "Tlbb3iBhwF9kWyxMRRhc",
+        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
+        "assignedTo": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+        "startTimeIndividualTask": "2025-06-18T13:10:00.000Z",
+        "endTimeIndividualTask": "2025-06-27T13:10:00.000Z",
+        "priority": "media",
+        "requiereRelevo": true,
+        "individualTask": "Implementaciones iniciales",
+        "isGroupTask": false,
+        "createdAt": "2025-06-17T22:50:28.743Z",
+        "status": "en curso",
+        "assignedToUser": {
+          "uid": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+          "email": "paula.ovalle@mail.com",
+          "role": "user",
+          "isAdmin": false,
+          "empresaId": "f4141d39-d1a0-4ed6-8c55-ec33151ea7b7",
+          "createdAt": "2025-06-17T22:48:02.194Z",
+          "name": "Paula",
+          "lastName": "Ovalle",
+          "rut": "21333082-9"
+        }
+      }
+    ]
+  },
+  {
+    "id": "udy7SweJpHaZudizPsbh",
+    "taskId": "5GVjEf9Uw28lDp27QdAt",
+    "startTime": "2025-06-17T13:21:00.000Z",
+    "endTime": "2025-06-29T15:10:00.000Z",
+    "priority": "media",
+    "status": "pendiente",
+    "requiereRelevo": true,
+    "isGroupTask": false,
+    "isFinished": false,
+    "participants": [
+      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
+      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+    ],
+    "shouldBeWorking": [],
+    "currentlyWorking": [],
+    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
+    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+    "createdAt": "2025-06-17T22:50:26.597Z",
+    "assignments": []
+  }
+]
 
 ## 📝 `GET /api/users`
 **Descripción**:
