@@ -122,6 +122,7 @@ exports.getUsersByEmpresa = async (req, res) => {
             delete userData.password; // Si almacenas contraseñas, elimínala
             return {
                 id: doc.id,
+                
                 uid: doc.id, // UID sin desencriptar
                 ...userData,
                 name,
