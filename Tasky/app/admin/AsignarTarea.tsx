@@ -2,243 +2,242 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  Alert,
-  ScrollView,
-  SafeAreaView,
   TouchableOpacity,
+  ScrollView,
+  Alert,
+  SafeAreaView,
   StyleSheet,
-  Picker
+  TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import globalStyles from '../globalStyles';
+import { Picker } from '@react-native-picker/picker';
 import TopBar from '../../components/TopBar';
 import { useRouter } from 'expo-router';
 
-//Por mientras esta con formato ISO para probar del navegador del pc
-//wueee
-
 const AsignarTarea = () => {
   const router = useRouter();
-  const [users, setUsers] = useState([]);
+
   const [tasks, setTasks] = useState([]);
+  const [users, setUsers] = useState([]);
+
   const [selectedTaskId, setSelectedTaskId] = useState('');
-  const [selectedUserIds, setSelectedUserIds] = useState([]);
-  const [isGroupTask, setIsGroupTask] = useState(false);
-  const [requiereRelevo, setRequiereRelevo] = useState(false);
+  const [assignmentType, setAssignmentType] = useState<'individual' | 'relevo' | 'grupal'>('individual');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [individualTasks, setIndividualTasks] = useState({}); 
+  const [priority, setPriority] = useState('normal');
+  const [status, setStatus] = useState('pendiente');
 
-  const fetchUsersAndTasks = async () => {
-    const token = await AsyncStorage.getItem('userToken');
-    if (!token) return Alert.alert('Error', 'Token no disponible');
+  const [participants, setParticipants] = useState([
+    { userId: '', individualTask: '', startTimeIndividualTask: '', endTimeIndividualTask: '' },
+  ]);
 
-    try {
-      const [usersRes, tasksRes] = await Promise.all([
-        fetch('https://proyecto-ids.vercel.app/api/users', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('https://proyecto-ids.vercel.app/api/tasks', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
-
-      const usersData = await usersRes.json();
-      const tasksData = await tasksRes.json();
-      setUsers(usersData);
-      setTasks(tasksData);
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'No se pudieron cargar los datos');
-    }
-  };
+  const [assignedTo, setAssignedTo] = useState('');
 
   useEffect(() => {
-    fetchUsersAndTasks();
+    const fetchData = async () => {
+      try {
+        const token = await AsyncStorage.getItem('userToken');
+        const [userRes, taskRes] = await Promise.all([
+          fetch('https://proyecto-ids.vercel.app/api/users', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch('https://proyecto-ids.vercel.app/api/tasks', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+        const [userData, taskData] = await Promise.all([userRes.json(), taskRes.json()]);
+        setUsers(userData);
+        setTasks(taskData);
+      } catch (err) {
+        console.error(err);
+        Alert.alert('Error', 'No se pudieron cargar usuarios o tareas');
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleAssign = async () => {
+    const isGroupTask = assignmentType === 'grupal';
+    const requiereRelevo = assignmentType === 'relevo';
+    const token = await AsyncStorage.getItem('userToken');
+
     if (!selectedTaskId || !startTime || !endTime) {
-      return Alert.alert('Error', 'Completa todos los campos principales.');
+      return Alert.alert('Error', 'Faltan campos obligatorios');
     }
 
-    const token = await AsyncStorage.getItem('userToken');
-    if (!token) return Alert.alert('Error', 'Token no disponible');
-
-    let body: any = {
+    let payload: any = {
       isGroupTask,
+      requiereRelevo,
       taskId: selectedTaskId,
       startTime,
       endTime,
-      priority: 'normal',
-      status: 'pendiente',
-      requiereRelevo,
+      priority,
+      status,
     };
 
     if (isGroupTask || requiereRelevo) {
-      const participantAssignments = selectedUserIds.map((uid) => {
-        const indTask = individualTasks[uid];
-        if (!indTask || !indTask.task || !indTask.start || !indTask.end) {
-          throw new Error(`Faltan datos para usuario ${uid}`);
-        }
-        return {
-          userId: uid,
-          individualTask: indTask.task,
-          startTimeIndividualTask: indTask.start,
-          endTimeIndividualTask: indTask.end,
-        };
-      });
-      body.participantAssignments = participantAssignments;
+      payload.participantAssignments = participants;
     } else {
-      if (!selectedUserIds[0]) return Alert.alert('Error', 'Selecciona un usuario');
-      body.assignedTo = selectedUserIds[0];
+      if (!assignedTo) return Alert.alert('Error', 'Selecciona un usuario');
+      payload.assignedTo = assignedTo;
     }
 
     try {
-      const response = await fetch('https://proyecto-ids.vercel.app/api/assignTask', {
+      const res = await fetch('https://proyecto-ids.vercel.app/api/assignTask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      const data = await res.json();
+
+      if (res.status === 201) {
         Alert.alert('Éxito', 'Tarea asignada correctamente');
         router.push('/admin/main');
       } else {
-        console.error(data);
-        Alert.alert('Error', data.message || 'Error al asignar la tarea');
+        Alert.alert('Error', data.message || 'No se pudo asignar la tarea');
       }
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Error de red o del servidor');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Error al hacer la asignación');
     }
   };
 
-  const handleUserSelection = (userId: string) => {
-    setSelectedUserIds((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
+  const handleParticipantChange = (index: number, field: string, value: string) => {
+    const updated = [...participants];
+    updated[index][field] = value;
+    setParticipants(updated);
+  };
+
+  const addParticipant = () => {
+    setParticipants([...participants, {
+      userId: '',
+      individualTask: '',
+      startTimeIndividualTask: '',
+      endTimeIndividualTask: ''
+    }]);
   };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <TopBar />
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView style={styles.container}>
+        <TouchableOpacity onPress={() => router.push('/admin/main')} style={styles.goBackButton}>
+          <Text style={styles.buttonText}>Volver</Text>
+        </TouchableOpacity>
 
         <Text style={styles.title}>Asignar Tarea</Text>
 
-        <Text style={styles.label}>Seleccionar Tarea:</Text>
-        <Picker
-          selectedValue={selectedTaskId}
-          onValueChange={setSelectedTaskId}
-          style={styles.input}
-        >
-          <Picker.Item label="Seleccione una tarea" value="" />
-          {tasks.map((task: any) => (
-            <Picker.Item key={task.id} label={task.title} value={task.id} />
-          ))}
-        </Picker>
-
-        <Text style={styles.label}>¿Es Tarea Grupal?</Text>
-        <Picker
-          selectedValue={isGroupTask ? 'sí' : 'no'}
-          onValueChange={(val) => setIsGroupTask(val === 'sí')}
-          style={styles.input}
-        >
-          <Picker.Item label="No" value="no" />
-          <Picker.Item label="Sí" value="sí" />
-        </Picker>
-
-        <Text style={styles.label}>¿Requiere Relevo?</Text>
-        <Picker
-          selectedValue={requiereRelevo ? 'sí' : 'no'}
-          onValueChange={(val) => setRequiereRelevo(val === 'sí')}
-          style={styles.input}
-        >
-          <Picker.Item label="No" value="no" />
-          <Picker.Item label="Sí" value="sí" />
-        </Picker>
-
-        <Text style={styles.label}>Inicio Tarea General (ISO):</Text>
-        <TextInput
-          value={startTime}
-          onChangeText={setStartTime}
-          placeholder="2025-06-14T13:00:00.000Z"
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Fin Tarea General (ISO):</Text>
-        <TextInput
-          value={endTime}
-          onChangeText={setEndTime}
-          placeholder="2025-06-14T15:00:00.000Z"
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Seleccionar Usuarios:</Text>
-        {users.map((user: any) => (
-          <TouchableOpacity
-            key={user.rut}
-            onPress={() => handleUserSelection(user.rut)}
-            style={{
-              padding: 8,
-              backgroundColor: selectedUserIds.includes(user.rut) ? '#a7c' : '#ddd',
-              borderRadius: 5,
-              marginBottom: 6,
-            }}
+        <Text style={styles.label}>Seleccionar Tarea</Text>
+        <View style={styles.picker}>
+          <Picker
+            selectedValue={selectedTaskId}
+            onValueChange={(itemValue) => setSelectedTaskId(itemValue)}
           >
-            <Text>{`${user.name} ${user.lastName} (${user.rut})`}</Text>
-          </TouchableOpacity>
-        ))}
+            <Picker.Item label="Seleccione una tarea..." value="" />
+            {tasks.map((task: any) => (
+              <Picker.Item key={task.id} label={task.title} value={task.id} />
+            ))}
+          </Picker>
+        </View>
 
-        {(isGroupTask || requiereRelevo) && selectedUserIds.map((uid) => (
-          <View key={uid} style={{ marginTop: 10 }}>
-            <Text style={styles.label}>Tarea individual para {uid}</Text>
-            <TextInput
-              placeholder="Descripción"
-              value={individualTasks[uid]?.task || ''}
-              onChangeText={(text) =>
-                setIndividualTasks((prev) => ({
-                  ...prev,
-                  [uid]: { ...prev[uid], task: text },
-                }))
-              }
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Inicio (ISO)"
-              value={individualTasks[uid]?.start || ''}
-              onChangeText={(text) =>
-                setIndividualTasks((prev) => ({
-                  ...prev,
-                  [uid]: { ...prev[uid], start: text },
-                }))
-              }
-              style={styles.input}
-            />
-            <TextInput
-              placeholder="Fin (ISO)"
-              value={individualTasks[uid]?.end || ''}
-              onChangeText={(text) =>
-                setIndividualTasks((prev) => ({
-                  ...prev,
-                  [uid]: { ...prev[uid], end: text },
-                }))
-              }
-              style={styles.input}
-            />
-          </View>
-        ))}
+        <Text style={styles.label}>Tipo de Asignación</Text>
+        <View style={styles.row}>
+          {['individual', 'relevo', 'grupal'].map(type => (
+            <TouchableOpacity
+              key={type}
+              onPress={() => setAssignmentType(type as any)}
+              style={[
+                styles.typeButton,
+                assignmentType === type && styles.typeButtonSelected,
+              ]}
+            >
+              <Text style={styles.buttonText}>{type}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <TouchableOpacity style={globalStyles.button} onPress={handleAssign}>
-          <Text style={styles.buttonText}>Asignar</Text>
+        <Text style={styles.label}>Inicio (ISO)</Text>
+        <TextInput value={startTime} onChangeText={setStartTime} style={styles.input} />
+
+        <Text style={styles.label}>Término (ISO)</Text>
+        <TextInput value={endTime} onChangeText={setEndTime} style={styles.input} />
+
+        {assignmentType === 'individual' && (
+          <>
+            <Text style={styles.label}>Seleccionar Usuario</Text>
+            <View style={styles.picker}>
+              <Picker
+                selectedValue={assignedTo}
+                onValueChange={(value) => setAssignedTo(value)}
+              >
+                <Picker.Item label="Seleccione un usuario..." value="" />
+                {users.map((user: any) => (
+                  <Picker.Item
+                    key={user.uid}
+                    label={`${user.name} ${user.lastName}`}
+                    value={user.uid}
+                  />
+                ))}
+              </Picker>
+            </View>
+          </>
+        )}
+
+        {(assignmentType === 'relevo' || assignmentType === 'grupal') && (
+          <>
+            <Text style={styles.label}>Participantes</Text>
+            {participants.map((p, i) => (
+              <View key={i} style={styles.participantBox}>
+                <Text style={styles.label}>Usuario</Text>
+                <View style={styles.picker}>
+                  <Picker
+                    selectedValue={p.userId}
+                    onValueChange={(value) => handleParticipantChange(i, 'userId', value)}
+                  >
+                    <Picker.Item label="Seleccione un usuario..." value="" />
+                    {users.map((user: any) => (
+                      <Picker.Item
+                        key={user.uid}
+                        label={`${user.name} ${user.lastName}`}
+                        value={user.uid}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+
+                <TextInput
+                  placeholder="Tarea individual"
+                  value={p.individualTask}
+                  onChangeText={(text) => handleParticipantChange(i, 'individualTask', text)}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Inicio (ISO)"
+                  value={p.startTimeIndividualTask}
+                  onChangeText={(text) => handleParticipantChange(i, 'startTimeIndividualTask', text)}
+                  style={styles.input}
+                />
+                <TextInput
+                  placeholder="Término (ISO)"
+                  value={p.endTimeIndividualTask}
+                  onChangeText={(text) => handleParticipantChange(i, 'endTimeIndividualTask', text)}
+                  style={styles.input}
+                />
+              </View>
+            ))}
+            <TouchableOpacity onPress={addParticipant} style={styles.addBtn}>
+              <Text style={styles.buttonText}>+ Agregar Participante</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <TouchableOpacity onPress={handleAssign} style={styles.submitBtn}>
+          <Text style={styles.buttonText}>Asignar Tarea</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -246,33 +245,63 @@ const AsignarTarea = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  label: {
-    fontWeight: '600',
-    marginTop: 10,
-    marginBottom: 6,
-  },
+  container: { padding: 20, backgroundColor: '#f2f2f2' },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  label: { fontWeight: 'bold', marginTop: 10 },
   input: {
     backgroundColor: '#fff',
+    borderColor: '#8971BB',
+    borderWidth: 1,
     padding: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  picker: {
+    backgroundColor: '#fff',
+    borderColor: '#8971BB',
     borderWidth: 1,
     borderRadius: 8,
-    borderColor: '#aaa',
+    marginBottom: 8,
+  },
+  row: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 10 },
+  typeButton: {
+    padding: 10,
+    backgroundColor: '#bbb',
+    borderRadius: 5,
+  },
+  typeButtonSelected: {
+    backgroundColor: '#8971BB',
+  },
+  goBackButton: {
+    backgroundColor: '#8971BB',
+    padding: 6,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+  },
+  submitBtn: {
+    backgroundColor: '#8971BB',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  addBtn: {
+    backgroundColor: '#6c5ce7',
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  participantBox: {
+    backgroundColor: '#eee',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 10,
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
-    textAlign: 'center',
   },
 });
 
