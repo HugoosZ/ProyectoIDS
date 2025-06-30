@@ -3,13 +3,13 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button, Alert, T
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const globalStyles = StyleSheet.create({
   container: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom: 100,
     backgroundColor: '#f0f2f5',
   },
   title: {
@@ -45,8 +45,6 @@ type Tarea = {
   trabajadorEntrante: string;
 };
 
-const MINUTOS_MINIMOS = 15; // minutos mínimos para poder terminar tarea
-
 // Función para obtener los datos de autenticación (userId y token)
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
   try {
@@ -57,6 +55,14 @@ const getStoredAuthData = async (): Promise<{ userId: string | null; token: stri
     console.error("Error al obtener datos de auth:", e);
     return { userId: null, token: null };
   }
+};
+
+// Función para convertir un Timestamp de Firestore a un objeto Date
+const parseFirestoreTimestamp = (timestamp: any): Date => {
+  if (timestamp && timestamp._seconds) {
+    return new Date(timestamp._seconds * 1000); // Convertir el valor de segundos a milisegundos
+  }
+  return new Date(); // Si no es un objeto válido, retornamos la fecha actual
 };
 
 export default function VerTareas() {
@@ -83,14 +89,34 @@ export default function VerTareas() {
   }, []);
 
   const logout = async () => {
-  try {
-    await AsyncStorage.removeItem('userId');
-    await AsyncStorage.removeItem('userToken');
-    router.replace('/'); // Redirige a login
-  } catch (e) {
-    console.error('Error al cerrar sesión:', e);
-  }
-};
+    Alert.alert(
+      "Cerrar Sesión",
+      "¿Estás seguro de que quieres cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          onPress: () => console.log("Cierre de sesión cancelado"),
+          style: "cancel"
+        },
+        {
+          text: "Confirmar",
+          onPress: async () => {
+              try {
+                await AsyncStorage.removeItem('userId');
+                await AsyncStorage.removeItem('userToken');
+                router.replace('/'); // Redirige a login
+              } catch (e) {
+                console.error('Error al cerrar sesión:', e);
+                Alert.alert("Error", "No se pudo cerrar sesión. Inténtalo de nuevo.");
+              }
+          },
+          style: "destructive"
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
   useEffect(() => {
     if (authUserId && authToken) {
       fetchTareas();
@@ -102,8 +128,6 @@ export default function VerTareas() {
 
     setLoading(true);
     setError(null);
-
-    console.log('Fecha y hora actual al cargar tareas:', new Date().toLocaleString());
 
     try {
       const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
@@ -119,50 +143,47 @@ export default function VerTareas() {
 
       const data = await response.json();
 
-      console.log('Respuesta de la API:', data);
+      if (Array.isArray(data)) {
+        const tareas: Tarea[] = data.map((apiTask: any) => {
+          return {
+            id: apiTask.assignmentId,
+            nombre: apiTask.taskName || apiTask.individualTask || 'Sin nombre',
+            descripcion: apiTask.taskDescription || '',
+            estado: apiTask.status.toLowerCase(),
+            hora: apiTask.startTime
+              ? parseFirestoreTimestamp(apiTask.startTime).toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: false 
+                })
+              : 'N/A',
+            priority: apiTask.priority || 'normal',
+            startTime: parseFirestoreTimestamp(apiTask.startTime), // Asegúrate de convertirlo a Date
+            endTime: parseFirestoreTimestamp(apiTask.endTime), // Asegúrate de convertirlo a Date
+            requiereRelevo: apiTask.requiereRelevo || false,
+            trabajadorSaliente: apiTask.trabajadorSaliente || '',
+            trabajadorEntrante: apiTask.trabajadorEntrante || ''
+          };
+        });
 
-      if (data && data.tasks) {
-        const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
-          id: apiTask.id,
-          nombre: apiTask.title,
-          descripcion: apiTask.description,
-          estado: apiTask.status.toLowerCase(),
-          hora: apiTask.startTime
-            ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-            : 'N/A',
-          priority: apiTask.priority,
-          startTime: apiTask.startTime ? new Date(apiTask.startTime) : null,
-          endTime: apiTask.endTime ? new Date(apiTask.endTime) : null,
-          requiereRelevo: apiTask.requiereRelevo || false,
-          trabajadorSaliente: apiTask.trabajadorSaliente || '',
-          trabajadorEntrante: apiTask.trabajadorEntrante || ''
-        }));
+        // Filtramos las tareas para que solo se muestren las pendientes o en curso
+        const tareasFiltradas = tareas.filter(tarea => 
+          tarea.estado === 'pendiente' || tarea.estado === 'en curso'
+        );
 
-        const tareasFiltradas = tareas.filter(tarea => tarea.estado === 'pendiente' || tarea.estado === 'en progreso');
-
-        console.log('Tareas filtradas:', tareasFiltradas);
         setTareasDelDia(tareasFiltradas);
       } else {
-        throw new Error('No se encontraron tareas en la respuesta');
+        throw new Error('Formato de respuesta inválido: se esperaba un array');
       }
     } catch (err: any) {
-      console.error("Error al obtener tareas:", err);
-      setError("Error al cargar las tareas.");
+      setError("Error al cargar las tareas: " + (err.message || 'Error desconocido'));
     } finally {
       setLoading(false);
     }
   };
 
-  const hayTareaEnProgreso = (): boolean => {
-    return tareasDelDia.some(tarea => tarea.estado === "en progreso");
-  };
-
-  const puedeTerminarTarea = (startTime?: string | Date): boolean => {
-    if (!startTime) return false;
-    const inicio = new Date(startTime).getTime();
-    const ahora = Date.now();
-    const diffMinutos = (ahora - inicio) / (1000 * 60);
-    return diffMinutos >= MINUTOS_MINIMOS;
+  const hayTareaEnCurso = (): boolean => {
+    return tareasDelDia.some(tarea => tarea.estado === "en curso");
   };
 
   const actualizarEstadoTarea = async (tareaId: string, nuevoEstado: string) => {
@@ -170,23 +191,8 @@ export default function VerTareas() {
 
     const empresaId = '9ccfbbf4-da1a-4ece-8145-f54dc1e8aa23';
 
-    if (nuevoEstado === "completada") {
-      const tarea = tareasDelDia.find(t => t.id === tareaId);
-      if (!tarea) {
-        Alert.alert("Error", "Tarea no encontrada.");
-        return;
-      }
-      if (!puedeTerminarTarea(tarea.startTime)) {
-        Alert.alert(
-          "Atención",
-          `No puedes finalizar esta tarea hasta que hayan pasado al menos ${MINUTOS_MINIMOS} minutos desde su inicio.`
-        );
-        return;
-      }
-    }
-
-    if (nuevoEstado === "en progreso") {
-      if (hayTareaEnProgreso()) {
+    if (nuevoEstado === "en curso") {
+      if (hayTareaEnCurso()) {
         Alert.alert("Atención", "Solo puedes tener una tarea en ejecución al mismo tiempo.");
         return;
       }
@@ -214,7 +220,6 @@ export default function VerTareas() {
 
       await fetchTareas();
     } catch (err: any) {
-      console.error("Error actualizando tarea:", err);
       Alert.alert("Error", err.message || "No se pudo actualizar la tarea.");
     } finally {
       setActualizandoId(null);
@@ -223,100 +228,105 @@ export default function VerTareas() {
 
   const mostrarEstado = (estado: string) => {
     if (estado === 'pendiente') return '🕒 Pendiente';
-    if (estado === 'en progreso') return '🔄 En progreso';
+    if (estado === 'en curso') return '🔄 En curso';
     if (estado === 'completada') return '✅ Completada';
     return estado;
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
-        <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-          <Ionicons name="log-out-outline" size={26} color="#007AFF" />
+    <View style={{ flex: 1 }}>
+
+      <ScrollView contentContainerStyle={globalStyles.container}>
+        <Text style={globalStyles.title}>Tareas del Día</Text>
+
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={globalStyles.errorText}>{error}</Text>
+            <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
+          </View>
+        )}
+
+        {!error && tareasDelDia.length === 0 && !loading && (
+          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
+        )}
+
+        {loading && !error && (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text>Cargando tareas...</Text>
+          </View>
+        )}
+
+        {!loading && tareasDelDia.map(tarea => (
+          <View key={tarea.id} style={styles.tareaCard}>
+            <View style={styles.tareaHeader}>
+              <Text style={styles.tareaHora}>{tarea.hora}</Text>
+              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
+            </View>
+            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+            {tarea.estado === 'pendiente' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'en curso')}
+                color="#1E90FF"
+                disabled={actualizandoId === tarea.id || hayTareaEnCurso()}
+              />
+            )}
+
+            {tarea.estado === 'en curso' && (
+              <Button
+                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+                color="#28a745"
+              />
+            )}
+          </View>
+        ))}
+      </ScrollView>
+
+      <SafeAreaView edges={['bottom']} style={styles.bottomMenu}>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/turno')}
+        >
+          <Ionicons name="time" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Turno</Text>
         </TouchableOpacity>
 
-        <ScrollView contentContainerStyle={globalStyles.container}>
-          <Text style={globalStyles.title}>Tareas del Día</Text>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/tareas_completadas')}
+        >
+          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Completadas</Text>
+        </TouchableOpacity>
 
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={globalStyles.errorText}>{error}</Text>
-              <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
-            </View>
-          )}
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={() => router.push('/trabajador/calendario-semanal')}
+        >
+          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
+          <Text style={styles.menuText}>Calendario</Text>
+        </TouchableOpacity>
 
-          {!error && tareasDelDia.length === 0 && !loading && (
-            <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
-          )}
-
-          {loading && !error && (
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color="#007AFF" />
-              <Text>Cargando tareas...</Text>
-            </View>
-          )}
-
-          {!loading && tareasDelDia.map(tarea => (
-            <View key={tarea.id} style={styles.tareaCard}>
-              <View style={styles.tareaHeader}>
-                <Text style={styles.tareaHora}>{tarea.hora}</Text>
-                <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
-              </View>
-              <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-              <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-
-              {tarea.estado === 'pendiente' && (
-                <Button
-                  title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'en progreso')}
-                  color="#1E90FF"
-                  disabled={actualizandoId === tarea.id || hayTareaEnProgreso()}
-                />
-              )}
-
-              {tarea.estado === 'en progreso' && (
-                <Button
-                  title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
-                  onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                  color="#28a745"
-                  disabled={actualizandoId === tarea.id || !puedeTerminarTarea(tarea.startTime)}
-                />
-              )}
-            </View>
-          ))}
-        </ScrollView>
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/turno')}
-          >
-            <Ionicons name="time" size={30} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/tareas_completadas')}
-          >
-            <Ionicons name="checkmark-done-outline" size={30} color="white" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.botonCalendario}
-            onPress={() => router.push('/trabajador/calendario-semanal')}
-          >
-            <Ionicons name="calendar-outline" size={30} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </SafeAreaView>
+        <TouchableOpacity
+          style={styles.menuButton}
+          onPress={logout}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+          <Text style={[styles.menuText, {color: '#FF3B30'}]}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const getEstadoColor = (estado: string) => {
   if (estado === 'pendiente') return '#FFA500';
   if (estado === 'completada') return '#32CD32';
-  if (estado === 'en progreso') return '#1E90FF';
+  if (estado === 'en curso') return '#1E90FF';
   return '#666';
 };
 
@@ -366,26 +376,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 5,
   },
-  botonCalendario: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 30,
-    elevation: 5,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 20,
-    width: '100%',
+  bottomMenu: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    paddingVertical: 5,
   },
-
-  logoutButton: {
-  position: 'absolute',
-  top: 10,
-  left: 10,
-  zIndex: 10,
-  padding: 10,
-},
+  menuButton: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  menuText: {
+    fontSize: 12,
+    color: '#007AFF',
+    marginTop: 2,
+  },
 });

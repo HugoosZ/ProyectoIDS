@@ -8,10 +8,7 @@ type Tarea = {
   nombre: string;
   descripcion: string;
   estado: string;
-  hora: string;
   priority?: string;
-  startTime?: string | Date;
-  endTime?: string | Date;
 };
 
 type TareasPorDia = {
@@ -70,31 +67,35 @@ export default function CalendarioSemanalTareas() {
 
       const data = await response.json();
 
-      // data.tasks es el arreglo de tareas
-      const tareas: Tarea[] = data.tasks.map((apiTask: any) => ({
-        id: apiTask.id,
-        nombre: apiTask.title,
-        descripcion: apiTask.description,
-        estado: apiTask.status.toLowerCase(),
-        hora: apiTask.startTime
-          ? new Date(apiTask.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
-          : 'N/A',
-        priority: apiTask.priority,
-        startTime: apiTask.startTime,
-        endTime: apiTask.endTime,
-      }));
+      // Mostrar la respuesta completa para inspeccionarla
+      console.log("Respuesta de la API:", data);
 
-      // Agrupar tareas completadas por fecha (ISO yyyy-mm-dd)
-      const tareasCompletadas: TareasPorDia = {};
-      tareas
-        .filter(tarea => tarea.estado === 'completada') // Filtro para solo mostrar tareas completadas
-        .forEach((tarea) => {
+      // Asegurarnos de que la respuesta contiene un arreglo de tareas
+      if (Array.isArray(data)) {
+        // Filtrar solo las tareas completadas
+        const tareas: Tarea[] = data
+          .filter((apiTask: any) => apiTask.status.toLowerCase() === 'completada')
+          .map((apiTask: any) => ({
+            id: apiTask.assignmentId, // Usando 'assignmentId' como el ID de la tarea
+            nombre: apiTask.taskName || apiTask.individualTask || 'Sin nombre',
+            descripcion: apiTask.taskDescription || '',
+            estado: apiTask.status.toLowerCase(),
+            priority: apiTask.priority || 'normal',
+          }));
+
+        // Agrupar tareas completadas por fecha (ISO yyyy-mm-dd)
+        const tareasCompletadas: TareasPorDia = {};
+        tareas.forEach((tarea) => {
+          // Comprobar si startTime está presente y es válido antes de usarlo
           const fecha = tarea.startTime ? new Date(tarea.startTime).toISOString().split('T')[0] : 'Sin fecha';
           if (!tareasCompletadas[fecha]) tareasCompletadas[fecha] = [];
           tareasCompletadas[fecha].push(tarea);
         });
 
-      setTareasPorDia(tareasCompletadas);
+        setTareasPorDia(tareasCompletadas);
+      } else {
+        throw new Error('La respuesta de la API no contiene un arreglo de tareas.');
+      }
     } catch (err: any) {
       console.error("Error al obtener tareas:", err);
       setError(err.message || "Error al cargar las tareas.");
@@ -141,7 +142,7 @@ export default function CalendarioSemanalTareas() {
 
       {Object.entries(tareasPorDia).map(([fecha, tareas]) => (
         <View key={fecha} style={styles.diaContainer}>
-          <Text style={styles.fecha}>{fecha}</Text>
+          {fecha !== 'Sin fecha' && <Text style={styles.fecha}>{fecha}</Text>}
           {tareas.map((tarea) => (
             <View
               key={tarea.id}
@@ -151,7 +152,6 @@ export default function CalendarioSemanalTareas() {
               <Text style={styles.estado}>
                 {tarea.estado === 'completada' ? '✅ Completada' : '🔄 En progreso'}
               </Text>
-              <Text style={styles.hora}>Hora: {tarea.hora}</Text>
             </View>
           ))}
         </View>
@@ -221,10 +221,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#444',
-  },
-  hora: {
-    fontSize: 13,
-    color: '#555',
-    marginTop: 3,
   },
 });
