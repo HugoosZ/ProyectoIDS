@@ -124,22 +124,22 @@ export default function VerTareas() {
   }, [authUserId, authToken]);
 
   const fetchTareas = async () => {
-    if (!authUserId || !authToken) return;
+  if (!authUserId || !authToken) return;
 
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+  try {
+    const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${authUserId}`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      if (!response.ok) {
-        throw new Error(`Error HTTP ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Error HTTP ${response.status}`);
+    }
 
       const data = await response.json();
 
