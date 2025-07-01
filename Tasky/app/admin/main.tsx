@@ -184,48 +184,41 @@ export default function AdminMain() {
       </View>
       <BottomBar />
   
-      {/* MODAL DE DETALLE */}
       {tareaSeleccionada && (
-        <Modal
-          visible={modalVisible}
-          animationType="slide"
-          transparent
-          onRequestClose={cerrarModal}
-        >
-          <View style={styles.modalBackground}>
-            <View style={styles.modalContainer}>
-              <Text style={styles.modalTitle}>{tareaSeleccionada.taskName}</Text>
-              <Text style={styles.modalLabel}>Estado: {tareaSeleccionada.status}</Text>
-              <Text style={styles.modalLabel}>
-                Inicio: {formatearFecha(tareaSeleccionada.startTime)}
-              </Text>
-              <Text style={styles.modalLabel}>
-                Fin: {formatearFecha(tareaSeleccionada.endTime)}
-              </Text>
-  
-              <Text style={[styles.modalLabel, { marginTop: 10 }]}>Asignaciones:</Text>
-              {tareaSeleccionada.assignments?.map((a, i) => (
-                <View key={i} style={{ marginBottom: 10 }}>
-                  <Text style={styles.modalItem}>
-                    👤 {a.assignedToUser?.name} {a.assignedToUser?.lastName}
+      <Modal
+              visible={modalVisible}
+              animationType="slide"
+              transparent
+              onRequestClose={cerrarModal}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>{tareaSeleccionada.taskName}</Text>
+
+                  <Text style={[styles.modalLabel, { marginTop: 10 }]}>Asignaciones:</Text>
+                  {tareaSeleccionada.assignments?.map((a, i) => (
+                    <View key={i} style={{ marginBottom: 10 }}>
+                      <Text style={styles.modalItem}>
+                        👤 {a.assignedToUser?.name} {a.assignedToUser?.lastName}
+                      </Text>
+                      <Text style={styles.modalItem}>📌 {a.individualTask}</Text>
+                      <Text style={styles.modalItem}>
+                        🕒 {formatearFecha(a.startTimeIndividualTask)} - {formatearFecha(a.endTimeIndividualTask)}
+                      </Text>
+                      <Text style={styles.modalItem}>📊 {a.status}</Text>
+                    </View>
+                  ))}
+
+                  <Text
+                    onPress={cerrarModal}
+                    style={{ marginTop: 20, color: 'blue', textAlign: 'center' }}
+                  >
+                    Cerrar
                   </Text>
-                  <Text style={styles.modalItem}>
-                    🕒 {formatearFecha(a.startTimeIndividualTask)} - {formatearFecha(a.endTimeIndividualTask)}
-                  </Text>
-                  <Text style={styles.modalItem}>📌 {a.individualTask}</Text>
-                  <Text style={styles.modalItem}>📊 {a.status}</Text>
                 </View>
-              ))}
-  
-              <Text
-                onPress={cerrarModal}
-                style={{ marginTop: 20, color: 'blue', textAlign: 'center' }}
-              >
-                Cerrar
-              </Text>
-            </View>
-          </View>
-        </Modal>
+              </View>
+            </Modal>
+
       )}
     </SafeAreaView>
   );  
