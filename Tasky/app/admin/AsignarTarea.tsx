@@ -13,6 +13,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import TopBar from '../../components/TopBar';
 import { useRouter } from 'expo-router';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
+
 
 const AsignarTarea = () => {
   const router = useRouter();
@@ -26,6 +29,13 @@ const AsignarTarea = () => {
   const [endTime, setEndTime] = useState('');
   const [priority, setPriority] = useState('normal');
   const [status, setStatus] = useState('pendiente');
+
+  // Estados para seleccionar hora desde celu
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [startDateObj, setStartDateObj] = useState<Date | null>(null);
+  const [endDateObj, setEndDateObj] = useState<Date | null>(null);
+
 
   const [participants, setParticipants] = useState([
     { userId: '', individualTask: '', startTimeIndividualTask: '', endTimeIndividualTask: '' },
@@ -56,6 +66,27 @@ const AsignarTarea = () => {
 
     fetchData();
   }, []);
+
+//funciones para manejar la seleccion de fecha y hora desde celu
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowStartPicker(false);
+    if (event?.type === 'dismissed') return; 
+    if (selectedDate) {
+      setStartDateObj(selectedDate);
+      setStartTime(selectedDate.toISOString());
+    }
+  };
+
+  
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') setShowEndPicker(false);
+    if (event?.type === 'dismissed') return;
+    if (selectedDate) {
+      setEndDateObj(selectedDate);
+      setEndTime(selectedDate.toISOString());
+    }
+  };
+  
 
   const handleAssign = async () => {
     const isGroupTask = assignmentType === 'grupal';
@@ -160,12 +191,31 @@ const AsignarTarea = () => {
             </TouchableOpacity>
           ))}
         </View>
+        <Text style={styles.label}>Inicio</Text>
+        <TouchableOpacity onPress={() => setShowStartPicker(true)} style={styles.input}>
+          <Text>{startDateObj ? startDateObj.toLocaleString() : 'Seleccionar fecha y hora'}</Text>
+        </TouchableOpacity>
+        {showStartPicker && (
+          <DateTimePicker
+            value={startDateObj || new Date()}
+            mode="datetime"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleStartDateChange}
+          />
+        )}
 
-        <Text style={styles.label}>Inicio (ISO)</Text>
-        <TextInput value={startTime} onChangeText={setStartTime} style={styles.input} />
-
-        <Text style={styles.label}>Término (ISO)</Text>
-        <TextInput value={endTime} onChangeText={setEndTime} style={styles.input} />
+        <Text style={styles.label}>Término</Text>
+        <TouchableOpacity onPress={() => setShowEndPicker(true)} style={styles.input}>
+          <Text>{endDateObj ? endDateObj.toLocaleString() : 'Seleccionar fecha y hora'}</Text>
+        </TouchableOpacity>
+        {showEndPicker && (
+          <DateTimePicker
+            value={endDateObj || new Date()}
+            mode="datetime"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleEndDateChange}
+          />
+        )}
 
         {assignmentType === 'individual' && (
           <>
