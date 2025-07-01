@@ -93,48 +93,45 @@ exports.createUser = async (req, res) => {
 
 exports.getUsersByEmpresa = async (req, res) => {
     try {
-        // Obtenemos el empresaId del administrador logueado (inyectado por verifyAndDecodeToken)
-        const adminEmpresaId = req.user.empresaId;
+        const { isAdmin, empresaId } = req.user; // Esto viene del middleware verifyAndDecodeToken
 
-        if (!adminEmpresaId) {
-            // Si el admin no tiene un empresaId, no puede acceder a los usuarios
-            return res.status(403).json({ message: "Forbidden: Admin user is not associated with an enterprise." });
+        if (!empresaId) {
+            return res.status(400).json({ message: "ID de empresa no proporcionado en el token." });
         }
 
-        // Consulta a Firestore para obtener solo los usuarios de la misma empresa
-        const snapshot = await db.collection('users')
-                                .where('empresaId', '==', adminEmpresaId)
-                                .get();
+        const usersRef = db.collection('users');
+        const snapshot = await usersRef.where('empresaId', '==', empresaId).get();
 
         if (snapshot.empty) {
-            return res.status(200).json([]); // Devuelve un array vacío si no hay usuarios en esa empresa
+            return res.status(404).json({ message: "No se encontraron usuarios para esta empresa." });
         }
 
         const users = snapshot.docs.map(doc => {
             const userData = doc.data();
-            let name = userData.name;
-            let lastName = userData.lastName;
-            let rut = userData.rut;
-            try { name = decrypt(name); } catch (e) {}
-            try { lastName = decrypt(lastName); } catch (e) {}
-            try { rut = decrypt(rut); } catch (e) {}
-            // Opcional: Eliminar campos sensibles antes de enviar la respuesta
-            delete userData.password; // Si almacenas contraseñas, elimínala
+            // Desencriptar datos sensibles si están encriptados
+            const decryptedName = userData.name ? decrypt(userData.name) : null;
+            const decryptedLastName = userData.lastName ? decrypt(userData.lastName) : null;
+            const decryptedRut = userData.rut ? decrypt(userData.rut) : null;
+
             return {
-                id: doc.id,
-                
-                uid: doc.id, // UID sin desencriptar
-                ...userData,
-                name,
-                lastName,
-                rut
+                uid: doc.id, // El UID es el ID del documento en Firestore
+                email: userData.email,
+                role: userData.role,
+                isAdmin: userData.isAdmin,
+                empresaId: userData.empresaId,
+                createdAt: userData.createdAt ? userData.createdAt.toDate().toISOString() : null,
+                name: decryptedName,
+                lastName: decryptedLastName,
+                rut: decryptedRut,
+                // Asegúrate de incluir otros campos que necesites
             };
         });
 
         res.status(200).json(users);
+
     } catch (error) {
-        console.error('Error al obtener usuarios:', error);
-        res.status(500).json({ error: 'Error interno del servidor al obtener usuarios', details: error.message });
+        console.error("Error al obtener usuarios por empresa:", error);
+        res.status(500).json({ message: "Error interno del servidor al obtener usuarios." });
     }
 };
 

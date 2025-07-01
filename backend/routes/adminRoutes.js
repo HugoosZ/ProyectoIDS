@@ -22,11 +22,9 @@ router.get("/checkAdmin", verifyAndDecodeToken, checkAdminPrivileges, async (req
 
 
 // Ruta para obtener todos los usuarios de la empresa (Agregar auntenticacion)
-router.get('/users', userController.getUsersByEmpresa);
+router.get('/admin/users', verifyAndDecodeToken, checkAdminPrivileges, userController.getUsersByEmpresa);
 
 
-// Ruta para obtener todos los usuarios sin filtrar por empresa (Agregar auntenticacion)
-router.get('/allUsers', userController.getAllUsers);
 
 router.post("/createUser", verifyAndDecodeToken, checkAdminPrivileges, userController.createUser);
 
