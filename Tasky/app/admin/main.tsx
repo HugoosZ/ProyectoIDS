@@ -25,7 +25,6 @@ type Tarea = {
 
 export default function AdminMain() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
-  const [estadoFiltro, setEstadoFiltro] = useState('todas');
   const [usuarios, setUsuarios] = useState<Record<string, string>>({});
 
   const screenWidth = Dimensions.get('window').width;
@@ -65,32 +64,26 @@ export default function AdminMain() {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
       }
-
-      const res = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
+  
+      const res = await fetch('https://proyecto-ids.vercel.app/api/admin/tasks/detailed', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       const data = await res.json();
-      console.log(data);
       setTareas(data);
     } catch (error) {
       console.error('Error al obtener tareas:', error);
     }
   };
+  
 
   useEffect(() => {
     fetchUsuarios();
     fetchTareas();
   }, []);
-
-/*   const formatearFecha = (timestamp?: { _seconds: number }) => {
-    if (!timestamp?._seconds) return 'Fecha inválida';
-    const fecha = new Date(timestamp._seconds * 1000);
-    return fecha.toLocaleString();
-  }; */
 
 
   const formatearFecha = (fecha: any) => {
@@ -115,22 +108,8 @@ export default function AdminMain() {
     }).format(dateObj);
   };
   
-  const tareasFiltradas = tareas.filter((tarea) => {
-    if (estadoFiltro === 'todas') return true;
-    if (estadoFiltro === 'pendientes') {
-      return (
-        tarea.status?.toLowerCase() === 'pendiente' ||
-        tarea.status?.toLowerCase() === 'en desarrollo'
-      );
-    }
-    if (estadoFiltro === 'enDesarrollo') {
-      return tarea.status?.toLowerCase() === 'en desarrollo' || tarea.status?.toLowerCase() === 'en curso';
-    }
-    if (estadoFiltro === 'finalizadas') {
-      return ['completada', 'finalizada', 'finalizado'].includes(tarea.status?.toLowerCase() || '');
-    }
-    return true;
-  });
+  const tareasFiltradas = tareas;
+  
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
@@ -141,21 +120,6 @@ export default function AdminMain() {
 
           <View style={styles.tituloYFiltro}>
             <Text style={globalStyles.adminSubtitle}>Lista de tareas</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={estadoFiltro}
-                onValueChange={(itemValue) => setEstadoFiltro(itemValue)}
-                style={styles.picker}
-                mode="dropdown"
-              >
-                <Picker.Item label="Filtrar por..." value="todas" />
-                <Picker.Item label="Pendientes" value="pendientes" />
-                <Picker.Item label="En desarrollo" value="enDesarrollo" />
-                <Picker.Item label="Finalizadas" value="finalizadas" />
-              </Picker>
-            </View>
-          </View>
-
         </View>
 
         {tareasFiltradas.length === 0 ? (
@@ -165,25 +129,34 @@ export default function AdminMain() {
             data={tareasFiltradas}
             keyExtractor={(item) => item.id || Math.random().toString()}
             renderItem={({ item: tarea }) => (
-              <View style={styles.tareaContainer}>
-                <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                <Text>
-                  <Text style={styles.labelBold}>Asignado a:</Text>{' '}
-                  {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}
+                <View style={[
+                  styles.tareaCard,
+                  tarea.status?.toLowerCase() === 'completada' && styles.completada,
+                  tarea.status?.toLowerCase() === 'en curso' && styles.enCurso,
+                  tarea.status?.toLowerCase() === 'pendiente' && styles.pendiente,
+                ]}>
+
+                <Text style={styles.tareaTitulo}>{tarea.assignments?.[0]?.individualTask || 'Tarea general'}</Text>
+            
+                <Text style={styles.detalle}>
+                  <Text style={styles.label}>Inicio: </Text>
+                  {formatearFecha(tarea.assignments?.[0]?.startTimeIndividualTask)}
                 </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}
+                <Text style={styles.detalle}>
+                  <Text style={styles.label}>Fin: </Text>
+                  {formatearFecha(tarea.assignments?.[0]?.endTimeIndividualTask)}
                 </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}
+                <Text style={styles.detalle}>
+                  <Text style={styles.label}>Estado: </Text>
+                  {tarea.status}
                 </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Estado:</Text> {tarea.status}
-                </Text>
+
               </View>
             )}
+            
           />
         )}
+        </View>
       </View>
       <BottomBar />
     </SafeAreaView>
@@ -191,50 +164,39 @@ export default function AdminMain() {
 }
 
 const styles = StyleSheet.create({
-  filtroContainer: {
-    marginBottom: 20,
+  tareaCard: {
+    backgroundColor: '#fdfcfe',
+    padding: 18,
+    borderRadius: 16,
+    marginVertical: 10,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    borderLeftWidth: 6,
   },
-  tareaContainer: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 8,
-  },
-  nombre: {
-    fontSize: 16,
-    color: 'rgb(132, 106, 180)',
+  tareaTitulo: {
+    fontSize: 17,
     fontWeight: 'bold',
+    color: '#6a1b9a',
+    marginBottom: 8,
   },
-  labelBold: {
-    fontWeight: 'bold',
+  detalle: {
+    fontSize: 14.5,
+    marginBottom: 5,
+    color: '#555',
   },
-  header: {
-    marginBottom: 10,
+  completada: {
+    borderLeftColor: '#00c853',
   },
-  filaFiltro: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 4,
+  pendiente: {
+    borderLeftColor: '#bb33ff',
   },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    overflow: 'hidden',
-    width: 120,
+  enCurso: {
+    borderLeftColor: '#2962ff',
   },
-  picker: {
-    height: 30,
-    width: '100%',
-  },
-  tituloYFiltro: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 4,
-  },
+  
   
 });
