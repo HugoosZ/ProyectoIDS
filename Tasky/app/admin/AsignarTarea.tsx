@@ -38,7 +38,7 @@ const AsignarTarea = () => {
       try {
         const token = await AsyncStorage.getItem('userToken');
         const [userRes, taskRes] = await Promise.all([
-          fetch('https://proyecto-ids.vercel.app/api/users', {
+          fetch('https://proyecto-ids.vercel.app/api/admin/users', {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch('https://proyecto-ids.vercel.app/api/tasks', {

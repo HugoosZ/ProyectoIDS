@@ -38,7 +38,7 @@ export default function AdminMain() {
         return;
       }
 
-      const res = await fetch('https://proyecto-ids.vercel.app/api/users', {
+      const res = await fetch('https://proyecto-ids.vercel.app/api/admin/users', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
