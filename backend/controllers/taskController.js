@@ -70,6 +70,34 @@ async function updateDynamicTaskInfoStatus(taskInfoId) {
     }
 }
 
+async function getUserDataAndDecrypt(uid) {
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+        return null;
+    }
+    const userData = userDoc.data();
+    // Desencriptar los campos si están encriptados
+    let name = userData.name;
+    let lastName = userData.lastName;
+    let rut = userData.rut;
+    try { name = decrypt(name); } catch (e) { /* console.warn("Error desencriptando nombre:", e.message); */ }
+    try { lastName = decrypt(lastName); } catch (e) { /* console.warn("Error desencriptando apellido:", e.message); */ }
+    try { rut = decrypt(rut); } catch (e) { /* console.warn("Error desencriptando RUT:", e.message); */ }
+
+    // Retornar los datos del usuario con los campos desencriptados
+    return {
+        uid: userDoc.id,
+        email: userData.email,
+        role: userData.role,
+        isAdmin: userData.isAdmin,
+        empresaId: userData.empresaId,
+        createdAt: userData.createdAt instanceof Timestamp ? userData.createdAt.toDate().toISOString() : userData.createdAt,
+        name,
+        lastName,
+        rut
+    };
+}
+
 // Crear tarea (solo campos base)
 exports.createTask = async (req, res) => {
   try {
@@ -332,7 +360,7 @@ exports.updateTaskStatus = async (req, res) => {
 
         // === Lógica para Finalizar Tarea Grupal Y RECALCULAR shouldBeWorking/currentlyWorking ===
         // Llamar a la función auxiliar para actualizar los campos dinámicos
-        await updateDynamicTaskInfoStatus(assignmentData.taskInfoId); // <--- ESTA LÍNEA ES CLAVE
+        await updateDynamicTaskInfoStatus(assignmentData.taskInfoId); 
 
         // --- INICIO: Lógica para alerta de progreso al frontend ---
         const allRelatedAssignmentsSnapshot = await db.collection("taskAssignments")
@@ -801,36 +829,7 @@ exports.AssignTask = async (req, res) => {
   }
 };
 
-const getUserDataAndDecrypt = async (userId) => {
-    try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-            return null; // O manejar como un error si un usuario asignado no existe
-        }
-        const userData = userDoc.data();
 
-        // Desencriptar los campos sensibles
-        const decryptedUserData = {
-            uid: userId, // El UID es el ID del documento y es el RUT desencriptado
-            email: userData.email,
-            role: userData.role,
-            isAdmin: userData.isAdmin,
-            empresaId: userData.empresaId,
-            createdAt: userData.createdAt ? userData.createdAt.toDate() : null, // Convertir Timestamp a Date
-            // Desencriptar campos si existen
-            name: userData.name ? decrypt(userData.name) : null,
-            lastName: userData.lastName ? decrypt(userData.lastName) : null,
-            rut: userData.rut ? decrypt(userData.rut) : null, // El campo 'rut' dentro del doc está encriptado
-        };
-        // No incluir rutHash en la respuesta del usuario detallado si no es necesario para el frontend
-        // delete decryptedUserData.rutHash; // Si lo guardas y no quieres enviarlo
-
-        return decryptedUserData;
-    } catch (error) {
-        console.error("Error al obtener y desencriptar datos de usuario (ID:", userId, "):", error);
-        return null; // En caso de error (ej. dato corrupto), retornar null para ese usuario
-    }
-};
 
 
 // Nueva función para obtener todas las tareas detalladas para el administrador
@@ -851,6 +850,7 @@ exports.getAdminDetailedTasks = async (req, res) => {
             .get();
 
         const detailedTasks = [];
+        const taskNamesCache = {}
 
         for (const taskDoc of taskInfoSnapshot.docs) {
             const taskInfo = { id: taskDoc.id, ...taskDoc.data() };
@@ -862,6 +862,21 @@ exports.getAdminDetailedTasks = async (req, res) => {
                 } else if (taskInfo[key] instanceof Date) { // Si ya es Date, convertir a ISO string
                     taskInfo[key] = taskInfo[key].toISOString();
                 }
+            }
+
+            if (taskInfo.taskId) { // Asegúrate de que hay un taskId
+                if (!taskNamesCache[taskInfo.taskId]) {
+                    // Asumiendo que las definiciones de las tareas están en una colección 'tasks'
+                    const taskDefDoc = await db.collection('tasks').doc(taskInfo.taskId).get();
+                    if (taskDefDoc.exists) {
+                        taskNamesCache[taskInfo.taskId] = taskDefDoc.data().title || 'Nombre no disponible'; // Asumiendo que el campo se llama 'title'
+                    } else {
+                        taskNamesCache[taskInfo.taskId] = 'Nombre de tarea no encontrado';
+                    }
+                }
+                taskInfo.taskName = taskNamesCache[taskInfo.taskId];
+            } else {
+                taskInfo.taskName = 'ID de tarea general no especificado';
             }
 
             // Obtener todas las asignaciones para esta tareaInfo

@@ -115,7 +115,7 @@ Devuelve una vista detallada de todas las tareas (información principal y sus a
 
 **Método:** `GET`
 
-**URL:** `/api/tasks`
+**URL:** `/api/tasks/detailed`
 
 **Headers:**
 * `Authorization`: `Bearer <token_del_administrador_autenticado>`
@@ -125,98 +125,75 @@ Devuelve una vista detallada de todas las tareas (información principal y sus a
 ```json
 [
   {
-    "id": "MPYKDlSepXGG9nKETe9J",
-    "taskId": "5GVjEf9Uw28lDp27QdAt",
-    "startTime": "2025-06-17T13:21:00.000Z",
-    "endTime": "2025-06-29T15:10:00.000Z",
-    "priority": "media",
+    "id": "4Sl9AoxaAdvLzgOWBuqA",
+    "taskId": "u5w9FEWLNk4kkwdOrkRB",
+    "startTime": "2025-06-14T13:00:00.000Z",
+    "endTime": "2025-06-14T15:00:00.000Z",
+    "priority": "normal",
     "status": "pendiente",
     "requiereRelevo": true,
     "isGroupTask": false,
     "isFinished": false,
     "participants": [
-      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
-      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
+      "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+      "c09bde3f26d3c6090f65f556:3e1dac3b9488c7bd9aa925a6a91a230d:c38ecae240b3b02fedeb"
     ],
-    "shouldBeWorking": null,
-    "currentlyWorking": null,
+    "shouldBeWorking": [],
+    "currentlyWorking": [],
     "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
     "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
-    "createdAt": "2025-06-17T22:50:26.597Z",
-    "codigoRelevo": "688289",
-    "relevoExpira": "2025-06-18T19:55:29.874Z",
-    "validadoRelevo": true,
+    "createdAt": "2025-06-20T23:55:51.007Z",
+    "taskName": "Turno estancia cajas ala b",
     "assignments": [
       {
-        "id": "2U2gzDgAw8ph417V7hsW",
-        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
-        "assignedTo": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
-        "startTimeIndividualTask": "2025-06-28T13:12:00.000Z",
-        "endTimeIndividualTask": "2025-06-29T13:10:00.000Z",
-        "priority": "media",
+        "id": "cJkEijxrxLGU6NIWhBXI",
+        "taskInfoId": "4Sl9AoxaAdvLzgOWBuqA",
+        "assignedTo": "c09bde3f26d3c6090f65f556:3e1dac3b9488c7bd9aa925a6a91a230d:c38ecae240b3b02fedeb",
+        "startTimeIndividualTask": "2025-06-14T14:00:00.000Z",
+        "endTimeIndividualTask": "2025-06-14T15:00:00.000Z",
+        "priority": "normal",
         "requiereRelevo": true,
-        "individualTask": "Pruebas a los sistemas implementados",
+        "individualTask": "Turno tarde",
         "isGroupTask": false,
-        "createdAt": "2025-06-17T22:50:29.312Z",
-        "status": "finalizada",
+        "createdAt": "2025-06-20T23:55:51.774Z",
+        "status": "completada",
         "assignedToUser": {
-          "uid": "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804",
-          "email": "sofia.vergara@mail.com",
+          "uid": "c09bde3f26d3c6090f65f556:3e1dac3b9488c7bd9aa925a6a91a230d:c38ecae240b3b02fedeb",
+          "email": "hugo.rojas1@mail.udp.cl",
           "role": "user",
           "isAdmin": false,
-          "empresaId": "b969c0ae-ad7d-4894-ab9b-9fc1148dde14",
-          "createdAt": "2025-06-17T22:48:56.029Z",
-          "name": "Sofia",
-          "lastName": "Vergara",
-          "rut": "20835148-6"
+          "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+          "createdAt": "2025-06-17T14:30:22.347Z",
+          "name": "Hugo",
+          "lastName": "Rojas",
+          "rut": "21333863-3"
         }
       },
       {
-        "id": "Tlbb3iBhwF9kWyxMRRhc",
-        "taskInfoId": "MPYKDlSepXGG9nKETe9J",
-        "assignedTo": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
-        "startTimeIndividualTask": "2025-06-18T13:10:00.000Z",
-        "endTimeIndividualTask": "2025-06-27T13:10:00.000Z",
-        "priority": "media",
+        "id": "xNOKQyyb0wodHkE9cQd0",
+        "taskInfoId": "4Sl9AoxaAdvLzgOWBuqA",
+        "assignedTo": "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+        "startTimeIndividualTask": "2025-06-14T13:00:00.000Z",
+        "endTimeIndividualTask": "2025-06-14T14:00:00.000Z",
+        "priority": "normal",
         "requiereRelevo": true,
-        "individualTask": "Implementaciones iniciales",
+        "individualTask": "Turno mañana",
         "isGroupTask": false,
-        "createdAt": "2025-06-17T22:50:28.743Z",
-        "status": "en curso",
+        "createdAt": "2025-06-20T23:55:51.638Z",
+        "status": "completada",
         "assignedToUser": {
-          "uid": "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
-          "email": "paula.ovalle@mail.com",
-          "role": "user",
+          "uid": "2f8dbaa1de6bda5b0f0ac28a:c40df57fc0b7273d786a24c9046eb026:ad8b91377d2257eda502",
+          "email": "thomas.samir@mail.com",
+          "role": "Developer",
           "isAdmin": false,
-          "empresaId": "f4141d39-d1a0-4ed6-8c55-ec33151ea7b7",
-          "createdAt": "2025-06-17T22:48:02.194Z",
-          "name": "Paula",
-          "lastName": "Ovalle",
-          "rut": "21333082-9"
+          "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
+          "createdAt": "2025-06-17T21:21:02.560Z",
+          "name": "Thomas",
+          "lastName": "Samir",
+          "rut": "20750450-5"
         }
       }
     ]
-  },
-  {
-    "id": "udy7SweJpHaZudizPsbh",
-    "taskId": "5GVjEf9Uw28lDp27QdAt",
-    "startTime": "2025-06-17T13:21:00.000Z",
-    "endTime": "2025-06-29T15:10:00.000Z",
-    "priority": "media",
-    "status": "pendiente",
-    "requiereRelevo": true,
-    "isGroupTask": false,
-    "isFinished": false,
-    "participants": [
-      "ccdc3d942fde8068118ea018:7274dc7891a2cc44a0f65ee1fe05a4c0:366aaf96d88e6358cb6f",
-      "a7f5ecc85c5ade8ad8df6215:ac0cccfcf19aec312d4df225703f80ec:541b4d20cecfa8473804"
-    ],
-    "shouldBeWorking": null,
-    "currentlyWorking": null,
-    "assignedBy": "64b5f870a4a5f3d8c8950c36:72789c773403625c2b2fef2fd2552ed1:e6da947fc9b821058faf",
-    "empresaId": "febfd333-b692-4243-a822-48fbde752da8",
-    "createdAt": "2025-06-17T22:50:26.597Z",
-    "assignments": []
   }
 ]
 ```
