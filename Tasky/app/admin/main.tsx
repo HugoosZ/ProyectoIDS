@@ -3,8 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   View,
-  Dimensions,
   StyleSheet,
+  TouchableOpacity,
+  Modal,
   FlatList,
   Alert,
 } from 'react-native';
@@ -24,10 +25,13 @@ type Tarea = {
 };
 
 export default function AdminMain() {
-  const [tareas, setTareas] = useState<Tarea[]>([]);
+ const [tareas, setTareas] = useState<Tarea[]>([]);
   const [usuarios, setUsuarios] = useState<Record<string, string>>({});
 
-  const screenWidth = Dimensions.get('window').width;
+  const [tareaSeleccionada, setTareaSeleccionada] = useState<Tarea | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  //const screenWidth = Dimensions.get('window').width;
 
   const fetchUsuarios = async () => {
     try {
@@ -85,7 +89,16 @@ export default function AdminMain() {
     fetchTareas();
   }, []);
 
-
+  const verDetalleTarea = (tarea: Tarea) => {
+    setTareaSeleccionada(tarea);
+    setModalVisible(true);
+  };
+  
+  const cerrarModal = () => {
+    setModalVisible(false);
+    setTareaSeleccionada(null);
+  };
+  
   const formatearFecha = (fecha: any) => {
     let dateObj;
 
@@ -113,54 +126,110 @@ export default function AdminMain() {
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-    <TopBar />
-    <View style={globalStyles.adminContainer}>
+      <TopBar />
+      <View style={globalStyles.adminContainer}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
-
           <View style={styles.tituloYFiltro}>
             <Text style={globalStyles.adminSubtitle}>Lista de tareas</Text>
-        </View>
-
-        {tareasFiltradas.length === 0 ? (
-          <Text>No hay tareas para mostrar</Text>
-        ) : (
-          <FlatList
-            data={tareasFiltradas}
-            keyExtractor={(item) => item.id || Math.random().toString()}
-            renderItem={({ item: tarea }) => (
-                <View style={[
-                  styles.tareaCard,
-                  tarea.status?.toLowerCase() === 'completada' && styles.completada,
-                  tarea.status?.toLowerCase() === 'en curso' && styles.enCurso,
-                  tarea.status?.toLowerCase() === 'pendiente' && styles.pendiente,
-                ]}>
-
-                <Text style={styles.tareaTitulo}>{tarea.assignments?.[0]?.individualTask || 'Tarea general'}</Text>
-            
-                <Text style={styles.detalle}>
-                  <Text style={styles.label}>Inicio: </Text>
-                  {formatearFecha(tarea.assignments?.[0]?.startTimeIndividualTask)}
-                </Text>
-                <Text style={styles.detalle}>
-                  <Text style={styles.label}>Fin: </Text>
-                  {formatearFecha(tarea.assignments?.[0]?.endTimeIndividualTask)}
-                </Text>
-                <Text style={styles.detalle}>
-                  <Text style={styles.label}>Estado: </Text>
-                  {tarea.status}
-                </Text>
-
-              </View>
-            )}
-            
-          />
-        )}
+          </View>
+  
+          {tareasFiltradas.length === 0 ? (
+            <Text>No hay tareas para mostrar</Text>
+          ) : (
+            <FlatList
+              data={tareasFiltradas}
+              keyExtractor={(item) => item.id || Math.random().toString()}
+              renderItem={({ item: tarea }) => (
+                <TouchableOpacity
+                  onPress={() => verDetalleTarea(tarea)}
+                  style={[
+                    styles.tareaCard,
+                    tarea.status?.toLowerCase() === 'completada' && styles.completada,
+                    tarea.status?.toLowerCase() === 'en curso' && styles.enCurso,
+                    tarea.status?.toLowerCase() === 'pendiente' && styles.pendiente,
+                  ]}
+                >
+                  <Text style={styles.tareaTitulo}>{tarea.taskName || 'Tarea general'}</Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Inicio: </Text>
+                    {formatearFecha(tarea.startTime)}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Fin: </Text>
+                    {formatearFecha(tarea.endTime)}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Estado: </Text>
+                    {tarea.status}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Relevo: </Text>
+                    {tarea.requiereRelevo ? 'Sí' : 'No'}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Grupal: </Text>
+                    {tarea.isGroupTask ? 'Sí' : 'No'}
+                  </Text>
+                </TouchableOpacity>
+              )}              
+            />
+          )}
         </View>
       </View>
       <BottomBar />
+  
+      {/* MODAL DE DETALLE */}
+      {tareaSeleccionada && (
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent
+          onRequestClose={cerrarModal}
+        >
+          <View style={styles.modalBackground}>
+            <View style={styles.modalContainer}>
+              <Text style={styles.modalTitle}>{tareaSeleccionada.taskName}</Text>
+              <Text style={styles.modalLabel}>Estado: {tareaSeleccionada.status}</Text>
+              <Text style={styles.modalLabel}>
+                Inicio: {formatearFecha(tareaSeleccionada.startTime)}
+              </Text>
+              <Text style={styles.modalLabel}>
+                Fin: {formatearFecha(tareaSeleccionada.endTime)}
+              </Text>
+  
+              <Text style={[styles.modalLabel, { marginTop: 10 }]}>Asignaciones:</Text>
+              {tareaSeleccionada.assignments?.map((a, i) => (
+                <View key={i} style={{ marginBottom: 10 }}>
+                  <Text style={styles.modalItem}>
+                    👤 {a.assignedToUser?.name} {a.assignedToUser?.lastName}
+                  </Text>
+                  <Text style={styles.modalItem}>
+                    🕒 {formatearFecha(a.startTimeIndividualTask)} - {formatearFecha(a.endTimeIndividualTask)}
+                  </Text>
+                  <Text style={styles.modalItem}>📌 {a.individualTask}</Text>
+                  <Text style={styles.modalItem}>📊 {a.status}</Text>
+                </View>
+              ))}
+  
+              <Text
+                onPress={cerrarModal}
+                style={{ marginTop: 20, color: 'blue', textAlign: 'center' }}
+              >
+                Cerrar
+              </Text>
+            </View>
+          </View>
+        </Modal>
+      )}
     </SafeAreaView>
-  );
+  );  
+  
 }
 
 const styles = StyleSheet.create({
@@ -197,6 +266,40 @@ const styles = StyleSheet.create({
   enCurso: {
     borderLeftColor: '#2962ff',
   },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    width: '85%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    color: '#6a1b9a',
+  },
+  modalLabel: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: '#444',
+  },
+  modalItem: {
+    fontSize: 14,
+    color: '#333',
+  },
+  label: {
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  
   
   
 });
