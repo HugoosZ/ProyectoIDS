@@ -1,6 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Button } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 type Tarea = {
@@ -8,11 +17,6 @@ type Tarea = {
   nombre: string;
   descripcion: string;
   estado: string;
-  priority?: string;
-};
-
-type TareasPorDia = {
-  [fecha: string]: Tarea[];
 };
 
 const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
@@ -27,199 +31,195 @@ const getStoredAuthData = async (): Promise<{ userId: string | null; token: stri
 };
 
 export default function CalendarioSemanalTareas() {
-  const [tareasPorDia, setTareasPorDia] = useState<TareasPorDia>({});
+  const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [token, setToken] = useState<string | null>(null);
 
   const router = useRouter();
 
   useEffect(() => {
-    const loadAuthData = async () => {
+    const fetchTareas = async () => {
+      setLoading(true);
+      setError(null);
       const { userId, token } = await getStoredAuthData();
-      if (userId && token) {
-        setUserId(userId);
-        setToken(token);
-      } else {
+      if (!userId || !token) {
         setError("Usuario no autenticado.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+        const data = await response.json();
+
+        // Filtrar solo tareas completadas
+        const tareasFiltradas: Tarea[] = data
+          .filter((t: any) => t.status.toLowerCase() === 'completada')
+          .map((t: any) => ({
+            id: t.assignmentId,
+            nombre: t.taskName || t.individualTask || 'Sin nombre',
+            descripcion: t.taskDescription || '',
+            estado: t.status.toLowerCase(),
+          }));
+
+        setTareas(tareasFiltradas);
+      } catch (err: any) {
+        console.error("Error al obtener tareas:", err);
+        setError(err.message || "Error al cargar las tareas.");
+      } finally {
         setLoading(false);
       }
     };
-    loadAuthData();
+
+    fetchTareas();
   }, []);
-
-  const fetchTareas = async () => {
-    if (!userId || !token) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`https://proyecto-ids.vercel.app/api/statustasks/${userId}`, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
-
-      const data = await response.json();
-
-      // Mostrar la respuesta completa para inspeccionarla
-      console.log("Respuesta de la API:", data);
-
-      // Asegurarnos de que la respuesta contiene un arreglo de tareas
-      if (Array.isArray(data)) {
-        // Filtrar solo las tareas completadas
-        const tareas: Tarea[] = data
-          .filter((apiTask: any) => apiTask.status.toLowerCase() === 'completada')
-          .map((apiTask: any) => ({
-            id: apiTask.assignmentId, // Usando 'assignmentId' como el ID de la tarea
-            nombre: apiTask.taskName || apiTask.individualTask || 'Sin nombre',
-            descripcion: apiTask.taskDescription || '',
-            estado: apiTask.status.toLowerCase(),
-            priority: apiTask.priority || 'normal',
-          }));
-
-        // Agrupar tareas completadas por fecha (ISO yyyy-mm-dd)
-        const tareasCompletadas: TareasPorDia = {};
-        tareas.forEach((tarea) => {
-          // Comprobar si startTime está presente y es válido antes de usarlo
-          const fecha = tarea.startTime ? new Date(tarea.startTime).toISOString().split('T')[0] : 'Sin fecha';
-          if (!tareasCompletadas[fecha]) tareasCompletadas[fecha] = [];
-          tareasCompletadas[fecha].push(tarea);
-        });
-
-        setTareasPorDia(tareasCompletadas);
-      } else {
-        throw new Error('La respuesta de la API no contiene un arreglo de tareas.');
-      }
-    } catch (err: any) {
-      console.error("Error al obtener tareas:", err);
-      setError(err.message || "Error al cargar las tareas.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (userId && token) {
-      fetchTareas();
-    }
-  }, [userId, token]);
-
-  const getColorDeFondo = (fecha: string, estado: string) => {
-    const hoy = new Date();
-    const fechaTarea = new Date(fecha);
-    if (estado === 'completada' && fechaTarea < hoy) {
-      return '#e6f4ea';
-    }
-    return '#fff';
-  };
 
   if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Cargando tareas...</Text>
+        <Text style={styles.loadingText}>Cargando tareas...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Button title="← Volver" onPress={() => router.push('/trabajador/ver-tareas')} />
+    <SafeAreaView style={styles.container}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.push('/trabajador/ver-tareas')}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="chevron-back" size={22} color="#111827" />
+        <Text style={styles.backText}>Volver</Text>
+      </TouchableOpacity>
 
-      <Text style={styles.title}>Tareas Semanales Completadas</Text>
+      <Text style={styles.titulo}>Tareas Semanales Completadas</Text>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      {Object.keys(tareasPorDia).length === 0 && !error && (
-        <Text style={styles.empty}>No hay tareas completadas para mostrar.</Text>
-      )}
-
-      {Object.entries(tareasPorDia).map(([fecha, tareas]) => (
-        <View key={fecha} style={styles.diaContainer}>
-          {fecha !== 'Sin fecha' && <Text style={styles.fecha}>{fecha}</Text>}
-          {tareas.map((tarea) => (
-            <View
-              key={tarea.id}
-              style={[styles.tareaCard, { backgroundColor: getColorDeFondo(fecha, tarea.estado) }]}>
-              <Text style={styles.titulo}>{tarea.nombre}</Text>
-              <Text style={styles.descripcion}>{tarea.descripcion}</Text>
-              <Text style={styles.estado}>
-                {tarea.estado === 'completada' ? '✅ Completada' : '🔄 En progreso'}
-              </Text>
+      <FlatList
+        data={tareas}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={tareas.length === 0 ? styles.emptyContainer : undefined}
+        ListEmptyComponent={<Text style={styles.empty}>No hay tareas completadas para mostrar.</Text>}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <View style={styles.estadoRow}>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#8971BB" />
+              <Text style={styles.estadoTexto}>Completada</Text>
             </View>
-          ))}
-        </View>
-      ))}
-    </ScrollView>
+            <Text style={styles.nombre}>{item.nombre}</Text>
+            <Text style={styles.descripcion}>{item.descripcion}</Text>
+          </View>
+        )}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 50,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 12,
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#111827',
+    marginLeft: 6,
+  },
+  titulo: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+    marginHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  estadoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  estadoTexto: {
+    fontSize: 14,
+    color: '#8971BB',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  nombre: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 8,
+  },
+  descripcion: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F3F4F6',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 20,
-    textAlign: 'center',
-    color: '#333',
+  loadingText: {
+    marginTop: 8,
+    fontSize: 16,
+    color: '#6B7280',
   },
   error: {
-    color: 'red',
+    backgroundColor: '#FEE2E2',
+    color: '#B91C1C',
     textAlign: 'center',
+    padding: 10,
+    borderRadius: 8,
     marginBottom: 10,
+    fontWeight: '500',
   },
   empty: {
     textAlign: 'center',
-    color: '#555',
-    marginTop: 20,
-  },
-  diaContainer: {
-    marginBottom: 20,
-  },
-  fecha: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#222',
-  },
-  tareaCard: {
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  titulo: {
+    color: '#9CA3AF',
+    marginTop: 30,
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
   },
-  descripcion: {
-    fontSize: 14,
-    color: '#666',
-    marginVertical: 4,
-  },
-  estado: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
+  emptyContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
 });
