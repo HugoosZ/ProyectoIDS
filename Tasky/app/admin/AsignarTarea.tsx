@@ -39,10 +39,10 @@ const AsignarTarea = () => {
         const token = await AsyncStorage.getItem('userToken');
         const [userRes, taskRes] = await Promise.all([
           fetch('https://proyecto-ids.vercel.app/api/admin/users', {
-            headers: { Authorization: Bearer ${token} },
+            headers: { Authorization: `Bearer ${token}` },
           }),
           fetch('https://proyecto-ids.vercel.app/api/tasks', {
-            headers: { Authorization: Bearer ${token} },
+            headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
         const [userData, taskData] = await Promise.all([userRes.json(), taskRes.json()]);
@@ -88,7 +88,7 @@ const AsignarTarea = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: Bearer ${token},
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -179,7 +179,7 @@ const AsignarTarea = () => {
                 {users.map((user: any) => (
                   <Picker.Item
                     key={user.uid}
-                    label={${user.name} ${user.lastName}}
+                    label={`${user.name} ${user.lastName}`}
                     value={user.uid}
                   />
                 ))}
@@ -203,7 +203,7 @@ const AsignarTarea = () => {
                     {users.map((user: any) => (
                       <Picker.Item
                         key={user.uid}
-                        label={${user.name} ${user.lastName}}
+                        label={`${user.name} ${user.lastName}`}
                         value={user.uid}
                       />
                     ))}
@@ -306,4 +306,3 @@ const styles = StyleSheet.create({
 });
 
 export default AsignarTarea;
-
