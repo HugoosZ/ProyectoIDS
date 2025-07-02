@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F3F4F6',
-    paddingTop: 20,
+    paddingTop: 0, // Elimina el padding superior
     paddingHorizontal: 16,
   },
   flatListContent: {

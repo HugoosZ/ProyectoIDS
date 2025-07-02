@@ -3,8 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Text,
   View,
-  Dimensions,
   StyleSheet,
+  TouchableOpacity,
+  Modal,
   FlatList,
   Alert,
 } from 'react-native';
@@ -24,21 +25,24 @@ type Tarea = {
 };
 
 export default function AdminMain() {
-  const [tareas, setTareas] = useState<Tarea[]>([]);
-  const [estadoFiltro, setEstadoFiltro] = useState('todas');
+ const [tareas, setTareas] = useState<Tarea[]>([]);
   const [usuarios, setUsuarios] = useState<Record<string, string>>({});
 
-  const screenWidth = Dimensions.get('window').width;
+  const [tareaSeleccionada, setTareaSeleccionada] = useState<Tarea | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  //const screenWidth = Dimensions.get('window').width;
 
   const fetchUsuarios = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
+      console.log(token);
       if (!token) {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
       }
 
-      const res = await fetch('https://proyecto-ids.vercel.app/api/users', {
+      const res = await fetch('https://proyecto-ids.vercel.app/api/admin/users', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -64,152 +68,231 @@ export default function AdminMain() {
         Alert.alert('Error', 'No se encontró el token. Inicia sesión nuevamente.');
         return;
       }
-
-      const res = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
+  
+      const res = await fetch('https://proyecto-ids.vercel.app/api/admin/tasks/detailed', {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+  
       const data = await res.json();
       setTareas(data);
     } catch (error) {
       console.error('Error al obtener tareas:', error);
     }
   };
+  
 
   useEffect(() => {
     fetchUsuarios();
     fetchTareas();
   }, []);
 
-  const formatearFecha = (timestamp?: { _seconds: number }) => {
-    if (!timestamp?._seconds) return 'Fecha inválida';
-    const fecha = new Date(timestamp._seconds * 1000);
-    return fecha.toLocaleString();
+  const verDetalleTarea = (tarea: Tarea) => {
+    setTareaSeleccionada(tarea);
+    setModalVisible(true);
   };
+  
+  const cerrarModal = () => {
+    setModalVisible(false);
+    setTareaSeleccionada(null);
+  };
+  
+  const formatearFecha = (fecha: any) => {
+    let dateObj;
 
-  const tareasFiltradas = tareas.filter((tarea) => {
-    if (estadoFiltro === 'todas') return true;
-    if (estadoFiltro === 'pendientes') {
-      return (
-        tarea.status?.toLowerCase() === 'pendiente' ||
-        tarea.status?.toLowerCase() === 'en desarrollo'
-      );
+    if (fecha?._seconds) {
+      // Si es un timestamp de Firebase
+      dateObj = new Date(fecha._seconds * 1000);
+    } else if (typeof fecha === 'string') {
+      // Si ya es un string de fecha
+      dateObj = new Date(fecha);
+    } else {
+      return 'Fecha inválida';
     }
-    if (estadoFiltro === 'enDesarrollo') {
-      return tarea.status?.toLowerCase() === 'en desarrollo' || tarea.status?.toLowerCase() === 'en curso';
-    }
-    if (estadoFiltro === 'finalizadas') {
-      return ['completada', 'finalizada', 'finalizado'].includes(tarea.status?.toLowerCase() || '');
-    }
-    return true;
-  });
+
+    if (isNaN(dateObj.getTime())) return 'Fecha inválida';
+
+    return new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(dateObj);
+  };
+  
+  const tareasFiltradas = tareas;
+  
 
   return (
     <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']}>
-    <TopBar />
-    <View style={globalStyles.adminContainer}>
+      <TopBar />
+      <View style={globalStyles.adminContainer}>
         <View style={styles.header}>
           <Text style={globalStyles.title}>Bienvenido, Administrador</Text>
-
           <View style={styles.tituloYFiltro}>
             <Text style={globalStyles.adminSubtitle}>Lista de tareas</Text>
-            <View style={styles.pickerWrapper}>
-              <Picker
-                selectedValue={estadoFiltro}
-                onValueChange={(itemValue) => setEstadoFiltro(itemValue)}
-                style={styles.picker}
-                mode="dropdown"
-              >
-                <Picker.Item label="Filtrar por..." value="todas" />
-                <Picker.Item label="Pendientes" value="pendientes" />
-                <Picker.Item label="En desarrollo" value="enDesarrollo" />
-                <Picker.Item label="Finalizadas" value="finalizadas" />
-              </Picker>
-            </View>
           </View>
-
+  
+          {tareasFiltradas.length === 0 ? (
+            <Text>No hay tareas para mostrar</Text>
+          ) : (
+            <FlatList
+              data={tareasFiltradas}
+              keyExtractor={(item) => item.id || Math.random().toString()}
+              renderItem={({ item: tarea }) => (
+                <TouchableOpacity
+                  onPress={() => verDetalleTarea(tarea)}
+                  style={[
+                    styles.tareaCard,
+                    tarea.status?.toLowerCase() === 'completada' && styles.completada,
+                    tarea.status?.toLowerCase() === 'en curso' && styles.enCurso,
+                    tarea.status?.toLowerCase() === 'pendiente' && styles.pendiente,
+                  ]}
+                >
+                  <Text style={styles.tareaTitulo}>{tarea.taskName || 'Tarea general'}</Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Inicio: </Text>
+                    {formatearFecha(tarea.startTime)}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Fin: </Text>
+                    {formatearFecha(tarea.endTime)}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Estado: </Text>
+                    {tarea.status}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Relevo: </Text>
+                    {tarea.requiereRelevo ? 'Sí' : 'No'}
+                  </Text>
+              
+                  <Text style={styles.detalle}>
+                    <Text style={styles.label}>Grupal: </Text>
+                    {tarea.isGroupTask ? 'Sí' : 'No'}
+                  </Text>
+                </TouchableOpacity>
+              )}              
+            />
+          )}
         </View>
-
-        {tareasFiltradas.length === 0 ? (
-          <Text>No hay tareas para mostrar</Text>
-        ) : (
-          <FlatList
-            data={tareasFiltradas}
-            keyExtractor={(item) => item.id || Math.random().toString()}
-            renderItem={({ item: tarea }) => (
-              <View style={styles.tareaContainer}>
-                <Text style={styles.nombre}>{tarea.title || 'Sin título'}</Text>
-                <Text>
-                  <Text style={styles.labelBold}>Asignado a:</Text>{' '}
-                  {usuarios[tarea.assignedTo || ''] || 'Sin asignar'}
-                </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Desde:</Text> {formatearFecha(tarea.startTime)}
-                </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Hasta:</Text> {formatearFecha(tarea.endTime)}
-                </Text>
-                <Text>
-                  <Text style={styles.labelBold}>Estado:</Text> {tarea.status}
-                </Text>
-              </View>
-            )}
-          />
-        )}
       </View>
       <BottomBar />
+  
+      {tareaSeleccionada && (
+      <Modal
+              visible={modalVisible}
+              animationType="slide"
+              transparent
+              onRequestClose={cerrarModal}
+            >
+              <View style={styles.modalBackground}>
+                <View style={styles.modalContainer}>
+                  <Text style={styles.modalTitle}>{tareaSeleccionada.taskName}</Text>
+
+                  <Text style={[styles.modalLabel, { marginTop: 10 }]}>Asignaciones:</Text>
+                  {tareaSeleccionada.assignments?.map((a, i) => (
+                    <View key={i} style={{ marginBottom: 10 }}>
+                      <Text style={styles.modalItem}>
+                        👤 {a.assignedToUser?.name} {a.assignedToUser?.lastName}
+                      </Text>
+                      <Text style={styles.modalItem}>📌 {a.individualTask}</Text>
+                      <Text style={styles.modalItem}>
+                        🕒 {formatearFecha(a.startTimeIndividualTask)} - {formatearFecha(a.endTimeIndividualTask)}
+                      </Text>
+                      <Text style={styles.modalItem}>📊 {a.status}</Text>
+                    </View>
+                  ))}
+
+                  <Text
+                    onPress={cerrarModal}
+                    style={{ marginTop: 20, color: 'blue', textAlign: 'center' }}
+                  >
+                    Cerrar
+                  </Text>
+                </View>
+              </View>
+            </Modal>
+
+      )}
     </SafeAreaView>
-  );
+  );  
+  
 }
 
 const styles = StyleSheet.create({
-  filtroContainer: {
-    marginBottom: 20,
+  tareaCard: {
+    backgroundColor: '#fdfcfe',
+    padding: 18,
+    borderRadius: 16,
+    marginVertical: 10,
+    marginHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    borderLeftWidth: 6,
   },
-  tareaContainer: {
-    backgroundColor: '#f2f2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginVertical: 8,
-  },
-  nombre: {
-    fontSize: 16,
-    color: 'rgb(132, 106, 180)',
+  tareaTitulo: {
+    fontSize: 17,
     fontWeight: 'bold',
+    color: '#6a1b9a',
+    marginBottom: 8,
   },
-  labelBold: {
+  detalle: {
+    fontSize: 14.5,
+    marginBottom: 5,
+    color: '#555',
+  },
+  completada: {
+    borderLeftColor: '#00c853',
+  },
+  pendiente: {
+    borderLeftColor: '#bb33ff',
+  },
+  enCurso: {
+    borderLeftColor: '#2962ff',
+  },
+  modalBackground: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    width: '85%',
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-  },
-  header: {
     marginBottom: 10,
+    textAlign: 'center',
+    color: '#6a1b9a',
   },
-  filaFiltro: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 4,
+  modalLabel: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: '#444',
   },
-  pickerWrapper: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 5,
-    overflow: 'hidden',
-    width: 120,
+  modalItem: {
+    fontSize: 14,
+    color: '#333',
   },
-  picker: {
-    height: 30,
-    width: '100%',
+  label: {
+    fontWeight: 'bold',
+    color: '#333',
   },
-  tituloYFiltro: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-    paddingHorizontal: 4,
-  },
+  
+  
   
 });

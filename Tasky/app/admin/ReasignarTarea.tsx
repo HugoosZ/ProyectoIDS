@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { Text, Alert, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
 import { useRouter } from 'expo-router';
+import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
 
 type Usuario = {
   id: string;
@@ -28,13 +21,11 @@ type Tarea = {
 
 export default function ReasignarTarea() {
   const router = useRouter();
-
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [usuariosMap, setUsuariosMap] = useState<Record<string, string>>({});
   const [usuariosList, setUsuariosList] = useState<Usuario[]>([]);
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // --- Fetch de usuarios presentes
@@ -47,7 +38,7 @@ export default function ReasignarTarea() {
       if (!resUsers.ok) throw new Error('Error al obtener usuarios');
       const dataUsers: Usuario[] = await resUsers.json();
 
-      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true', {
+      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true&time=today', {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -58,7 +49,6 @@ export default function ReasignarTarea() {
         ? attendanceDataRaw
         : Object.values(attendanceDataRaw);
 
-      // Solo usuarios con isPresent === true ya filtrados por la API
       const presentUserIds = new Set(
         attendanceData.map((att: any) => att.userId)
       );
@@ -106,22 +96,6 @@ export default function ReasignarTarea() {
     }
   };
 
-  const checkAdmin = async (token: string) => {
-    try {
-      const res = await fetch('https://proyecto-ids.vercel.app/api/checkAdmin', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error('No eres administrador');
-      const data = await res.json();
-      setIsAdmin(data.isAdmin);
-      if (!data.isAdmin) Alert.alert('Error', 'No tienes permisos de administrador');
-    } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'No tienes permisos de administrador');
-    }
-  };
-
   useEffect(() => {
     const init = async () => {
       const token = await AsyncStorage.getItem('userToken');
@@ -130,12 +104,11 @@ export default function ReasignarTarea() {
         router.push('/');
         return;
       }
-      await checkAdmin(token);
       await fetchUsuarios(token);
       await fetchTareas(token);
     };
     init();
-  }, []);
+  }, [router]);
 
   // --- Reasignar Tarea ---
   const handleReassign = async () => {
@@ -176,33 +149,36 @@ export default function ReasignarTarea() {
   };
 
   return (
-    <ScrollView contentContainerStyle={globalStyles.container}>
-      <View style={globalStyles.card}>
-        <Text style={[globalStyles.title, { marginBottom: 10 }]}>
-          Reasignar Tarea
-        </Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f3f3f3' }}>
+      <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* Contenedor del botón "Volver" */}
+        <View style={styles.goBackContainer}>
+          {/* Botón Volver al inicio */}
+          <TouchableOpacity
+            style={styles.goBackButton}
+            onPress={() => router.push('/admin/main')} // Redirige a la página principal
+          >
+            <Text style={styles.buttonText}>Volver</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Contenedor del Título, centrado vertical y horizontal */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.title}>Reasignar Tarea</Text>
+        </View>
 
         <Text style={globalStyles.subtitle}>
           Selecciona una tarea pendiente o en progreso:
         </Text>
         {tareas.length === 0 && <Text>No hay tareas disponibles</Text>}
-        <ScrollView
-          style={{
-            maxHeight: 180,
-            marginBottom: 20,
-            width: '100%',
-            alignSelf: 'center',
-          }}
-        >
+        <ScrollView style={{ maxHeight: 180, marginBottom: 20, width: '100%' }}>
           {tareas.map((tarea) => {
             const isSelected = selectedTaskId === tarea.id;
             return (
               <TouchableOpacity
                 key={tarea.id}
-                style={[
-                  styles.cardItem,
-                  isSelected && styles.selectedCardItem,
-                ]}
+                style={[styles.cardItem, isSelected && styles.selectedCardItem]}
                 onPress={() => setSelectedTaskId(tarea.id)}
                 activeOpacity={0.85}
               >
@@ -225,23 +201,13 @@ export default function ReasignarTarea() {
           Selecciona un trabajador presente hoy:
         </Text>
         {usuariosList.length === 0 && <Text>No hay trabajadores disponibles</Text>}
-        <ScrollView
-          style={{
-            maxHeight: 120,
-            marginBottom: 20,
-            width: '100%',
-            alignSelf: 'center',
-          }}
-        >
+        <ScrollView style={{ maxHeight: 120, marginBottom: 20, width: '100%' }}>
           {usuariosList.map((user) => {
             const isSelected = selectedUserId === user.id;
             return (
               <TouchableOpacity
                 key={user.id}
-                style={[
-                  styles.cardItem,
-                  isSelected && styles.selectedCardItem,
-                ]}
+                style={[styles.cardItem, isSelected && styles.selectedCardItem]}
                 onPress={() => setSelectedUserId(user.id)}
                 activeOpacity={0.85}
               >
@@ -254,11 +220,7 @@ export default function ReasignarTarea() {
         </ScrollView>
 
         <TouchableOpacity
-          style={[
-            globalStyles.button,
-            loading ? { opacity: 0.6 } : {},
-            { marginTop: 8 },
-          ]}
+          style={[globalStyles.button, loading ? { opacity: 0.6 } : {}, { marginTop: 8 }]}
           onPress={handleReassign}
           disabled={loading}
         >
@@ -266,22 +228,44 @@ export default function ReasignarTarea() {
             {loading ? 'Reasignando...' : 'Reasignar'}
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            globalStyles.button,
-            { backgroundColor: '#999', marginTop: 0 },
-          ]}
-          onPress={() => router.back()}
-        >
-          <Text style={globalStyles.buttonText}>Volver</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
-}
+};
 
 const styles = StyleSheet.create({
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    backgroundColor: '#f2f2f2',
+  },
+  goBackContainer: {
+    alignItems: 'flex-start', // Alinea el botón "Volver" a la izquierda
+    marginBottom: 1,
+  },
+  goBackButton: {
+    backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 1, // Añadido para separar el botón del título
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  titleContainer: {
+    justifyContent: 'center', // Centra el título
+    alignItems: 'center', // Centra el título horizontalmente
+    flex: 1, // Asegura que ocupe todo el espacio disponible
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center', // Centra el título horizontalmente
+    marginTop: 0, // Elimina el margen superior
+  },
   cardItem: {
     backgroundColor: '#F5F5F5',
     marginBottom: 8,
@@ -289,7 +273,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(137, 113, 187, 1)',
     elevation: 2,
   },
   selectedCardItem: {
@@ -307,4 +291,3 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-
