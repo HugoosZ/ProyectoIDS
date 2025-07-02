@@ -13,9 +13,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import TopBar from '../../components/TopBar';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { Platform } from 'react-native';
-
 
 const AsignarTarea = () => {
   const router = useRouter();
@@ -30,13 +27,6 @@ const AsignarTarea = () => {
   const [priority, setPriority] = useState('normal');
   const [status, setStatus] = useState('pendiente');
 
-  // Estados para seleccionar hora desde celu
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
-  const [startDateObj, setStartDateObj] = useState<Date | null>(null);
-  const [endDateObj, setEndDateObj] = useState<Date | null>(null);
-
-
   const [participants, setParticipants] = useState([
     { userId: '', individualTask: '', startTimeIndividualTask: '', endTimeIndividualTask: '' },
   ]);
@@ -49,10 +39,10 @@ const AsignarTarea = () => {
         const token = await AsyncStorage.getItem('userToken');
         const [userRes, taskRes] = await Promise.all([
           fetch('https://proyecto-ids.vercel.app/api/admin/users', {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: Bearer ${token} },
           }),
           fetch('https://proyecto-ids.vercel.app/api/tasks', {
-            headers: { Authorization: `Bearer ${token}` },
+            headers: { Authorization: Bearer ${token} },
           }),
         ]);
         const [userData, taskData] = await Promise.all([userRes.json(), taskRes.json()]);
@@ -66,27 +56,6 @@ const AsignarTarea = () => {
 
     fetchData();
   }, []);
-
-//funciones para manejar la seleccion de fecha y hora desde celu
-  const handleStartDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowStartPicker(false);
-    if (event?.type === 'dismissed') return; 
-    if (selectedDate) {
-      setStartDateObj(selectedDate);
-      setStartTime(selectedDate.toISOString());
-    }
-  };
-
-  
-  const handleEndDateChange = (event: any, selectedDate?: Date) => {
-    if (Platform.OS === 'android') setShowEndPicker(false);
-    if (event?.type === 'dismissed') return;
-    if (selectedDate) {
-      setEndDateObj(selectedDate);
-      setEndTime(selectedDate.toISOString());
-    }
-  };
-  
 
   const handleAssign = async () => {
     const isGroupTask = assignmentType === 'grupal';
@@ -119,7 +88,7 @@ const AsignarTarea = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: Bearer ${token},
         },
         body: JSON.stringify(payload),
       });
@@ -191,31 +160,12 @@ const AsignarTarea = () => {
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={styles.label}>Inicio</Text>
-        <TouchableOpacity onPress={() => setShowStartPicker(true)} style={styles.input}>
-          <Text>{startDateObj ? startDateObj.toLocaleString() : 'Seleccionar fecha y hora'}</Text>
-        </TouchableOpacity>
-        {showStartPicker && (
-          <DateTimePicker
-            value={startDateObj || new Date()}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleStartDateChange}
-          />
-        )}
 
-        <Text style={styles.label}>Término</Text>
-        <TouchableOpacity onPress={() => setShowEndPicker(true)} style={styles.input}>
-          <Text>{endDateObj ? endDateObj.toLocaleString() : 'Seleccionar fecha y hora'}</Text>
-        </TouchableOpacity>
-        {showEndPicker && (
-          <DateTimePicker
-            value={endDateObj || new Date()}
-            mode="datetime"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleEndDateChange}
-          />
-        )}
+        <Text style={styles.label}>Inicio (ISO)</Text>
+        <TextInput value={startTime} onChangeText={setStartTime} style={styles.input} />
+
+        <Text style={styles.label}>Término (ISO)</Text>
+        <TextInput value={endTime} onChangeText={setEndTime} style={styles.input} />
 
         {assignmentType === 'individual' && (
           <>
@@ -229,7 +179,7 @@ const AsignarTarea = () => {
                 {users.map((user: any) => (
                   <Picker.Item
                     key={user.uid}
-                    label={`${user.name} ${user.lastName}`}
+                    label={${user.name} ${user.lastName}}
                     value={user.uid}
                   />
                 ))}
@@ -253,7 +203,7 @@ const AsignarTarea = () => {
                     {users.map((user: any) => (
                       <Picker.Item
                         key={user.uid}
-                        label={`${user.name} ${user.lastName}`}
+                        label={${user.name} ${user.lastName}}
                         value={user.uid}
                       />
                     ))}
@@ -356,3 +306,4 @@ const styles = StyleSheet.create({
 });
 
 export default AsignarTarea;
+
