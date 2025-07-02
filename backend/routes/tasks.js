@@ -55,7 +55,7 @@ router.put("/reassign-task/:taskId", async (req, res) => {
       return res.status(403).json({ error: "Solo administradores pueden reasignar tareas" });
     }
 
-    const taskRef = db.collection("tasks").doc(taskId);
+    const taskRef = db.collection("taskAssignments").doc(taskId);
     const taskDoc = await taskRef.get();
 
     if (!taskDoc.exists) {
