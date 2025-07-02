@@ -73,6 +73,8 @@ export default function VerTareas() {
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+
 
   useEffect(() => {
     const loadAuthData = async () => {
@@ -234,93 +236,104 @@ export default function VerTareas() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-
-      <ScrollView contentContainerStyle={globalStyles.container}>
-        <Text style={globalStyles.title}>Tareas del Día</Text>
-
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={globalStyles.errorText}>{error}</Text>
-            <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
-          </View>
-        )}
-
-        {!error && tareasDelDia.length === 0 && !loading && (
-          <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
-        )}
-
-        {loading && !error && (
-          <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#007AFF" />
-            <Text>Cargando tareas...</Text>
-          </View>
-        )}
-
-        {!loading && tareasDelDia.map(tarea => (
-          <View key={tarea.id} style={styles.tareaCard}>
-            <View style={styles.tareaHeader}>
-              <Text style={styles.tareaHora}>{tarea.hora}</Text>
-              <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>{mostrarEstado(tarea.estado)}</Text>
-            </View>
-            <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
-            <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
-
-            {tarea.estado === 'pendiente' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'en curso')}
-                color="#1E90FF"
-                disabled={actualizandoId === tarea.id || hayTareaEnCurso()}
-              />
-            )}
-
-            {tarea.estado === 'en curso' && (
-              <Button
-                title={actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
-                onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
-                color="#28a745"
-              />
-            )}
-          </View>
-        ))}
-      </ScrollView>
-
-      <SafeAreaView edges={['bottom']} style={styles.bottomMenu}>
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => router.push('/trabajador/turno')}
-        >
-          <Ionicons name="time" size={24} color="#007AFF" />
-          <Text style={styles.menuText}>Turno</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => router.push('/trabajador/tareas_completadas')}
-        >
-          <Ionicons name="checkmark-done-outline" size={24} color="#007AFF" />
-          <Text style={styles.menuText}>Completadas</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={() => router.push('/trabajador/calendario-semanal')}
-        >
-          <Ionicons name="calendar-outline" size={24} color="#007AFF" />
-          <Text style={styles.menuText}>Calendario</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuButton}
-          onPress={logout}
-        >
-          <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
-          <Text style={[styles.menuText, {color: '#FF3B30'}]}>Cerrar Sesión</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+  <SafeAreaView style={{ flex: 1, backgroundColor: '#f0f2f5' }}>
+    <View style={[styles.header, { paddingTop: insets.top }]}>
+      <Text style={globalStyles.title}>Tareas del Día</Text>
     </View>
-  );
+
+    <ScrollView contentContainerStyle={styles.scrollContent}>
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={globalStyles.errorText}>{error}</Text>
+          <Button title="Reintentar" onPress={fetchTareas} color="#007AFF" />
+        </View>
+      )}
+
+      {!error && tareasDelDia.length === 0 && !loading && (
+        <Text style={globalStyles.emptyText}>No hay tareas asignadas.</Text>
+      )}
+
+      {loading && !error && (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text>Cargando tareas...</Text>
+        </View>
+      )}
+
+      {!loading && tareasDelDia.map(tarea => (
+        <View key={tarea.id} style={styles.tareaCard}>
+          <View style={styles.tareaHeader}>
+            <Text style={styles.tareaHora}>{tarea.hora}</Text>
+            <Text style={[styles.tareaEstado, { color: getEstadoColor(tarea.estado) }]}>
+              {mostrarEstado(tarea.estado)}
+            </Text>
+          </View>
+          <Text style={styles.tareaNombre}>{tarea.nombre}</Text>
+          <Text style={styles.tareaDescripcion}>{tarea.descripcion}</Text>
+
+          {tarea.estado === 'pendiente' && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.buttonPrimary]}
+              onPress={() => actualizarEstadoTarea(tarea.id, 'en curso')}
+              disabled={actualizandoId === tarea.id || hayTareaEnCurso()}
+            >
+              <Text style={styles.buttonPrimaryText}>
+                {actualizandoId === tarea.id ? "Cambiando..." : "Empezar"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {tarea.estado === 'en curso' && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.buttonPrimary]}
+              onPress={() => actualizarEstadoTarea(tarea.id, 'completada')}
+            >
+              <Text style={styles.actionButtonText}>
+                {actualizandoId === tarea.id ? "Actualizando..." : "Completar"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+        </View>
+      ))}
+    </ScrollView>
+
+    <View style={[styles.bottomMenu, { paddingBottom: insets.bottom }]}>
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => router.push('/trabajador/turno')}
+      >
+        <Ionicons name="time" size={24} style={styles.menuIconPrimary} />
+        <Text style={styles.menuText}>Turno</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => router.push('/trabajador/tareas_completadas')}
+      >
+        <Ionicons name="checkmark-done-outline" size={24} style={styles.menuIconPrimary} />
+        <Text style={styles.menuText}>Completadas</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={() => router.push('/trabajador/calendario-semanal')}
+      >
+        <Ionicons name="calendar-outline" size={24} style={styles.menuIconPrimary} />
+        <Text style={styles.menuText}>Calendario</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuButton}
+        onPress={logout}
+      >
+        <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+        <Text style={[styles.menuText, { color: '#FF3B30' }]}>Cerrar Sesión</Text>
+      </TouchableOpacity>
+    </View>
+  </SafeAreaView>
+);
+
 }
 
 const getEstadoColor = (estado: string) => {
@@ -341,46 +354,54 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   tareaCard: {
-    backgroundColor: '#fff',
-    padding: 15,
-    marginVertical: 8,
-    borderRadius: 10,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
+  backgroundColor: '#ffffff',
+  padding: 16,
+  marginVertical: 10,
+  borderRadius: 16,
+  elevation: 4,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.05,
+  shadowRadius: 8,
+  borderWidth: 1,
+  borderColor: '#e0e0e0',
+},
   tareaHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
   tareaHora: {
-    fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#555',
-    fontSize: 14,
   },
   tareaEstado: {
-    fontWeight: 'bold',
-    fontSize: 14,
+    fontWeight: '600',
+    fontSize: 13,
   },
   tareaNombre: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+    color: '#1c1c1e',
   },
   tareaDescripcion: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 5,
+    lineHeight: 20,
   },
-  bottomMenu: {
+   bottomMenu: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     backgroundColor: '#fff',
     alignItems: 'center',
     paddingVertical: 5,
+    borderTopWidth: 1,
+    borderColor: '#ddd',
   },
   menuButton: {
     flex: 1,
@@ -390,7 +411,42 @@ const styles = StyleSheet.create({
   },
   menuText: {
     fontSize: 12,
-    color: '#007AFF',
+    color: '#8971BB',
     marginTop: 2,
   },
+  header: {
+  backgroundColor: '#f0f2f5',
+  paddingHorizontal: 20,
+  paddingBottom: 10,
+  },
+  scrollContent: {
+  paddingHorizontal: 20,
+  paddingBottom: 100,
+},
+  actionButton: {
+  marginTop: 10,
+  paddingVertical: 10,
+  paddingHorizontal: 24,
+  borderRadius: 30,
+  alignItems: 'center',
+},
+actionButtonText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+},
+buttonPrimary: {
+  backgroundColor: 'rgba(137, 113, 187, 1)',
+},
+buttonPrimaryText: {
+  color: '#fff',
+  fontWeight: '600',
+  fontSize: 14,
+},
+menuIconPrimary: {
+  color: 'rgba(137, 113, 187, 1)',
+},
+menuTextPrimary: {
+  color: 'rgba(137, 113, 187, 1)',
+},
 });
