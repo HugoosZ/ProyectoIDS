@@ -144,10 +144,7 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
   try {
     const { userId: paramUserId } = req.params;
     const tokenUserId = req.user.uid;
-
-    if (paramUserId !== tokenUserId) {
-      return res.status(403).json({ error: "No tienes permiso para acceder a estas tareas." });
-    }
+  
 
     // Usa la función con zona horaria para obtener el rango correcto
     const { Timestamp } = require("firebase-admin/firestore");
