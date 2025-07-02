@@ -215,25 +215,26 @@ exports.getAllCompanyTasks = async (req, res) => {
 
         const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Convertir Timestamps a formato legible (solo fecha, YYYY-MM-DD)
+        // Convertir Timestamps a formato legible (fecha y hora)
         const formattedTasks = tasks.map(task => {
             const formattedTask = { ...task };
-            if (formattedTask.createdAt instanceof Timestamp) {
-                formattedTask.createdAt = formattedTask.createdAt.toDate().toISOString().split('T')[0];
+            // Eliminar .split('T')[0] para mantener la hora
+            if (formattedTask.createdAt instanceof admin.firestore.Timestamp) { // Usar admin.firestore.Timestamp
+                formattedTask.createdAt = formattedTask.createdAt.toDate().toISOString();
             }
-            if (formattedTask.startTime instanceof Timestamp) {
-                formattedTask.startTime = formattedTask.startTime.toDate().toISOString().split('T')[0];
+            if (formattedTask.startTime instanceof admin.firestore.Timestamp) { // Usar admin.firestore.Timestamp
+                formattedTask.startTime = formattedTask.startTime.toDate().toISOString();
             }
-            if (formattedTask.endTime instanceof Timestamp) {
-                formattedTask.endTime = formattedTask.endTime.toDate().toISOString().split('T')[0];
+            if (formattedTask.endTime instanceof admin.firestore.Timestamp) { // Usar admin.firestore.Timestamp
+                formattedTask.endTime = formattedTask.endTime.toDate().toISOString();
             }
-            if (formattedTask.realStartTime instanceof Timestamp && formattedTask.realStartTime !== null) {
-                formattedTask.realStartTime = formattedTask.realStartTime.toDate().toISOString().split('T')[0];
+            if (formattedTask.realStartTime instanceof admin.firestore.Timestamp && formattedTask.realStartTime !== null) { // Usar admin.firestore.Timestamp
+                formattedTask.realStartTime = formattedTask.realStartTime.toDate().toISOString();
             } else if (formattedTask.realStartTime === null) {
                 formattedTask.realStartTime = null;
             }
-            if (formattedTask.realEndTime instanceof Timestamp && formattedTask.realEndTime !== null) {
-                formattedTask.realEndTime = formattedTask.realEndTime.toDate().toISOString().split('T')[0];
+            if (formattedTask.realEndTime instanceof admin.firestore.Timestamp && formattedTask.realEndTime !== null) { // Usar admin.firestore.Timestamp
+                formattedTask.realEndTime = formattedTask.realEndTime.toDate().toISOString();
             } else if (formattedTask.realEndTime === null) {
                 formattedTask.realEndTime = null;
             }
