@@ -133,10 +133,10 @@ router.get("/admin/workers/isPresent/NoTasks", verifyAndDecodeToken, checkAdminP
   }
 });
 
-// Ruta para obtener la asistencia de todos los usuarios, de uno específico, presentes o ausentes
 router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, async (req, res) => {
   try {
     const { userId, isPresent, time } = req.query;
+
     let query = db.collection("asistencias");
     if (userId) {
       query = query.where("userId", "==", userId);
@@ -152,29 +152,46 @@ router.get("/admin/attendance", verifyAndDecodeToken, checkAdminPrivileges, asyn
         .where("date", ">=", dateFilter.startDate)
         .where("date", "<=", dateFilter.endDate);
     }
+
     const snapshot = await query.get();
+
     if (snapshot.empty) {
       return res.status(404).json({ message: "No se encontró asistencia para el/los usuario(s) con los filtros dados" });
     }
+
     const attendance = await Promise.all(snapshot.docs.map(async (doc) => {
       const asistenciaData = doc.data();
       const userDoc = await db.collection("users").doc(asistenciaData.userId).get();
       const userData = userDoc.exists ? userDoc.data() : null;
+
+      // Desencriptar campos
+      let name = userData?.name || null;
+      let lastName = userData?.lastName || null;
+      let rut = userData?.rut || null;
+
+      try { name = decrypt(name); } catch (e) {}
+      try { lastName = decrypt(lastName); } catch (e) {}
+      try { rut = decrypt(rut); } catch (e) {}
+
       return {
         asistenciaId: doc.id,
         ...asistenciaData,
         user: userData ? {
-          name: userData.name || null,
+          name,
+          lastName,
+          rut,
           email: userData.email || null
         } : null
       };
     }));
+
     res.status(200).json(attendance);
   } catch (error) {
     console.error("Error al obtener asistencia:", error);
     res.status(500).json({ error: "Error al obtener asistencia" });
   }
 });
+
 
 
 module.exports = router;
