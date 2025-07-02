@@ -205,7 +205,7 @@ exports.getAllCompanyTasks = async (req, res) => {
             return res.status(403).json({ message: "Forbidden: User is not associated with an enterprise." });
         }
 
-        let query = db.collection("taskAssignments").where("empresaId", "==", userEmpresaId);
+        let query = db.collection("tasks").where("empresaId", "==", userEmpresaId);
 
         const snapshot = await query.get();
 

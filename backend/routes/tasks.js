@@ -144,7 +144,6 @@ router.get("/tasks/done/:userId/today/", verifyAndDecodeToken, async (req, res) 
   try {
     const { userId: paramUserId } = req.params;
     const tokenUserId = req.user.uid;
-  
 
     // Usa la función con zona horaria para obtener el rango correcto
     const { Timestamp } = require("firebase-admin/firestore");
