@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, SafeAreaView } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-type Tarea={
+type Tarea = {
   id: string;
   description: string;
   status: string;
@@ -12,18 +19,18 @@ type Tarea={
   realEndTime: string;
 };
 
-const getStoredAuthData=async (): Promise<{ userId: string | null; token: string | null }> =>{
-  try{
-    const userId=await AsyncStorage.getItem('userId');
-    const token=await AsyncStorage.getItem('userToken');
+const getStoredAuthData = async (): Promise<{ userId: string | null; token: string | null }> => {
+  try {
+    const userId = await AsyncStorage.getItem('userId');
+    const token = await AsyncStorage.getItem('userToken');
     return { userId, token };
-  }catch (e){
-    console.error("Error al obtener datos de auth:", e);
-    return{ userId: null, token: null };
+  } catch (e) {
+    console.error('Error al obtener datos de auth:', e);
+    return { userId: null, token: null };
   }
 };
 
-export default function TareasCompletadas(){
+export default function TareasCompletadas() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,18 +41,21 @@ export default function TareasCompletadas(){
       setLoading(true);
       const { userId, token } = await getStoredAuthData();
       if (!userId || !token) {
-        setError("Usuario no autenticado.");
+        setError('Usuario no autenticado.');
         setLoading(false);
         return;
       }
 
       try {
-        const response = await fetch(`https://proyecto-ids.vercel.app/api/tasks/done/${userId}/today`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `https://proyecto-ids.vercel.app/api/tasks/done/${userId}/today`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Error HTTP ${response.status}`);
@@ -53,8 +63,8 @@ export default function TareasCompletadas(){
         const data: Tarea[] = await response.json();
         setTareas(data);
       } catch (err: any) {
-        console.error("Error al obtener tareas completadas:", err);
-        setError(err.message || "Error al cargar las tareas.");
+        console.error('Error al obtener tareas completadas:', err);
+        setError(err.message || 'Error al cargar las tareas.');
       } finally {
         setLoading(false);
       }
@@ -73,13 +83,13 @@ export default function TareasCompletadas(){
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Botón exactamente igual que el otro, sin icono */}
       <TouchableOpacity
-        style={styles.backButton}
+        style={styles.goBackButton}
         onPress={() => router.push('/trabajador/ver-tareas')}
         activeOpacity={0.8}
       >
-        <Ionicons name="chevron-back" size={22} color="#111827" />
-        <Text style={styles.backText}>Volver</Text>
+        <Text style={styles.buttonText}>Volver</Text>
       </TouchableOpacity>
 
       <Text style={styles.titulo}>Tareas completadas hoy</Text>
@@ -87,22 +97,30 @@ export default function TareasCompletadas(){
       {error && <Text style={styles.error}>{error}</Text>}
 
       <FlatList
-          data={tareas}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.flatListContent}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.estadoRow}>
-                <Ionicons name="checkmark-circle-outline" size={20} color="#10B981" />
-              </View>
-              <Text style={styles.descripcion}>{item.description}</Text>
-              <Text style={styles.hora}>Inicio: {new Date(item.realStartTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-              <Text style={styles.hora}>Término: {new Date(item.realEndTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-            </View>
-  )}
-  ListEmptyComponent={<Text style={styles.empty}>No has completado tareas hoy.</Text>}
-/>
-
+        data={tareas}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.flatListContent}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.descripcion}>{item.description}</Text>
+            <Text style={styles.hora}>
+              Inicio:{' '}
+              {new Date(item.realStartTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+            <Text style={styles.hora}>
+              Término:{' '}
+              {new Date(item.realEndTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </Text>
+          </View>
+        )}
+        ListEmptyComponent={<Text style={styles.empty}>No has completado tareas hoy.</Text>}
+      />
     </SafeAreaView>
   );
 }
@@ -111,8 +129,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F3F4F6',
-    paddingTop: 0, // Elimina el padding superior
-    paddingHorizontal: 16,
+    paddingTop: 0,
+    paddingHorizontal: 16, // Para que no se salga del margen
   },
   flatListContent: {
     paddingBottom: 40,
@@ -130,7 +148,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 14,
-    marginHorizontal: 8, // margen lateral para no pegarse al borde
+    marginHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
@@ -142,17 +160,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginTop: 8,
     fontWeight: '500',
-  },
-  estadoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  estadoTexto: {
-    fontSize: 14,
-    color: '#10B981',
-    fontWeight: '600',
-    marginLeft: 6,
   },
   hora: {
     fontSize: 14,
@@ -185,25 +192,26 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontSize: 16,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  goBackButton: {
+    backgroundColor: '#8971BB', // Morado
+    height: 40,
     borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 2,
     marginBottom: 12,
+    marginTop: 10,
   },
-  backText: {
+  buttonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#111827',
-    marginLeft: 6,
+    color: '#fff', // texto blanco
+    textAlign: 'center',
   },
 });

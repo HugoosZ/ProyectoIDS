@@ -58,7 +58,6 @@ export default function CalendarioSemanalTareas() {
         if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
         const data = await response.json();
 
-        // Filtrar solo tareas completadas
         const tareasFiltradas: Tarea[] = data
           .filter((t: any) => t.status.toLowerCase() === 'completada')
           .map((t: any) => ({
@@ -92,12 +91,11 @@ export default function CalendarioSemanalTareas() {
   return (
     <SafeAreaView style={styles.container}>
       <TouchableOpacity
-        style={styles.backButton}
+        style={styles.goBackButton}
         onPress={() => router.push('/trabajador/ver-tareas')}
         activeOpacity={0.8}
       >
-        <Ionicons name="chevron-back" size={22} color="#111827" />
-        <Text style={styles.backText}>Volver</Text>
+        <Text style={styles.buttonText}>Volver</Text>
       </TouchableOpacity>
 
       <Text style={styles.titulo}>Tareas Semanales Completadas</Text>
@@ -130,26 +128,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     paddingHorizontal: 16,
   },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#E5E7EB',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  goBackButton: {
+    backgroundColor: '#8971BB',
+    height: 40,
     borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 2,
     marginBottom: 12,
+    marginTop: 10,
   },
-  backText: {
+  buttonText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#111827',
-    marginLeft: 6,
+    color: '#fff',
+    textAlign: 'center',
   },
   titulo: {
     fontSize: 24,

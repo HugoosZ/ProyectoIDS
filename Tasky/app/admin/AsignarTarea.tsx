@@ -272,12 +272,20 @@ const styles = StyleSheet.create({
   typeButtonSelected: {
     backgroundColor: '#8971BB',
   },
-  goBackButton: {
-    backgroundColor: '#8971BB',
-    padding: 6,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 10,
+ goBackButton: {
+  backgroundColor: '#8971BB',         // morado
+  height: 40,
+  borderRadius: 50,
+  justifyContent: 'center',
+  alignItems: 'center',
+  paddingHorizontal: 15,
+  alignSelf: 'flex-start',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.04,
+  shadowRadius: 2,
+  elevation: 2,
+  marginBottom: 12,
   },
   submitBtn: {
     backgroundColor: '#8971BB',
@@ -300,8 +308,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+  fontSize: 15,
+  fontWeight: '500',
+  color: '#fff',
+  textAlign: 'center',
   },
 });
 

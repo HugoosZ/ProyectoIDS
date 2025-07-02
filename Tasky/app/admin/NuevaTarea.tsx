@@ -65,7 +65,7 @@ const NuevaTarea = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f2f2f2' }}>
       <TopBar /> 
       <ScrollView contentContainerStyle={styles.container}>
 
@@ -152,16 +152,27 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(137, 113, 187, 1)',
     marginBottom: 12,
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+buttonText: {
+  fontSize: 15,
+  fontWeight: '500',
+  color: '#fff',
+  // sin marginLeft porque no hay ícono, así queda centrado
+  textAlign: 'center',
   },
-  goBackButton: {
-    backgroundColor: 'rgba(137, 113, 187, 1)', 
-    padding: 4,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginRight: 10,
+ goBackButton: {
+  backgroundColor: 'rgba(137, 113, 187, 1)', // color morado
+  height: 40,                                // altura fija para buen centrado vertical
+  borderRadius: 50,
+  justifyContent: 'center',                  // centra verticalmente el contenido
+  alignItems: 'center',                      // centra horizontalmente
+  paddingHorizontal: 15,                     // padding horizontal para espacio interior
+  alignSelf: 'flex-start',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.04,
+  shadowRadius: 2,
+  elevation: 2,
+  marginBottom: 12,
   },
 });
 export default NuevaTarea;

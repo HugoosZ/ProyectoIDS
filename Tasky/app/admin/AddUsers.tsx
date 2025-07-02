@@ -10,15 +10,16 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import globalStyles from '../globalStyles';
-
 import TopBar from '../../components/TopBar';
+import { useRouter } from 'expo-router';
 
 const AddUsers = () => {
-
+  const router = useRouter();
 
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
@@ -85,7 +86,7 @@ const AddUsers = () => {
     <SafeAreaView
       style={{
         flex: 1,
-        backgroundColor: '#f3f3f3', // Fondo sin el contenedor sombreado
+        backgroundColor: '#f3f3f3',
         paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
       }}
     >
@@ -94,13 +95,18 @@ const AddUsers = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 60 : 0}
       >
-          <TopBar />
+        <TopBar />
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingHorizontal: 20 }}>
             
-          
+            <TouchableOpacity
+              onPress={() => router.push('/admin/main')}
+              style={styles.goBackButton}
+            >
+              <Text style={styles.buttonText}>Volver</Text>
+            </TouchableOpacity>
 
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: -250}}>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: -250 }}>
               <Text style={[globalStyles.title, globalStyles.titleCentered]}>
                 Agregar Nuevo Trabajador
               </Text>
@@ -150,5 +156,30 @@ const AddUsers = () => {
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  goBackButton: {
+    backgroundColor: '#8971BB',
+    height: 40,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 12,
+    marginTop: 10,
+  },
+  buttonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#fff',
+    textAlign: 'center',
+  },
+});
 
 export default AddUsers;

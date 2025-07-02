@@ -56,11 +56,13 @@ const globalStyles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
   },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
+ buttonText: {
+  fontSize: 18,       // igual que el otro
+  fontWeight: '500',  // igual que el otro
+  color: '#fff',      // mantiene el color original del botón
+  marginLeft: 6,      // agrega margen igual que el otro estilo
+},
+
   registerLink: {
     color: '#fff', // Cambiado a blanco para el link
     fontWeight: '500',

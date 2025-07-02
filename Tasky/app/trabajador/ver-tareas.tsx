@@ -229,9 +229,9 @@ export default function VerTareas() {
   };
 
   const mostrarEstado = (estado: string) => {
-    if (estado === 'pendiente') return '🕒 Pendiente';
-    if (estado === 'en curso') return '🔄 En curso';
-    if (estado === 'completada') return '✅ Completada';
+    if (estado === 'pendiente') return 'Pendiente';
+    if (estado === 'en curso') return 'En curso';
+    if (estado === 'completada') return 'Completada';
     return estado;
   };
 

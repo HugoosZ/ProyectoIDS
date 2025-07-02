@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { Text, Alert, ScrollView, TouchableOpacity, StyleSheet, SafeAreaView, View } from 'react-native';
+import {
+  Text,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import globalStyles from '../globalStyles';
 import { useRouter } from 'expo-router';
-import TopBar from '../../components/TopBar'; // El TopBar ahora tendrá el icono para abrir el Drawer
+import TopBar from '../../components/TopBar';
 
 type Usuario = {
   id: string;
@@ -28,7 +36,6 @@ export default function ReasignarTarea() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // --- Fetch de usuarios presentes
   const fetchUsuarios = async (token: string) => {
     try {
       const resUsers = await fetch('https://proyecto-ids.vercel.app/api/users', {
@@ -38,10 +45,13 @@ export default function ReasignarTarea() {
       if (!resUsers.ok) throw new Error('Error al obtener usuarios');
       const dataUsers: Usuario[] = await resUsers.json();
 
-      const resAttendance = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true&time=today', {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const resAttendance = await fetch(
+        'https://proyecto-ids.vercel.app/api/admin/attendance?isPresent=true&time=today',
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (!resAttendance.ok) throw new Error('Error al obtener asistencias');
       const attendanceDataRaw = await resAttendance.json();
 
@@ -49,9 +59,7 @@ export default function ReasignarTarea() {
         ? attendanceDataRaw
         : Object.values(attendanceDataRaw);
 
-      const presentUserIds = new Set(
-        attendanceData.map((att: any) => att.userId)
-      );
+      const presentUserIds = new Set(attendanceData.map((att: any) => att.userId));
 
       const filteredUsers = dataUsers.filter((user) => presentUserIds.has(user.id));
 
@@ -68,7 +76,6 @@ export default function ReasignarTarea() {
     }
   };
 
-  // --- Fetch tareas
   const fetchTareas = async (token: string) => {
     try {
       const res = await fetch('https://proyecto-ids.vercel.app/api/tasks', {
@@ -110,7 +117,6 @@ export default function ReasignarTarea() {
     init();
   }, [router]);
 
-  // --- Reasignar Tarea ---
   const handleReassign = async () => {
     if (!selectedTaskId || !selectedUserId) {
       Alert.alert('Error', 'Selecciona una tarea y un trabajador.');
@@ -125,17 +131,20 @@ export default function ReasignarTarea() {
         router.push('/');
         return;
       }
-      const res = await fetch(`https://proyecto-ids.vercel.app/api/reassign-task/${selectedTaskId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          newAssignedToUid: selectedUserId,
-          adminUid: adminUid,
-        }),
-      });
+      const res = await fetch(
+        `https://proyecto-ids.vercel.app/api/reassign-task/${selectedTaskId}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            newAssignedToUid: selectedUserId,
+            adminUid: adminUid,
+          }),
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Error al reasignar tarea');
       Alert.alert('Éxito', data.message || 'Tarea reasignada correctamente');
@@ -150,27 +159,22 @@ export default function ReasignarTarea() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f3f3f3' }}>
-      <TopBar /> {/* TopBar con el icono para abrir el Drawer */}
+      <TopBar />
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Contenedor del botón "Volver" */}
         <View style={styles.goBackContainer}>
-          {/* Botón Volver al inicio */}
           <TouchableOpacity
             style={styles.goBackButton}
-            onPress={() => router.push('/admin/main')} // Redirige a la página principal
+            onPress={() => router.push('/admin/main')}
           >
-            <Text style={styles.buttonText}>Volver</Text>
+            <Text style={styles.goBackButtonText}>Volver</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Contenedor del Título, centrado vertical y horizontal */}
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Reasignar Tarea</Text>
         </View>
 
-        <Text style={globalStyles.subtitle}>
-          Selecciona una tarea pendiente o en progreso:
-        </Text>
+        <Text style={globalStyles.subtitle}>Selecciona una tarea pendiente o en progreso:</Text>
         {tareas.length === 0 && <Text>No hay tareas disponibles</Text>}
         <ScrollView style={{ maxHeight: 180, marginBottom: 20, width: '100%' }}>
           {tareas.map((tarea) => {
@@ -189,17 +193,13 @@ export default function ReasignarTarea() {
                     ? usuariosMap[tarea.assignedTo] || tarea.assignedTo
                     : 'No asignado'}
                 </Text>
-                <Text style={styles.cardMeta}>
-                  Estado: {tarea.status || 'Desconocido'}
-                </Text>
+                <Text style={styles.cardMeta}>Estado: {tarea.status || 'Desconocido'}</Text>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        <Text style={globalStyles.subtitle}>
-          Selecciona un trabajador presente hoy:
-        </Text>
+        <Text style={globalStyles.subtitle}>Selecciona un trabajador presente hoy:</Text>
         {usuariosList.length === 0 && <Text>No hay trabajadores disponibles</Text>}
         <ScrollView style={{ maxHeight: 120, marginBottom: 20, width: '100%' }}>
           {usuariosList.map((user) => {
@@ -231,7 +231,7 @@ export default function ReasignarTarea() {
       </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -240,31 +240,40 @@ const styles = StyleSheet.create({
     backgroundColor: '#f2f2f2',
   },
   goBackContainer: {
-    alignItems: 'flex-start', // Alinea el botón "Volver" a la izquierda
+    alignItems: 'flex-start',
     marginBottom: 1,
   },
   goBackButton: {
-    backgroundColor: 'rgba(137, 113, 187, 1)', // Botón morado
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: '#8971BB',
+    height: 40,
+    borderRadius: 50,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 1, // Añadido para separar el botón del título
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 12,
   },
-  buttonText: {
+  goBackButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
     color: '#fff',
-    fontWeight: 'bold',
+    textAlign: 'center',
   },
   titleContainer: {
-    justifyContent: 'center', // Centra el título
-    alignItems: 'center', // Centra el título horizontalmente
-    flex: 1, // Asegura que ocupe todo el espacio disponible
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
-    textAlign: 'center', // Centra el título horizontalmente
-    marginTop: 0, // Elimina el margen superior
+    textAlign: 'center',
   },
   cardItem: {
     backgroundColor: '#F5F5F5',

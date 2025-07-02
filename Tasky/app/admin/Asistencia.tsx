@@ -7,10 +7,12 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopBar from '../../components/TopBar';
 import BottomBar from '../../components/BottomBar';
+import { useRouter } from 'expo-router';
 
 type Asistencia = {
   asistenciaId: string;
@@ -27,6 +29,7 @@ type Asistencia = {
 export default function Asistencia() {
   const [asistencias, setAsistencias] = useState<Asistencia[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const fetchAsistencias = async () => {
     try {
@@ -36,14 +39,15 @@ export default function Asistencia() {
         return;
       }
 
-      const res = await fetch('https://proyecto-ids.vercel.app/api/admin/attendance?time=today', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-
+      const res = await fetch(
+        'https://proyecto-ids.vercel.app/api/admin/attendance?time=today',
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const data: Asistencia[] = await res.json();
       if (!res.ok) throw new Error(data as any || 'Error al obtener asistencia');
@@ -60,22 +64,18 @@ export default function Asistencia() {
         }
       });
 
-      //setAsistencias(Array.from(asistenciaMap.values()));
-
       const asistenciaOrdenada = Array.from(asistenciaMap.values()).sort((a, b) => {
-        if(a.isPresent && b.isPresent) return 0;
+        if (a.isPresent && b.isPresent) return 0;
         return a.isPresent ? -1 : 1;
       });
 
       setAsistencias(asistenciaOrdenada);
-
     } catch (err: any) {
       Alert.alert('Error', err.message);
     } finally {
       setLoading(false);
     }
   };
-  
 
   useEffect(() => {
     fetchAsistencias();
@@ -90,6 +90,14 @@ export default function Asistencia() {
     <SafeAreaView style={{ flex: 1 }}>
       <TopBar />
       <View style={styles.container}>
+        {/* Botón Volver */}
+        <TouchableOpacity
+          style={styles.goBackButton}
+          onPress={() => router.push('/admin/main')}
+        >
+          <Text style={styles.goBackButtonText}>Volver</Text>
+        </TouchableOpacity>
+
         <Text style={styles.title}>Asistencia del día</Text>
         {loading ? (
           <ActivityIndicator size="large" color="#8866c2" />
@@ -102,17 +110,24 @@ export default function Asistencia() {
                 key={asistencia.asistenciaId}
                 style={[
                   styles.card,
-                  !asistencia.isPresent && styles.cardAusente, // es
-                ]}>
-
-                <Text style={[styles.nombre,
-                !asistencia.isPresent && { color: '#888'},
-                ]}>
-
+                  !asistencia.isPresent && styles.cardAusente,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.nombre,
+                    !asistencia.isPresent && { color: '#888' },
+                  ]}
+                >
                   {asistencia.user?.name} {asistencia.user?.lastName}
                 </Text>
-                <Text><Text style={styles.bold}>Correo:</Text> {asistencia.user?.email}</Text>
-                <Text><Text style={styles.bold}>Estado:</Text> {asistencia.isPresent ? 'Presente' : 'Ausente'}</Text>
+                <Text>
+                  <Text style={styles.bold}>Correo:</Text> {asistencia.user?.email}
+                </Text>
+                <Text>
+                  <Text style={styles.bold}>Estado:</Text>{' '}
+                  {asistencia.isPresent ? 'Presente' : 'Ausente'}
+                </Text>
               </View>
             ))}
           </ScrollView>
@@ -128,6 +143,27 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 10,
+  },
+  goBackButton: {
+    backgroundColor: '#8971BB',
+    height: 40,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    alignSelf: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 2,
+    marginBottom: 12,
+  },
+  goBackButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#fff',
+    textAlign: 'center',
   },
   title: {
     fontSize: 20,
